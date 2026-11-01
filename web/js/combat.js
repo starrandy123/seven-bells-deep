@@ -126,7 +126,7 @@ export function createCombat(G, h, api) {
     const id = resolve(D, kind, view()); if (!id) return true;
     const d = D.moves[id];
     if (d.kind === 'power') {
-      if (!open(id)) { G.ui.tip(D.locked_tip[id] || 'Not yet', 2.4); return true; }
+      if (!open(id)) { G.ui.lockedTip(D.locked_tip[id] || 'Not yet'); return true; }
       if (!afford(id) || coolOf(id) > 0) { log('denied', { id, tide: h.tide, cool: coolOf(id) }); G.fx.denied && G.fx.denied(); return true; }
     }
     if (id === 'icepath' && G.world.heightAt(h.pos.x, -h.pos.z) > -1) { log('denied', { id, tide: h.tide, cool: 0 }); G.fx.denied && G.fx.denied(); G.ui.tip('Ice Path needs the sea under you', 2); return true; }
@@ -139,7 +139,7 @@ export function createCombat(G, h, api) {
     if (open('shoalsong')) { G.ui.unlock('call'); teach('song_open', 'Shoalsong', 'Hold Call: what the ring touches follows you'); }
     if (open('cast')) { G.ui.unlock('cast'); teach('cast_open', 'Homeward Cast', 'Cast throws the trident. Cast or Strike calls it home'); } const slots = D.stances[stance].slots.map((id) => ({ id, name: D.moves[id].name, open: open(id) })); slots.ice = open('ice'); slots.cast = open('cast'); G.ui.setStance(stance, slots); }
   function swapStance() {
-    if (stance === 'water' && !open('ice')) { G.ui.tip(D.locked_tip.ice, 2.4); return; }
+    if (stance === 'water' && !open('ice')) { G.ui.lockedTip(D.locked_tip.ice); return; }
     setStance(stance === 'water' ? 'ice' : 'water');
   }
   function setStance(s, quiet) {

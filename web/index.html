@@ -75,7 +75,7 @@
   .btn { position: absolute; pointer-events: auto; border-radius: 50%; display: none; align-items: center; justify-content: center; text-align: center; color: var(--ink); touch-action: none;
          font-weight: 800; font-size: 14px; letter-spacing: -0.2px; line-height: 1.05; padding: 0; overflow-wrap: anywhere; background: rgba(6, 34, 54, 0.6); border: 2px solid rgba(160, 240, 255, 0.5); width: 60px; height: 60px; box-sizing: border-box; }
   #hotbar .btn.locked { opacity: .42; filter: grayscale(1); }
-  .build { position: absolute; left: 12px; bottom: 8px; font-size: 11px; color: rgba(255, 255, 255, .72); pointer-events: none; }
+  .build { position: absolute; left: var(--left); bottom: var(--bottom); font-size: 11px; color: rgba(255, 255, 255, .72); pointer-events: none; }
   .btn.show { display: flex; } .btn.down { background: rgba(26, 120, 150, 0.94) !important; border-color: #fff !important; transform: scale(0.93); box-shadow: 0 0 18px rgba(160, 240, 255, 0.9); }
   body:not(.touch) .btn::after { content: attr(data-key); position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 700; padding: 0 5px; border-radius: 6px; background: rgba(4, 22, 40, 0.92); color: var(--gold); white-space: nowrap; }
   .btn.cool { color: rgba(234, 252, 255, 0.6); background: rgba(6, 34, 54, 0.4); border-color: rgba(160, 240, 255, 0.24); }

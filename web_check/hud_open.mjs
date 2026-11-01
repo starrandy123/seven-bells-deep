@@ -5,13 +5,15 @@ const W = await gate('hud_open', { budget: 120 });
 const { line, open, section, finish } = W;
 const LAND = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: PHONE.isMobile, hasTouch: true };
 const SLOTS = ['bStance', 'bDash', 'bSpin', 'bWave', 'bP4', 'bCast', 'bCall'];
-await section(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8'], async () => {
+await section(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8', 'H9'], async () => {
   const seed = `window.addEventListener('unhandledrejection', (e) => { (window.__rej = window.__rej || []).push(String(e.reason && e.reason.message || e.reason)); });`;
   const { page, errors, close } = await open('?fresh&tier=phone', { ctx: LAND, init: [seed] });
   await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 });
   const stamp = await page.evaluate(() => document.querySelector('#title .build').textContent);
   line('H6', /^Build [1-9]\d*$/.test(stamp), `the title says which build this is: "${stamp}"`);
   await page.tap('#dive').catch(() => page.click('#dive')); await page.waitForTimeout(900);
+  const firstTime = await page.evaluate(() => document.querySelector('#toast').classList.contains('on'));
+  line('H9', !firstTime, `a first-time player isn't told what's new: toast ${firstTime}`);
   await page.evaluate(() => { const G = window.__game, Q = window.__qa; if (G.cine && G.cine.active) G.cine.stop(true); Q.calm(); }); await page.waitForTimeout(400);
   const hud = await page.evaluate((ids) => ids.map((id) => { const e = document.getElementById(id), r = e.getBoundingClientRect(), s = getComputedStyle(e); return { id, on: s.display !== 'none' && r.width > 0, inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, locked: e.classList.contains('locked'), o: +s.opacity }; }), SLOTS);
   line('H1', hud.every((b) => b.on && b.inside), `every hotbar slot is on a turned phone's screen on a new game: ${hud.filter((b) => b.on && b.inside).length} of ${SLOTS.length}`);
@@ -31,6 +33,16 @@ await section(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7', 'H8'], async () => {
   line('H7', tip, `the tornado is told once he's been twelve seconds in the water: ${tip}`);
   const news = await page.evaluate(() => { const G = window.__game; return { seen: (() => { try { return localStorage.getItem('thalor.build'); } catch (_) { return null; } })() }; });
   line('H8', stamp === 'Build ' + news.seen, `the build he's been told of is remembered, so it's said once: ${news.seen}; ${errors.length} errors`);
+  await close();
+});
+await section(['H10'], async () => {
+  const seed = `try { localStorage.setItem('thalor.build', '1'); } catch (_) {}`;
+  const { page, close } = await open('?fresh&tier=phone', { ctx: LAND, init: [seed] });
+  await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 });
+  await page.tap('#dive').catch(() => page.click('#dive'));
+  await page.waitForFunction(() => /is in$/.test(document.querySelector('#toast b').textContent), null, { timeout: 6000 }).catch(() => {});
+  const b = await page.evaluate(() => document.querySelector('#toast b').textContent);
+  line('H10', /^Build \d+ is in$/.test(b), `someone back from an older build is told: "${b}"`);
   await close();
 });
 await finish();

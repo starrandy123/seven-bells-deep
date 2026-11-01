@@ -225,7 +225,7 @@ export function createUI(G) {
     setTimeout(() => screens.map.warm(), 1200);
     // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
     for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + BUILD;
-    const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };
+    const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen && seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };      // only to someone who was here before it
     const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); };
     $('dive').addEventListener('click', go);
     let sure = false;
@@ -278,6 +278,13 @@ export function createUI(G) {
   function toast(big, small, sec = 4) { say('toast', () => { const t = $('toast'); t.querySelector('b').textContent = big; t.querySelector('span').textContent = small || ''; }, sec); }
   function place(name) { say('place', () => { $('place').textContent = name; }, 3); }
   function tip(msg, sec = 5) { say('tip', () => { $('tip').textContent = msg; }, sec); }
+  // a tap on a dimmed slot is a question, and it's answered now, over whatever the feed was saying: he has just pressed something and needs to know why nothing happened
+  function lockedTip(msg) {
+    const i = waiting.findIndex((x) => x.kind === 'tip'); if (i >= 0) waiting.splice(i, 1);
+    if (saying && saying.kind === 'tip') { tip(msg, 2.4); return; }
+    if (saying) { waiting.push(saying); dropLine(); }      // what it stood in front of takes its turn again after
+    feedGap = 0; takeLine({ kind: 'tip', paint: () => { $('tip').textContent = msg; }, left: 2.4, waited: 0, age: 0 });
+  }
   function bark(who, text, sec = 5) { say('bark', () => { const b = $('bark'); b.querySelector('b').textContent = who || ''; b.querySelector('span').textContent = text; }, sec); }
   function card(title, text, sec = 8, style = '') { say('card', () => { const c = $('card'); c.className = style; c.querySelector('b').textContent = title; c.querySelector('span').textContent = text; }, sec); }
   function done(small, big, lines = []) { say('done', () => { const d = $('done'); d.querySelector('small').textContent = small; d.querySelector('b').textContent = big; d.querySelector('span').textContent = lines.join(' · '); }, 6); }
@@ -399,7 +406,7 @@ export function createUI(G) {
   }
 
   return {
-    input, sample, setLoad, ready, fade, toast, tip, place, bark, card, done, event, timer, objective, unlock, lockPowers, hurt, rideHint, context, cue, pulse, hint, update, setPause, showPanel, openScreen,
+    input, sample, setLoad, ready, fade, toast, tip, lockedTip, place, bark, card, done, event, timer, objective, unlock, lockPowers, hurt, rideHint, context, cue, pulse, hint, update, setPause, showPanel, openScreen,
     setCast(out) { bCast.textContent = out ? 'Recall' : 'Cast'; bCast.classList.toggle('call', out); },
     lock, talkLine, talkTyping, talkFinish, applySettings, setStance, refreshTitle, remap, captureKey(a) { capture = a; }, screen: () => (G.paused ? screens.tab : 'play'), screens,
     objectiveChanged() { G.audio.bubble(); },
