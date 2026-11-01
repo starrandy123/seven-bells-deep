@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { planCities } from './city.js';
 
 const GRID = 16;                                  // quads along a patch's side
 const LEVELS = 6;                                 // 20, 40, 80, 160, 320, 640 m patches
@@ -608,6 +609,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     ghost: () => look.patch(lit({ vertexColors: true }), {
       key: 'ghost',
       glow: /* glsl */`ocGlow = pow(vColor.rgb, vec3(1.5))*vec3(.70, 1.5, 1.15)*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .35*ocPulse);`,
+    }),
+    // the cities' buildings (city.js): weathered stone and weed like the old kit, and their windows glow warm when the lamps are lit and at night
+    city: () => look.patch(lit({ vertexColors: true }), {
+      key: 'city',
+      albedo: /* glsl */`{ float ocN1 = texture(tOcNoise, vOcP.xz*.037 + vOcP.y*vec2(.021, -.013)).a, ocN2 = texture(tOcNoise, vOcP.zx*.17 + vOcP.y*vec2(.09, .07)).b;
+        float ocWin = smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b));
+        float ocAl = smoothstep(.40, .68, ocN1*.72 + ocN2*.28)*smoothstep(1.2, -.6, vOcP.y)*(1.0 - ocWin);
+        diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.7); }`,
+      glow: /* glsl */`ocGlow = pow(vColor.rgb, vec3(1.5))*vec3(2.2)*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*.55)*2.4;`,
     }),
     lamp: () => look.patch(lit({ vertexColors: true }), {
       key: 'lamp',
@@ -1438,6 +1448,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // what a phone can't give. data.colliders is a view of the store, made only if something asks (the walls do; the game reads the store).
   // Most solids are copies per instance, so world.json can hold a kind's shape once. The arena gate is the world's: its solids and mesh stand until setGateOpen(true), then it sinks into the sand.
   const G8 = data.arena && data.arena.gate;
+  // the cities' streets and buildings (city.js), planned now so their solids are the world's own
+  const cityPlan = planCities(data, heightAt, { phone });
+  data.colliders = (data.colliders || []).concat(cityPlan.colliders);
+  cityPlan.build(scene, () => familyMat('city'));
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
   for (const name in kinds) { const I = data.instances[name]; if (I) NS += (I.length / 6 | 0) * kinds[name].length; }
@@ -1693,6 +1707,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     return w7;
   }
   function update(dt, camera, focus) {
+    cityPlan.update(scene, camera.position, phone);
     camera.updateMatrixWorld();
     updateTerrain(camera);
     updateInstances(camera);
@@ -1717,7 +1732,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   prog(1);
 
   return {
-    data, heightAt, regionAt, biomeAt, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
+    data, heightAt, regionAt, biomeAt, cities: cityPlan, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     glbs: { props: propsGLB, creatures: creaturesGLB },
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;
