@@ -284,7 +284,7 @@ export function createUI(G) {
 
   // ------------------------------------------------------------------ onboarding hint: a picture on the control, a word, a Skip
   const hintEl = $('hint'), thumb = $('thumb'); let pulsed = null;
-  const placeThumb = (h) => { if (h.on === '#stick') { thumb.style.left = `calc(var(--left) + 76px)`; thumb.style.top = `calc(100vh - var(--bottom) - 76px)`; thumb.className = 'push'; } if (h.zone === 'right') { thumb.style.left = '72vw'; thumb.style.top = '50vh'; thumb.className = 'drag'; } };
+  const placeThumb = (h) => { if (h.on === '#stick') { thumb.style.left = `calc(var(--left) + 76px)`; thumb.style.top = `calc(100vh - var(--bottom) - var(--lift, 0px) - 76px)`; thumb.className = 'push'; } if (h.zone === 'right') { thumb.style.left = '72vw'; thumb.style.top = '50vh'; thumb.className = 'drag'; } };
   function hint(h) {
     if (pulsed) { pulsed.classList.remove('pulse'); pulsed = null; }
     thumb.className = '';

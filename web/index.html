@@ -79,18 +79,20 @@
   .btn.cool { color: rgba(234, 252, 255, 0.6); background: rgba(6, 34, 54, 0.4); border-color: rgba(160, 240, 255, 0.24); }
   .btn.call { background: #ffd678; color: #2a1a00; border-color: #fff; transform: scale(1.18); transition: transform 0.08s; box-shadow: 0 0 26px rgba(255, 214, 120, 0.9); }
   /* the arc: Colosseum's geometry, Strike in the corner */
-  #bAtk { width: 88px; height: 88px; right: calc(var(--right) + 6px); bottom: calc(var(--bottom) + 20px); font-size: 18px; background: rgba(96, 62, 10, 0.8); border-color: #ffe0a0; }
-  #bParry { width: 64px; height: 64px; right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + 8px); }
-  #bBoost { right: calc(var(--right) + 90px); bottom: calc(var(--bottom) + 96px); }
-  #bJump { right: calc(var(--right) + 8px); bottom: calc(var(--bottom) + 120px); background: rgba(24, 58, 96, 0.78); }
-  #bRide { right: calc(var(--right) + 8px); bottom: calc(var(--bottom) + 254px); background: rgba(14, 84, 68, 0.84); border-color: #bff5dc; }
-  /* the hotbar: bottom middle; upright it sits over the stick and the arc, centred */
-  #hotbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--bottom) + 196px); display: flex; gap: 5px; pointer-events: none; }
+  #bAtk { width: 88px; height: 88px; right: calc(var(--right) + 6px); bottom: calc(var(--bottom) + var(--lift) + 20px); font-size: 18px; background: rgba(96, 62, 10, 0.8); border-color: #ffe0a0; }
+  #bParry { width: 64px; height: 64px; right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + var(--lift) + 8px); }
+  #bBoost { right: calc(var(--right) + 90px); bottom: calc(var(--bottom) + var(--lift) + 96px); }
+  #bJump { right: calc(var(--right) + 8px); bottom: calc(var(--bottom) + var(--lift) + 120px); background: rgba(24, 58, 96, 0.78); }
+  #bRide { right: calc(var(--right) + 8px); bottom: calc(var(--bottom) + var(--lift) + 192px); background: rgba(14, 84, 68, 0.84); border-color: #bff5dc; }
+  /* the hotbar: bottom middle, at the screen's foot, under the stick and the arc (Randy, 1 Nov: "put the hot bar below that diamond and
+     joystick buttons"); --lift raises the stick and the arc over it */
+  #hud { --lift: 58px; }
+  #hotbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: var(--bottom); display: flex; gap: 5px; pointer-events: none; }
   #hotbar .btn { position: relative; width: 46px; height: 46px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0; background: rgba(4, 22, 40, 0.6); border-width: 1.5px; border-color: rgba(160, 240, 255, 0.36); }
   #hotbar #bStance { border-color: #9ff4ff; }
   body[data-stance=ice] #hotbar #bStance { background: rgba(70, 96, 130, 0.72); border-color: #e4f6ff; }
   #bCast.call { border-color: #ffe0a0; }
-  #stick { position: absolute; left: calc(var(--left) + 10px); bottom: var(--bottom); width: 132px; height: 132px; border-radius: 50%; display: none; pointer-events: auto; touch-action: none;
+  #stick { position: absolute; left: calc(var(--left) + 10px); bottom: calc(var(--bottom) + var(--lift)); width: 132px; height: 132px; border-radius: 50%; display: none; pointer-events: auto; touch-action: none;
            background: rgba(6, 40, 62, 0.34); border: 2px solid rgba(160, 240, 255, 0.42); }
   body.touch #stick { display: block; }
   #nub { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px; border-radius: 50%; background: rgba(160, 240, 255, 0.4); border: 2px solid rgba(255, 255, 255, 0.6); }
@@ -119,8 +121,7 @@
     #feed { top: calc(var(--top) + 100px); left: calc(var(--left) + 152px); right: calc(var(--right) + 250px); max-height: calc(100vh - var(--top) - var(--bottom) - 170px); }
     #toast b { font-size: 26px; }
     /* turned: the hotbar in the bottom middle, between the stick and the arc */
-    #hotbar { bottom: var(--bottom); }
-    #bRide { right: calc(var(--right) + 176px); bottom: calc(var(--bottom) + 96px); }
+    #bRide { right: calc(var(--right) + 176px); bottom: calc(var(--bottom) + var(--lift) + 96px); }
   }
 
   /* ---- talking ---- */
