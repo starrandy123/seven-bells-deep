@@ -90,7 +90,8 @@
      joystick buttons"); --lift raises the stick and the arc over it */
   #hud { --lift: 58px; }
   #hotbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: var(--bottom); display: flex; gap: 5px; pointer-events: none; }
-  #hotbar .btn { position: relative; width: 46px; height: 46px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0; background: rgba(4, 22, 40, 0.6); border-width: 1.5px; border-color: rgba(160, 240, 255, 0.36); }
+  #hotbar .btn { position: relative; width: 46px; height: 46px; border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0; background: rgba(4, 22, 40, 0.6); border-width: 1.5px; border-color: rgba(160, 240, 255, 0.36); }
+  @media (max-width: 360px) { #hotbar { gap: 3px; } #hotbar .btn { width: 41px; height: 46px; } }      /* all seven stand on a 320-wide phone */
   #hotbar #bStance { border-color: #9ff4ff; }
   body[data-stance=ice] #hotbar #bStance { background: rgba(70, 96, 130, 0.72); border-color: #e4f6ff; }
   #bCast.call { border-color: #ffe0a0; }

@@ -32,7 +32,7 @@ const SOLID_KINDS = { tower: 9, tower_cold: 9, dome_hall: 14, wall_bay: 6, wall_
 const CLEARS = { sea: ['wall_bay', 'wall_broken', 'wall_windows', 'wall_windows_cold', 'tower', 'tower_cold', 'roof_slab', 'column_broken', 'column_fallen'], land: ['stone_wall'] };
 // a land house's plaster, each house its own (the Mediterranean range: cream, ochre, white, rose, pale blue, straw)
 // a sea city's stone, each building its own: cream marble, honey sandstone, coral rose, jade, slate blue, ivory
-const SEA_STONE = [[1.1, 1.1, 1.06], [1.34, 0.96, 0.36], [1.3, 0.6, 0.54], [0.42, 1.16, 0.74], [0.5, 0.74, 1.4], [1.3, 1.24, 0.96], [1.04, 0.64, 1.16], [0.92, 0.6, 0.42]];      // and a violet, and a dark terracotta
+const SEA_STONE = [[1.1, 1.1, 1.06], [1.34, 0.96, 0.36], [1.3, 0.6, 0.54], [0.56, 1.08, 0.8], [0.6, 0.76, 1.06], [1.3, 1.24, 0.96], [1.0, 0.72, 1.0], [0.92, 0.6, 0.42]];      // and a violet, and a dark terracotta
 const PLASTER = [[1.0, 0.97, 0.9], [1.04, 0.78, 0.42], [1.06, 1.06, 1.04], [1.0, 0.62, 0.5], [0.66, 0.8, 1.0], [0.98, 0.9, 0.72], [0.72, 0.88, 0.66], [1.02, 0.7, 0.74]];
 
 // ------------------------------------------------------------------------------------------------ a tiny seeded random

@@ -210,14 +210,13 @@ export const CITY_POST = /* glsl */`{
   float ocS1 = (1.0 - smoothstep(-.06, .22, ocNdl)), ocS2 = (1.0 - smoothstep(-.52, -.18, ocNdl));
   outgoingLight *= 1.0 - .36*ocHf*clamp(ocLnGrid(ocT1)*ocS1 + ocLnGrid(ocT2)*ocS2, 0.0, 1.0)*(1.0 - ocWinM);
   // under the water the sun's colours are gone a few metres down, and a street of coral, sandstone and jade reads as one blue: a soft light of its own keeps each building its colour through the haze
-  // the stone's hue is pushed first and the water's loss given back after: done the other way round the red given back (55 times over at 90 m) took every other colour with it, the walls went and the lit windows hung in the blue
-  { float ocUnder = 1.0 - smoothstep(-6.0, -1.0, vOcP.y), ocD = min(length(vOcP - cameraPosition), 90.0);
-    outgoingLight += diffuseColor.rgb*vec3(.70, .66, .60)*ocUnder*(1.0 - .42*(1.0 - smoothstep(-150.0, -70.0, vOcP.y)))*(.72 + .28*max(ocNdl, 0.0))*(1.0 - .75*ocWinM);
-    float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .42*ocUnder*(1.0 - ocWinM)), vec3(0.0));
-    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.72), ocUnder); }
+  // the sea's own light and nothing else (Randy, 1 Nov: "The underwater buildings are too bright and we need actual natural light"): more of what comes down through the water to this depth, so a roof catches it, a wall has half and an underside none, blue-green as it is down there. A stone keeps its own colour only close to, as anything does in the sea
+  { float ocUnder = 1.0 - smoothstep(-6.0, -1.0, vOcP.y), ocD = min(length(vOcP - cameraPosition), 40.0);
+    outgoingLight += diffuseColor.rgb*ocAmbient(ocWn, max(-vOcP.y, 0.0))*ocUnder*.55*(1.0 - ocWinM);
+    float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .3*ocUnder*(1.0 - ocWinM)), vec3(0.0));
+    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.34), ocUnder); }
   outgoingLight = mix(outgoingLight, vec3(.010, .020, .028), clamp(ocInkM, 0.0, 1.0));
 }`;
 
-// windows lit when the lamps are lit and at night, and always under the water's light: from 18 m down, and burning brighter in the deep (Vesper at 150 m was
-// almost invisible in the game: its own windows are what you see it by down there)
-export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*mix(.62, 1.5, 1.0 - smoothstep(-120.0, -60.0, vOcP.y)))*2.6;`;
+// windows lit when the lamps are lit and at night, and in the deep where no day reaches (Vesper at 150 m is seen by its own windows). Randy, 1 Nov: natural light under the water
+export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*mix(.05, 1.3, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)))*2.6*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition));`;      // a window is a lamp only where the day's light has gone: by day in the shallows it's dark glass, and at any depth its red goes first with distance

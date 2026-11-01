@@ -624,7 +624,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       key: 'lit',
       // (the world builder's rule: only lit window faces reach .95 in any channel)
       glow: /* glsl */`{ float ocPane = texture(tOcNoise, floor(vOcP.xz*.7 + vOcP.y*.5)*.0173 + vOcP.y*.011).a;
-        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.55 + 1.5*ocPane*ocPane)*2.1; }`,
+        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.55 + 1.5*ocPane*ocPane)*2.1;
+        ocGlow *= max(ocNight, mix(1.0, mix(.04, 1.0, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)), 1.0 - smoothstep(-6.0, -1.0, vOcP.y)))*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition)); }`,      // under the water a window is a lamp only where the day's light has gone (city_glsl.js, CITY_GLOW)
     }),
     coral: () => look.patch(lit({ vertexColors: true }), {
       wrap: .55, key: 'coral',

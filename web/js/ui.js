@@ -1,5 +1,5 @@
 // The input and everything drawn in the page over the canvas: stick, buttons, keys, HUD, toasts, compass, the feed, talk, title, the menu.
-import { TITLE, TOUCH, FLAG } from './config.js';
+import { TITLE, TOUCH, FLAG, BUILD } from './config.js';
 import { DATA } from './data.js';
 import { STACK_HTML } from './stack.js';
 import { readSave } from './save.js';
@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Hold Jump on the water: tornado. Hotbar always on. New cities, surf stance, crawl';
+const NEWS = 'Surf: hands back, leaning forward. Natural light under the water. Hold Jump on the water: tornado';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -224,9 +224,8 @@ export function createUI(G) {
     if (G.quest) G.quest.titleShot();
     setTimeout(() => screens.map.warm(), 1200);
     // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
-    const build = +window.__MOSAIC_SIM_CODE_VERSION || 0;
-    if (build) for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + build;
-    const tellBuild = () => { if (!build) return; let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(build)); } catch (_) { /* no store: it's said each time */ } if (seen !== String(build)) toast('Build ' + build + ' is in', NEWS, 7); };
+    for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + BUILD;
+    const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };
     const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); };
     $('dive').addEventListener('click', go);
     let sure = false;
