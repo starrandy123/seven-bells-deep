@@ -177,7 +177,7 @@ Between two gaits the stride is the blend of theirs and T = stride / speed, so a
 | stance release | last 40 % of the stance, at most 1.9 cm a 60 Hz frame | (ours), under M1's 3 cm | what the hold has taken up goes back to the clip before the foot leaves |
 | soft reach | the last 3.3 % of a leg | (ours) | a knee coming out of straight turns fastest of all, so nothing asks for the very end of it |
 | `REACH_OFF` | 0.965 of the leg | (ours), the soft reach's start | a foot well into its stance comes up when the leg has run out of reach, as a real foot does. Held on, the reach read 1.108 of the leg: the foot dragged and the knee snapped at 2,129°/s against the capture's 1,160 |
-| `KNEE_RATE`, `TOE_RATE` | 24.4 and 24 rad/s, about 1,400°/s | (ours), under M3's 1,500 | a knee has a top speed: a foot in the air gives along the line from the hip. The toe is the capture's without its noise, which reads 1,576°/s at `RATE` on a joint that small |
+| `KNEE_RATE`, `TOE_RATE`, `FOOT_RATE` | 24.4, 24 and 20 rad/s | (ours), under M3's 1,500 | a knee has a top speed: a foot in the air gives along the line from the hip. The toe is the capture's without its noise, which reads 1,576°/s at `RATE` on a joint that small. A foot in the air turns no faster than this, and lands at the angle it has, up to 0.3 rad off the clip's, with the roll taking it the rest of the way: a tap, release and tap left a foot no swing to get flat in, and it flipped at 8,167°/s |
 | `ONCE_MOST`, `ONCE_SLOPE` | 2.4 m/s, 0.27 (15°) | (ours) | a capture of a start begins at a stand on the flat. He lands from a run, wades ashore or comes off the land ride already going, and on a hill the stride does it |
 | `SLOPE_STRIDE` | 0.45, from 0.2 of slope to 0.7 | (ours) | the most a hill shortens his steps, up, down or across, read from the ground's own steepness 0.8 m around him; they quicken to match, so the ground's speed is the same. On the flat stride a 32° descent had both feet off the ground at a walk and the hips stepping 30 cm a frame. M2h |
 | Hips on a hill | start down at 25 % of a swing, all of it by 90 %, over 0.1-0.3 slope | (ours) | they lead the foot that's coming instead of dropping when it lands |
@@ -275,7 +275,7 @@ Mantle and hair hang along what pulls on them, read in his chest's frame: gravit
 | Name | Value | Kind | Why |
 |---|---|---|---|
 | blend time | 0.10-0.30 s by what changed, longer for a bigger offset | (ours) | |
-| `SWITCH_RATE` | 8.7 rad/s (500°/s) | (ours) | each joint's offset gets the time it needs to die at this rate, up to 0.6 s. A fixed time pops the joints that happen to be far apart; knee pops are the known fault [Holden23] |
+| `SWITCH_RATE` | 10.5 rad/s (600°/s) | (ours), read against M3m: 7.6 gave 1,554°/s, 8.7 gave 1,516, 10.5 gave 1,467, because a blow's fast part is then past the offset | each joint's offset gets the time it needs to die at this rate, up to 0.6 s. A fixed time pops the joints that happen to be far apart; knee pops are the known fault [Holden23] |
 | `FACE_RATE` | 12.5 rad/s, 716°/s | (ours), M14e's 720 | what his drawn facing turns at most, whatever sets it |
 
 ## Clips (`Pipeline/hero/moves.py`, Python, 30 fps)

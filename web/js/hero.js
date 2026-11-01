@@ -362,7 +362,7 @@ export async function createHero(G) {
     const y0 = turnS.y, y1 = chase(turnF, turnS, nearAngle(y0, turnGoal), dt);
     h.omega = (y1 - y0) / dt; h.heading = wrap(y1); turnGoal = nearAngle(y1, turnGoal);
     // a walk's start and stop take the time the captures do: the weight shifts first, and two steps bring him to rest. Quicker and the body leaves the planted foot behind
-    const easy = target < WALK_TOP && /^walk_/.test(body.loco || '');
+    const easy = target < WALK_TOP && (/^walk_/.test(body.loco || '') || (h.spd < 0.4 && !h.armed));
     const want = clamp((target - h.spd) * 7, easy ? -WALK_EASE : -slowDown(h.spd), easy ? WALK_EASE : speedUp(h.spd));
     h.accel = first(0.05, h.accel, want, dt);
     h.spd = Math.max(0, h.spd + h.accel * dt);

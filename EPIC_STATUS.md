@@ -4,10 +4,10 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 
 | ID | What | Status | Check |
 |---|---|---|---|
-| M1 | Stride match: planted feet don't slide. A foot on the ground m | building | land now real capture, live 07:56; move_walls M1 family red, 4.6 cm a frame (limit 3); M1b, M1c red; see Pipeline/wip/movement/NOTES.md |
-| M2 | Foot placement on terrain: two-bone IK plants the feet on the  | building | move_walls M2 red, 3.1 cm (limit 3); M2b, M2c green |
-| M3 | Pose changes never pop: inertialization on every switch (Bollo | building | move_walls M3, M3m red on the capture legs; fix for the double-jump flip private, unrun; M3c green |
-| M4 | Starts, stops, pivots: a start lean, a stop with a settle, a p | building | move_walls M4c red; real starts and stops private, M4s and M4t written, unrun |
+| M1 | Stride match: planted feet don't slide. A foot on the ground m | check green | move_walls M1 2.73 cm a frame (limit 3), M1_90 2.10, M1_120 1.11, M1_144 0.92; M1b, M1s, M1c; Chromium and WebKit, this Mac, 1 Nov. M1 now skips frames when he isn't on his feet: on the land ride it read feet in the air. Second reader owed on that. His acceptance owed |
+| M2 | Foot placement on terrain: two-bone IK plants the feet on the  | building | move_walls M2 2.36 cm (limit 3), M2k, M2b, M2c, M2h 7.5 cm a frame (limit 12; new, the baseline read 30.3) green. M2j red, 1,701°/s against 1,500 (new; baseline 2,997) |
+| M3 | Pose changes never pop: inertialization on every switch (Bollo | building | move_walls M3 red, 1,830°/s against 1,500, one case: a stop inside the land ride's landing. Every other case at or under about 1,410. M3m 1,467 and M3c green |
+| M4 | Starts, stops, pivots: a start lean, a stop with a settle, a p | check green | move_walls M4, M4f, M4p, M4l, M4r, M4b, M4c 1.9 cm, M4s, M4t, M4w; Chromium and WebKit. Real starts and stops are live. Turns still use no `m_turn_*` clip. His acceptance owed |
 | M5 | The jump: real anticipation, height set by press length, coyot | check green | move_walls M5a-j, M5g2 |
 | M6 | Super sprint reads right: no legs running in slow motion at 36 | building | move_walls M6a, M6b; blur and M6c judge owed |
 | M7 | Slopes: the Warden climbs what looks climbable and nothing els | check green | move_walls M7, M7b, M7c, M7d; rates A7, A7s |
@@ -15,10 +15,10 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | M9 | The surface: treading, breaching, diving in. See TRANS | building | move_walls M9a, M9d green; M9b, M9c look_shots --cross are look |
 | M10 | Surf: ride the sea on a rising wave (a state of its own, with  | check green | move_walls M10a-d, M10f, M10g; M10e looked at, modest |
 | M11 | Ride a whale or a dolphin, with a real grip pose | check green | move_walls M11a, M11b; ride film looked at, camera reworked |
-| M12 | Swim is smooth at every speed: no pops between tread, slow, fa | check green | move_walls M12a, M12b, M12c |
+| M12 | Swim is smooth at every speed: no pops between tread, slow, fa | check green | move_walls M12a 1,467°/s, M12b, M12c on the CMU crawl; Chromium and WebKit. Strokes switch through the inertial blend. His acceptance owed |
 | M13 | Camera: spring arm with second-order followers, never inside a | building | move_walls M13d, M13e; judged J3, J3c, J4, J5 green; play A5 13 frames left before the leap, not reread since |
 | M14 | Fluidity, to the reference (`reference/fluidity_ref_action_rpg | building | web_check/combat walls; M14g judge owed; combat adds: [wall_fluid] green for blows (no dead stretch over 0.33 s, buffer 0.20 s, speed kept ≥ 80%) |
-| M15 | Tidepulse: boost is a beat | check green | move_walls M15a, b, c, e; M15d judge owed |
+| M15 | Tidepulse: boost is a beat | check green | move_walls M15a, b, c, e, on each arm stroke; M15c now presses off the beat; M15d judge owed |
 | P1 | Water stance: Water Whip (a reaching lash that grabs and pulls | check green | `walls_page` [wall_powers], plants caught; every Water slot and the Whip fired by touch in Chromium and WebKit (`walls_touch` T2, T3) |
 | P2 | Ice stance: Frost Lance (a thrown spear that freezes), Glacier | check green | [wall_powers], [wall_elements]; every Ice slot and Frost Guard by touch in both engines (`walls_touch` T1, T2); P2d Ice Path under a surf: 20 plates, 39 m in 2 s at 13 m/s or better, 0 frames in the water, and by touch (T6) |
 | P3 | Elements combine: soaked + frozen = shatter for big damage; fr | check green | [wall_elements]: six named interactions, the sea holds 8.02 s, shatter × 3; each plant caught; P3f taught once per save, first.mjs not read by me |
@@ -111,10 +111,10 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 
 | ID | What | Status | Check |
 |---|---|---|---|
-| M16 | Real motion data on land | building | land clips real capture live; starts, stops, turns written, never run (`Pipeline/wip/movement/NOTES.md`) |
+| M16 | Real motion data on land | building | land clips real capture; starts and stops real and live (M4s, M4t, M4w). Filmed beside the raw clip, close to it pose for pose. His acceptance owed. Turns not from capture |
 | M17 | Dolphin leap | building | Jump shown swimming, 6, 12, 20 m in the 06:40 build; not reread since the map changed |
 | M18 | Trident holstered out of a fight | building | in the 08:35 build; not reread |
-| M19 | Natural body | building | forearm twist passes offline, not rebuilt; his acceptance owed |
+| M19 | Natural body | building | joints.py 6 of 6: forearm twist 94.0 (limit 95), was 179; crawl CMU 126_02, tread on Rocketbox's idle; his acceptance on his phone owed |
 | P15 | Water tornado he makes and rides | building | hold Jump, 28 m; no plant has run on it |
 | W22 | Land that reads as natural islands | building | his 16:57 word: not yet, W26 |
 | G12 | Every session starts at sea | check green | `returning_at_sea.mjs` |

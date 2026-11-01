@@ -263,7 +263,7 @@ await section(['M5a', 'M5b', 'M5c', 'M5d', 'M5e', 'M5f', 'M5g', 'M5h'], async ()
     const drop = (m) => { start(); Q.drive(none); for (let i = 0; i < 8; i++) G.frame(dt); h.pos.y = FLOOR + 0.92 + m; h.prev.copy(h.pos); h.drawPos.copy(h.pos); h.air = true; h.land = false; h.apexY = h.pos.y; h.vel.set(0, 0, 0); let shot = null, st = ''; let lowest = 9; for (let i = 0; i < 160; i++) { G.frame(dt); if (!h.air && !shot) { shot = (b.shot && b.shot.name) || 'none'; st = h.state; } if (!h.air) lowest = Math.min(lowest, (h.dropNow || 0) * -1); } return { shot, st, sink: -lowest }; };
     const d1 = drop(1), d3 = drop(3.5), d9 = drop(9);
     // sprint: the superhero leap
-    R.room((x, z) => FLOOR); start(-30); Q.drive({ ...run, boost: true }); for (let i = 0; i < 150; i++) G.frame(dt); const fast = h.spd; Q.drive({ ...run, boost: true, jump: true, jumpHeld: true, ud: 1 }); let top = 0; const y0 = h.pos.y; for (let i = 0; i < 90; i++) { G.frame(dt); top = Math.max(top, h.pos.y - y0); }
+    R.room((x, z) => FLOOR); start(-30); Q.drive({ ...run, boost: true }); for (let i = 0; i < 68; i++) G.frame(dt); const fast = h.spd; Q.drive({ ...run, boost: true, jump: true, jumpHeld: true, ud: 1 }); let top = 0; const y0 = h.pos.y; for (let i = 0; i < 90; i++) { G.frame(dt); top = Math.max(top, h.pos.y - y0); }
     R.room(null);
     return { full, tap, cIn, cOut, bufAir, y1, v1, v2, j2, v3, j3, d1, d3, d9, fast, leap: top };
   });
@@ -470,7 +470,7 @@ await section(['M15a', 'M15b', 'M15c', 'M15e'], async () => {
     // out of time: the tier holds, and a press keeps it alive
     const was = h.tideTier; untilBeat(true); press(); out.afterMiss = h.tideTier; out.was = was;
     // held from nothing
-    start(); Q.drive({ ...go, boost: true }); for (let i = 0; i < 20; i++) G.frame(dt); out.held = h.tideTier;
+    start(); untilBeat(true); Q.drive({ ...go, boost: true }); for (let i = 0; i < 20; i++) G.frame(dt); out.held = h.tideTier;
     // plain swimming costs nothing
     start(); const f0 = h.boostFuel, t0 = h.tide; for (let i = 0; i < 300; i++) G.frame(dt); out.fuel = h.boostFuel - f0;
     return out;
@@ -577,7 +577,7 @@ await section(['M20', 'M20b'], async () => {
   await o.close();
 });
 // M4s: a start and a stop are the capture's, on feet that stay down --------------------
-await section(['M4s', 'M4t'], async () => {
+await section(['M4s', 'M4t', 'M4w'], async () => {
   const o = await open1();
   const r = await o.page.evaluate(() => {
     const Q = window.__qa, G = window.__game, h = G.hero, b = h.body, R = window.__rig, dt = 1 / 60, V = h.pos.constructor, s = R.sea, go = { my: 1, mx: 0, ud: 0, boost: false }, none = { my: 0, mx: 0, ud: 0, boost: false };
@@ -586,10 +586,14 @@ await section(['M4s', 'M4t'], async () => {
     const watch = (N, each) => { let worst = 0, held = [false, false], kinds = ['', ''], was = [new V(), new V()], cur = [new V(), new V()]; for (let i = 0; i < N; i++) { G.frame(dt); if (each) each(i); b.legs.forEach((l, k) => { const kind = R.kind(l); R[kind](l, cur[k]); if (l.down && held[k] && kind === kinds[k]) worst = Math.max(worst, cur[k].distanceTo(was[k]) * 100); held[k] = l.down; kinds[k] = kind; was[k].copy(cur[k]); }); } return worst; };
     home(); Q.drive(none); for (let i = 0; i < 30; i++) G.frame(dt); Q.drive(go); let name = '', first = -1; const startSlide = watch(60, (i) => { if (b.loco && !name) { name = b.loco; first = i; } });
     home(); Q.drive(go); for (let i = 0; i < 120; i++) G.frame(dt); const from = h.spd; Q.drive(none); let sName = '', sFirst = -1, end = -1; const stopSlide = watch(150, (i) => { if (b.loco && !sName) { sName = b.loco; sFirst = i; } if (end < 0 && h.spd < 0.05) end = i; });
-    const both = b.legs.every((l) => l.down); R.room(null); return { name, first, startSlide, sName, sFirst, stopSlide, end, from, both };
+    const both = b.legs.every((l) => l.down);
+    // a walk's start: he's on the capture's pace, so the hips don't have to go down after a foot he's left behind, and he's moving at once
+    home(); Q.drive(none); for (let i = 0; i < 30; i++) G.frame(dt); Q.drive({ ...go, my: 0.22 }); let sink = 0, wName = '', v02 = 0; for (let i = 0; i < 70; i++) { G.frame(dt); sink = Math.max(sink, h.dropNow || 0); if (b.loco && !wName) wName = b.loco; if (i === 12) v02 = h.spd; }
+    R.room(null); return { name, first, startSlide, sName, sFirst, stopSlide, end, from, both, sink, wName, v02 };
   });
   line('M4s', /run_start|walk_start/.test(r.name) && r.first >= 0 && r.first <= 6 && r.startSlide <= 3, `a start is the capture's: ${r.name || 'none'} within ${r.first} frames of the press (≤ 6), a foot that's down moves at most ${r.startSlide.toFixed(2)} cm a frame (≤ 3)`);
   line('M4t', /run_stop/.test(r.sName) && r.sFirst >= 0 && r.sFirst <= 21 && r.stopSlide <= 3 && r.end >= 0 && r.both, `a stop is the capture's: ${r.sName || 'none'} within ${r.sFirst} frames of letting go from ${r.from.toFixed(1)} m/s (≤ 21), a foot that's down moves at most ${r.stopSlide.toFixed(2)} cm a frame (≤ 3), still at ${(r.end / 60).toFixed(2)} s, both feet down ${r.both}`);
+  line('M4w', /walk_start/.test(r.wName) && r.sink <= 0.08 && r.v02 > 0.3, `a walk's start is on the capture's pace: ${r.wName || 'none'}, the hips go down at most ${(r.sink * 100).toFixed(1)} cm after a foot left behind (≤ 8, ours), moving at ${r.v02.toFixed(2)} m/s by 0.2 s (> 0.3)`);
   await o.close();
 });
 // a probe, not a wall: a run, frame by frame

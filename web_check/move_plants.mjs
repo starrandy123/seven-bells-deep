@@ -1,5 +1,5 @@
 // MOVE's plants: each defect put back into a copy of the tree, which its own wall must turn RED by its own line. A plant whose edit no longer applies is STALE, and is rewritten, never dropped.
-//   node move_plants.mjs <web dir> [--from=0] [--to=99] [--name=x]         run under heavy.sh; about 8 s a plant, so split at 18 a run
+//   node move_plants.mjs <web dir> [--from=0] [--to=99] [--name=x] [--port=n] [--gate=dir]         run under heavy.sh; about 8 s a plant, so split at 18 a run
 import { spawn, spawnSync } from 'child_process'; import fs from 'fs'; import path from 'path'; import os from 'os';
 const here = path.dirname(new URL(import.meta.url).pathname);
 const args = process.argv.slice(2), webDir = path.resolve(args.find((a) => !a.startsWith('--')) || path.join(here, '../web'));
@@ -66,7 +66,7 @@ const P = [
   { name: 'fight_no_hold', why: 'in a fight the look doesn\'t turn to keep the target in frame', file: 'js/hero.js', old: "if (tgt) { const off = wrap(Math.atan2(tgt.x - h.drawPos.x, tgt.z - h.drawPos.z) - G.camYaw),", new: "if (false) { const off = wrap(Math.atan2(tgt.x - h.drawPos.x, tgt.z - h.drawPos.z) - G.camYaw),", only: 'M13e', catches: /FAIL M13e/ },
   { name: 'swim_too_close', why: 'the arm so short he overflows the frame at speed', file: 'js/hero.js', old: "tight = wet ? 1 - (cam.aspect >= 1 ? 0.47 : 0.13) * smooth(1.5, 7, h.speed) : 1,", new: "tight = wet ? 0.3 : 1,", only: 'M12c', catches: /FAIL M12c/ },
   { name: 'both_feet_lift', why: 'a gait starting at speed lifts both feet at once', file: 'js/body.js', old: "phase = a.s === 'L' ? (Math.max(S.bt, 1 - S.onL) + 0.001 + S.onL) % 1 : Math.max(S.bt, S.onL) + 0.001;", new: "phase = ((Math.max(S.bt, 0.5) + 0.001 + (a.s === 'L' ? S.onL : 0)) % 1 + 1) % 1;", only: 'M3', catches: /FAIL M3 / },
-  { name: 'phase_jump_cut', why: 'a new gait phase jumps the arms outside the blend', file: 'js/body.js', old: "> 0.04) pendingA = 0.16;", new: "> 0.04) pendingA = 0;", only: 'M3', catches: /FAIL M3 / },
+  { name: 'phase_jump_cut', why: 'a new gait phase jumps the arms outside the blend', file: 'js/body.js', old: "if (speed > ONCE_MOST) inertia(0.16); else pendingA = 0.16; }", new: "pendingA = 0; }", only: 'M3', catches: /FAIL M3 / },
   { name: 'starts_flicker', why: 'a start runs its first steps at three times the rate, and M1b leaves those steps out', file: 'js/body.js', old: "if (gaitOn && !loco) phase = (phase + dt / S.T) % 1;", new: "if (gaitOn) phase = (phase + (h.spd < 5 ? 3 : 1) * dt / S.T) % 1;", only: 'M1s', catches: /FAIL M1s/ },
   { name: 'kink_foot_floats', why: 'a planted foot stands 8 cm off the ground, which M2 would see only where there is no kink', file: 'js/body.js', old: "plantAt(l, [Gx, h.groundAt(Gx, Gz), Gz], a, f);", new: "plantAt(l, [Gx, h.groundAt(Gx, Gz) + 0.08, Gz], a, f);", only: 'M2k', catches: /FAIL M2k/ },
   { name: 'turn_snaps_on_slopes', why: 'his drawn facing snaps on real ground and eases on a flat: M4 on its own flat stays green, M4r must not', file: 'js/body.js', old: "facing += clamp(turnBy, -most_, most_); const yaw = facing;", new: "{ const H = (a, b) => G.world.heightAt(a, -b), x = h.pos.x, z = h.pos.z, sl = Math.abs(H(x + 1.5, z) - H(x - 1.5, z)) + Math.abs(H(x, z + 1.5) - H(x, z - 1.5)); if (sl > 0.15) facing = Math.round(wanted / 0.8) * 0.8; else facing += clamp(turnBy, -most_, most_); } const yaw = facing;", only: 'M4r', catches: /FAIL M4r/ },
@@ -76,14 +76,14 @@ const P = [
   { name: 'stale_swing_clock', why: 'a foot in the air when a stop begins keeps its old clock and snaps flat at touchdown', file: 'js/body.js', old: "if (o) { loco = o; trunk(0.18); for (const l of legs) if (!l.down) { l.t0 = 0; l.t1 = nextOn(o.on[l.s], 0, o.dur); l.fresh = true; } }", new: "if (o) { loco = o; trunk(0.18); }", only: 'M3', catches: /FAIL M3 / },
   { name: 'phantom_step', why: 'a clock set back at a handover reads as a foot coming round to the ground', file: 'js/body.js', old: "!seated && l.ph < prev && prev > 0.5", new: "l.ph < prev && prev > 0.5", only: 'M1s', catches: /FAIL M1s/ },
   { name: 'foot_past_reach', why: 'a foot stays down after the leg has run out of reach', file: 'js/body.js', old: "const spent = (l.reach || 0) > REACH_OFF &&", new: "const spent = false &&", only: 'M1', catches: /FAIL M1 / },
-  { name: 'walk_starts_fast', why: 'a walk starts as hard as a run, and the body leaves the planted foot behind', file: 'js/hero.js', old: "const easy = target < WALK_TOP && /^walk_/.test(body.loco || '');", new: "const easy = false;", only: 'M1', catches: /FAIL M1 / },
+  { name: 'walk_starts_fast', why: 'a walk starts as hard as a run, and the body leaves the planted foot behind', file: 'js/hero.js', old: "const easy = target < WALK_TOP && (/^walk_/.test(body.loco || '') || (h.spd < 0.4 && !h.armed));", new: "const easy = false;", only: 'M4w', catches: /FAIL M4w/ },
   { name: 'hips_let_go_in_a_frame', why: 'a foot pushing off lets go of the hips at a threshold, and he springs up in a frame', file: 'js/body.js', old: "* smooth(-0.5, -0.12, l.rock)", new: "* (l.rock > -0.25 ? 1 : 0)", only: 'M1,M2h', catches: /FAIL M(1|2h) / },
   { name: 'flat_stride_on_a_hill', why: 'his steps stay long on steep ground: both feet off at a walk, the hips dropping to reach', file: 'js/body.js', old: "const k = 1 - SLOPE_STRIDE * smooth(0.2, 0.7, chase(P.slope, F.slope, steep(), dt));", new: "const k = 1 - 0 * chase(P.slope, F.slope, steep(), dt);", only: 'M2h', catches: /FAIL M2h/ },
   { name: 'foot_flies_level', why: 'the foot flies level and snaps to the slope on contact', file: 'js/body.js', old: "if (F.slope.y > 0.2 && s > 0.35) {", new: "if (false) {", only: 'M2j', catches: /FAIL M2j/ },
   { name: 'ride_ends_in_a_drop', why: 'the land ride drops him onto his feet in a frame', file: 'js/hero.js', old: "endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); h.landSurfT = 0; G.audio.splash(); } return; }", new: "endSurf(); h.land = true; h.grounded = true; h.spd = v; h.pos.y = g + STAND; h.landSurfT = 0; G.audio.splash(); } return; }", only: 'M3', catches: /FAIL M3 / },
   { name: 'dash_on_pinned_feet', why: 'Riptide on land on the stride at 34 m/s: the feet flip', file: 'js/body.js', old: "'dodge_land', 'atk_dash_land']", new: "'dodge_land']", only: 'M3m', catches: /FAIL M3m/ },
   { name: 'start_not_real', why: 'he just sets off, no real start', file: 'js/body.js', old: "if (o) { loco = o; gaitOn = true; trunk(0.16); }", new: "", only: 'M4s', catches: /FAIL M4s/ },
-  { name: 'stance_not_shortened', why: 'at a sprint a foot stays down the clip\'s full share, slipping as the ground goes by faster than the clip', file: 'js/formulas/gait.js', old: "out.bt = out.beta * Math.min(1, out.L / out.T / Math.max(s, 0.01));", new: "out.bt = out.beta;", only: 'M1', catches: /FAIL M1 / },
+  { name: 'stance_not_shortened', why: 'at a sprint a foot stays down the clip\'s full share, slipping as the ground goes by faster than the clip', file: 'js/formulas/gait.js', old: "out.bt = out.beta * Math.min(1, out.L / out.T / Math.max(s, 0.01));", new: "out.bt = out.beta;", extra2: { file: 'js/body.js', old: "const spent = (l.reach || 0) > REACH_OFF &&", new: "const spent = false &&" }, only: 'M1', catches: /FAIL M1 / },
   { name: 'look_keeps_turning', why: 'the line that clears the look swallowed by the comment before it: one swipe keeps the camera turning for ever', file: 'js/hero.js', old: "\n    u.yaw = 0; u.pitch = 0;", new: " u.yaw = 0; u.pitch = 0;", only: 'M20b', catches: /FAIL M20b/ },
   { name: 'a_dot', why: 'the camera so far back he\'s a dot', file: 'js/hero.js', old: "h.ride ? RIDE_ARM : (fight ? 5.2 : 3.9)", new: "h.ride ? RIDE_ARM : (fight ? 19 : 19)", only: 'M13d', catches: /FAIL M13d/ },
 ];
@@ -92,16 +92,16 @@ if (args.includes('--check')) { let stale = 0; for (const p of P) { const t = fs
 const from = +opt('from', 0), to = +opt('to', 99), only = opt('name'), list = P.filter((p, i) => (only ? p.name === only : i >= from && i < to));
 const gateDir = opt('gate') || path.join(webDir, '..', 'gate'), cleanFile = path.join(gateDir, 'move_walls_chromium.txt'), cleanLines = fs.existsSync(cleanFile) ? fs.readFileSync(cleanFile, 'utf8').split('\n') : [];
 const root = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'move_plants_'));
-let bad = 0, n = 0, port = 8841 + (process.pid % 40);
+let bad = 0, n = 0, port = 8841 + (process.pid % 40); const fixedPort = opt('port', '');       // --port=8862: one port of your own, used by each plant in turn. The default range crosses other servers on this machine, and a clash reads the wrong build
 for (const p of list) {
   n++; const dir = path.join(root, p.name); fs.mkdirSync(dir);
   for (const e of fs.readdirSync(webDir)) { if (e === 'dev') continue; const s = path.join(webDir, e); if (e === 'js') fs.cpSync(s, path.join(dir, e), { recursive: true }); else fs.symlinkSync(s, path.join(dir, e)); }
   const apply = (f, o, w) => { const fp = path.join(dir, f); const t = fs.readFileSync(fp, 'utf8'); if (!t.includes(o)) return false; fs.writeFileSync(fp, t.replace(o, w)); return true; };
-  if (!apply(p.file, p.old, p.new) || (p.extra && !apply(p.file, p.extra.old, p.extra.new))) { console.log(`STALE ${p.name}: its edit no longer applies; rewrite it`); bad++; continue; }
-  const srv = spawn('node', [path.join(here, 'serve.mjs'), dir, String(++port)], { stdio: 'ignore' });
+  if (!apply(p.file, p.old, p.new) || (p.extra && !apply(p.file, p.extra.old, p.extra.new)) || (p.extra2 && !apply(p.extra2.file, p.extra2.old, p.extra2.new))) { console.log(`STALE ${p.name}: its edit no longer applies; rewrite it`); bad++; continue; }
+  if (fixedPort) port = +fixedPort - 1; const srv = spawn('node', [path.join(here, 'serve.mjs'), dir, String(++port)], { stdio: 'ignore' });
   await new Promise((r) => setTimeout(r, 400));
   const r = spawnSync('node', [path.join(here, 'move_walls.mjs'), `http://127.0.0.1:${port}/index.html`, 'chromium', `--only=${p.only}`, `--out=${path.join(root, 'out')}`], { encoding: 'utf8', timeout: 60000 });
-  srv.kill();
+  srv.kill(); await new Promise((r) => setTimeout(r, 150));
   const out = (r.stdout || '') + (r.stderr || ''), hit = out.split('\n').find((l) => p.catches.test(l));
   // a wall already red on the clean tree proves nothing by being red: its line has to change (QA, round 6)
   const was = cleanLines.find((l) => l.startsWith(`FAIL ${p.only} `)), norm = (l) => l.replace(/\s+/g, ' ').trim();

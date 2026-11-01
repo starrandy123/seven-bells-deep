@@ -1,5 +1,7 @@
 # Movement: where it stands (1 Nov, 08:06)
 
+**Merged into `web/js` on 1 Nov, evening: `src/` is history now, and no longer matches the live code. Read `DESIGN.md` §Movement and `EPIC_STATUS.md` for where it stands. Everything below is as written at 08:06.**
+
 Written for the cloud session taking over. Randy's priority is the basics of the body: land first, then swim. Missions are paused.
 
 ## What's live
