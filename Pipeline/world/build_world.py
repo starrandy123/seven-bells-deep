@@ -2005,6 +2005,8 @@ BELLS = [
 ]
 
 PEARLS = []
+# what the walled cities closed in after the pearls were laid (g_collect G1o, 1 Nov): the nearest open water, read in the game
+MOVED = {(440.0, 322.0, -54.0): [435.0, 319.5, -54.0], (-95.56, 549.01, -151.0): [-101.0, 549.0, -151.0]}
 
 
 def pearl(x, y, z):
@@ -2433,7 +2435,7 @@ WORLD = {
     'bells': [{k: (rnd(v) if isinstance(v, float) else v) for k, v in b.items()} for b in BELLS],
     'arena': {'x': AX, 'y': AY, 'z': -ARENA_D, 'r': 46.0, 'rx': RX, 'ry': RY, 'top': rnd(ARENA_TOP), 'floor_rx': rnd(FL_RX), 'floor_ry': rnd(FL_RY),
               'gate': {'x': GATE_POS[0], 'y': GATE_POS[1], 'z': rnd(GZ), 'yaw': 0.0, 'size': [round(v, 2) for v in gate_size]}},
-    'pearls': PEARLS, 'chests': CHESTS, 'encounters': ENC, 'whales': WHALES, 'schools': SCHOOLS, 'drifters': DRIFT, 'pods': PODS, 'sharks': SHARKS, 'land': LAND_PTS, 'decks': DECKS, 'rivers': RIVERS, 'waterfalls': FALLS, 'openings': OPENINGS, 'plumes': PLUMES, 'life': LIFE, 'holds': HOLDS,
+    'pearls': [MOVED.get(tuple(p), p) for p in PEARLS], 'chests': CHESTS, 'encounters': ENC, 'whales': WHALES, 'schools': SCHOOLS, 'drifters': DRIFT, 'pods': PODS, 'sharks': SHARKS, 'land': LAND_PTS, 'decks': DECKS, 'rivers': RIVERS, 'waterfalls': FALLS, 'openings': OPENINGS, 'plumes': PLUMES, 'life': LIFE, 'holds': HOLDS,
     'files': {'height': 'height_z.bin', 'biome': 'biome_z.bin', 'biome2': 'biome2_z.bin', 'sand_n': 'tex/sand_n.webp', 'rock_n': 'tex/rock_n.webp'},
     'packs': PACKS_T,
     'lod': {'coral_fan': 24, 'coral_brain': 24, 'coral_branch': 24, 'coral_table': 24, 'coral_tube': 24, 'anemone': 24, 'glow_coral': 30, 'kelp_stalk': 40, 'seagrass': 18, 'rock_a': 60, 'rock_b': 60, 'rock_c': 60, 'beach_rock': 50, 'ice_floe': 60, 'smoker': 70, 'ice_ceiling': 110, 'ice_pillar': 110, 'wreck_hull': 110, 'wreck_bow': 110, 'wreck_stern': 110, 'column': 90, 'column_broken': 90, 'wall_bay': 90, 'wall_broken': 90, 'arch': 110, 'temple_front': 110, 'arena_bay': 110, 'bell_shrine': 90, 'dome_hall': 120, 'tower': 120, 'tower_cold': 120,

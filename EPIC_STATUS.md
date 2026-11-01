@@ -107,6 +107,37 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | Q23 | Published bytes match the frozen copy | todo | |
 | Q24 | Files the first view doesn't need load after first play | check green | load Q24 on a copy of the live map: 3 packs load late, 0.97 MB; 3.82 MB as sent before first play. Packs wait for the hero to move, or half a minute at the title |
 
+## Part 2 (§20, CR-35). `accepted` is his word alone
+
+| ID | What | Status | Check |
+|---|---|---|---|
+| M16 | Real motion data on land | building | land clips real capture live; starts, stops, turns written, never run (`Pipeline/wip/movement/NOTES.md`) |
+| M17 | Dolphin leap | building | Jump shown swimming, 6, 12, 20 m in the 06:40 build; not reread since the map changed |
+| M18 | Trident holstered out of a fight | building | in the 08:35 build; not reread |
+| M19 | Natural body | building | forearm twist passes offline, not rebuilt; his acceptance owed |
+| P15 | Water tornado he makes and rides | building | hold Jump, 28 m; no plant has run on it |
+| W22 | Land that reads as natural islands | building | his 16:57 word: not yet, W26 |
+| G12 | Every session starts at sea | check green | `returning_at_sea.mjs` |
+| V1 | Emberkin bodies | todo | |
+| V2 | Flight on fire thrusters | todo | |
+| V3 | The same power set, in fire | todo | |
+| V4 | Range, both sides | todo | |
+| V5 | Water against fire | todo | |
+| V6 | Fire biomes | todo | |
+| V7 | Fire bosses | todo | |
+| V8 | The war | todo | |
+| V9 | All work well together | todo | |
+| M20 | Swim up waterfalls | building | `8d95b35`; from inside the pool never run |
+| M21 | Sprint and climb uphill | building | `f850eb1`, read headless by the cloud only |
+| M22 | Land ride, and the water it leaves | building | half done, see §20 |
+| M23 | Surf real waves | building | he outruns the wave |
+| W23 | Falls and streams meet the land | building | seen from Crown Falls to the sea, plain and glassy; his 16:57 word: sheet of paper |
+| W24 | Real cities | building | Thalor 83 draws 395k, Vesper 64 and 445k on the Mac's GPU; not looked at on a phone |
+| W25 | Ocean environment pass | todo | |
+| W26 | Natural cliffs and mountain edges | todo | |
+| G13 | His phone HUD | check green | CR-36: `g_hud` G7h and `input` C1t 21 of 21 in WebKit. `ui` C3 (hotbar 5 px apart) and E1h (labels 14 px) stay red, his call |
+| G14 | One line at a time | building | in `ui.js`; a wall owed |
+
 ## Pick-up: missions, paused 2026-11-01 on his word ("Pause on the missions for now")
 
 Frost Wyrm stall (ch4.5, reported 736 s on the 06:36 snapshot, 3 bells):

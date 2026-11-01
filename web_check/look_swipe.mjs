@@ -10,7 +10,8 @@ const dive = await page.$('#dive'); if (dive && await dive.isVisible()) await di
 const yaw = () => page.evaluate(() => window.__game.camYaw);
 const drag = (dx) => page.evaluate(async (dx) => { const c = document.querySelector('canvas'); const ev = (t, x, y) => c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y, isPrimary: true }));
   ev('pointerdown', 300, 400); for (let i = 1; i <= 10; i++) { ev('pointermove', 300 + dx * i / 10, 400); await new Promise((r) => requestAnimationFrame(r)); } ev('pointerup', 300 + dx, 400); }, dx);
-const y0 = await yaw(); await drag(-60); const y1 = await yaw(); await page.waitForTimeout(1000); const y2 = await yaw(); await page.waitForTimeout(2000); const y3 = await yaw();
+const y0 = await yaw(); await drag(-60); await page.waitForTimeout(100); const y1 = await yaw(); await page.waitForTimeout(1000);      // the last move lands on the next step: read after it, or a late frame reads as drift
+ const y2 = await yaw(); await page.waitForTimeout(2000); const y3 = await yaw();
 const deg = (a) => +(a * 57.3).toFixed(1);
 console.log('swipe 60 px: turned', deg(y1 - y0), 'deg by lift; +1 s drift', deg(y2 - y1), 'deg; +3 s drift', deg(y3 - y1), 'deg');
 await browser.close(); console.log(Math.abs(y3 - y1) < 0.02 ? 'PASS the camera stops when the thumb lifts' : 'FAIL the camera keeps turning after the thumb lifts');

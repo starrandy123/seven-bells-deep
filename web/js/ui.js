@@ -229,21 +229,50 @@ export function createUI(G) {
   // a hard cut, covered: black for a frame, then the fade lifts
   function cut() { const f = $('fade'); f.style.transition = 'none'; f.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = ''; f.classList.remove('on'); })); }
 
-  // ------------------------------------------------------------------ the feed: each line shows, holds and leaves by itself
+  // ------------------------------------------------------------------ the feed: it says one thing at a time (Randy's audit, 1 Nov: seven popups at once hid the game).
+  // The boss bar, the timer and a teaching hint are status and stay up. Every other line takes its turn: a bigger line takes the screen from a smaller one, the rest wait, the
+  // biggest first, and what isn't worth saying late lapses. A line that has others behind it leaves as soon as it has been read.
+  const RANK = { done: 6, toast: 5, event: 4, card: 3, tip: 2, bark: 1, place: 0 };
+  const READ = { done: 3.2, toast: 2.8, event: 3.2, card: 3.6, tip: 1.2, bark: 2.2, place: 1.4 };     // s, least time on the screen once something waits behind it (ours)
+  const LAPSE = { done: 30, toast: 30, event: 20, card: 15, tip: 4, bark: 4, place: 2.5 };             // s, longest a line may wait for its turn (ours)
+  const FEED_GAP = 0.4;                                                                              // s between two lines: the last one's fade (ours)
   const timers = {};
+  let saying = null, feedGap = 0; const waiting = [];
   function show(id, sec) {
     const el = $(id); el.classList.remove('bye'); el.classList.add('on');
     if (sec) timers[id] = sec; else delete timers[id];
     return el;
   }
   function hide(id) { const el = $(id); delete timers[id]; el.classList.add('bye'); setTimeout(() => { if (el.classList.contains('bye')) { el.classList.remove('on', 'bye'); } }, 360); }
-  function toast(big, small, sec = 4) { const t = $('toast'); t.querySelector('b').textContent = big; t.querySelector('span').textContent = small || ''; show('toast', sec); }
-  function place(name) { $('place').textContent = name; show('place', 3.5); }
-  function tip(msg, sec = 5) { $('tip').textContent = msg; show('tip', sec); }
-  function bark(who, text, sec = 5) { const b = $('bark'); b.querySelector('b').textContent = who || ''; b.querySelector('span').textContent = text; show('bark', sec); }
-  function card(title, text, sec = 8, style = '') { const c = $('card'); c.className = `${style} on`; c.querySelector('b').textContent = title; c.querySelector('span').textContent = text; show('card', sec); }
-  function done(small, big, lines = []) { const d = $('done'); d.querySelector('small').textContent = small; d.querySelector('b').textContent = big; d.querySelector('span').textContent = lines.join(' · '); show('done', 6); }
-  function event(big, small, sec = 7) { const e = $('event'); e.querySelector('b').textContent = big; e.querySelector('span').textContent = small || ''; show('event', sec); }
+  function takeLine(l) { saying = l; l.age = 0; l.paint(); const el = $(l.kind); el.classList.remove('bye'); el.classList.add('on'); }
+  function dropLine() { $(saying.kind).classList.add('bye'); const el = $(saying.kind); setTimeout(() => { if (el.classList.contains('bye')) el.classList.remove('on', 'bye'); }, 360); saying = null; feedGap = FEED_GAP; }
+  function say(kind, paint, sec) {
+    const l = { kind, paint, left: sec, waited: 0, age: 0 };
+    if (saying && saying.kind === kind) { paint(); saying.left = sec; saying.age = 0; return; }      // the newest of a kind replaces the last, at once
+    const i = waiting.findIndex((x) => x.kind === kind); if (i >= 0) waiting.splice(i, 1);
+    if (saying && RANK[kind] > RANK[saying.kind] && RANK[saying.kind] <= RANK.tip) { if (saying.kind === 'tip' && saying.left > 1.5) waiting.push(saying); dropLine(); }
+    waiting.push(l);
+  }
+  function feedStep(dt) {
+    if (locked) return;                                                                              // nothing talks over a conversation; it all comes after
+    for (let i = waiting.length - 1; i >= 0; i--) { const l = waiting[i]; if ((l.waited += dt) > LAPSE[l.kind]) waiting.splice(i, 1); }
+    if (saying) {
+      saying.age += dt; saying.left -= dt;
+      if (saying.left <= 0 || (waiting.length && saying.age >= READ[saying.kind])) dropLine();
+      return;
+    }
+    if ((feedGap -= dt) > 0) return;
+    let best = null; const held = hintEl.classList.contains('on');                                   // a place's name and a passer-by's word don't talk over a lesson
+    for (const l of waiting) { if (held && RANK[l.kind] < RANK.tip) continue; if (!best || RANK[l.kind] > RANK[best.kind]) best = l; }
+    if (best) { waiting.splice(waiting.indexOf(best), 1); takeLine(best); }
+  }
+  function toast(big, small, sec = 4) { say('toast', () => { const t = $('toast'); t.querySelector('b').textContent = big; t.querySelector('span').textContent = small || ''; }, sec); }
+  function place(name) { say('place', () => { $('place').textContent = name; }, 3); }
+  function tip(msg, sec = 5) { say('tip', () => { $('tip').textContent = msg; }, sec); }
+  function bark(who, text, sec = 5) { say('bark', () => { const b = $('bark'); b.querySelector('b').textContent = who || ''; b.querySelector('span').textContent = text; }, sec); }
+  function card(title, text, sec = 8, style = '') { say('card', () => { const c = $('card'); c.className = style; c.querySelector('b').textContent = title; c.querySelector('span').textContent = text; }, sec); }
+  function done(small, big, lines = []) { say('done', () => { const d = $('done'); d.querySelector('small').textContent = small; d.querySelector('b').textContent = big; d.querySelector('span').textContent = lines.join(' · '); }, 6); }
+  function event(big, small, sec = 7) { say('event', () => { const e = $('event'); e.querySelector('b').textContent = big; e.querySelector('span').textContent = small || ''; }, sec); }
   let timerOn = false;
   function timer(sec, label, up) {
     if (sec === null || sec === undefined) { if (timerOn) { timerOn = false; hide('timer'); } return; }
@@ -284,7 +313,7 @@ export function createUI(G) {
 
   // ------------------------------------------------------------------ onboarding hint: a picture on the control, a word, a Skip
   const hintEl = $('hint'), thumb = $('thumb'); let pulsed = null;
-  const placeThumb = (h) => { if (h.on === '#stick') { thumb.style.left = `calc(var(--left) + 76px)`; thumb.style.top = `calc(100vh - var(--bottom) - var(--lift, 0px) - 76px)`; thumb.className = 'push'; } if (h.zone === 'right') { thumb.style.left = '72vw'; thumb.style.top = '50vh'; thumb.className = 'drag'; } };
+  const placeThumb = (h) => { if (h.on === '#stick') { thumb.style.left = `calc(var(--left) + 76px)`; thumb.style.top = `calc(100vh - var(--bottom) - var(--lift, 0px) - 66px)`; thumb.className = 'push'; } if (h.zone === 'right') { thumb.style.left = '72vw'; thumb.style.top = '50vh'; thumb.className = 'drag'; } };
   function hint(h) {
     if (pulsed) { pulsed.classList.remove('pulse'); pulsed = null; }
     thumb.className = '';
@@ -333,6 +362,7 @@ export function createUI(G) {
   function update(dt) {
     if (cueT > 0 && (cueT -= dt) <= 0) bParry.classList.remove('call');
     for (const id in timers) { if ((timers[id] -= dt) <= 0) hide(id); }
+    feedStep(dt);
     if (typing) {
       typing.n += dt * 62; const n = Math.floor(typing.n);
       talkText.textContent = typing.text.slice(0, n); if (n >= typing.text.length) typing = null;

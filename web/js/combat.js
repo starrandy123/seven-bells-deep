@@ -447,6 +447,7 @@ export function createCombat(G, h, api) {
     get cool() { return cool; },
     setStance,
     has: (id) => !!(D && D.moves[id]),
+    opened: (id) => !!D && open(id),
     difficulty: () => (D && D.difficulty[G.settings && G.settings.difficulty]) || (D && D.difficulty.normal),
     unlockStance(id) { if (id === 'ice' || id === undefined) { h.powers.ice = true; showSlots(); } },
     // a clean slate for a check: nothing running, nothing cooling, nothing buffered

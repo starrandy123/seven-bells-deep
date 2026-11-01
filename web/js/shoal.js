@@ -87,7 +87,7 @@ export function createShoal(G, h, D, C) {
   }
   function step(dt) {
     stepRing(dt);
-    if ((bookT -= dt) <= 0) { bookT = 1; const c = G.quest && G.quest.collect; if (c && G.combat.has('shoalsong')) for (const k in S.book) if (c.logged[k] && !seen[k]) { seen[k] = 1; C.teach('song_' + k, 'Shoalsong', S.book[k]); } }
+    if ((bookT -= dt) <= 0) { bookT = 1; const c = G.quest && G.quest.collect; if (c && G.combat.opened('shoalsong')) for (const k in S.book) if (c.logged[k] && !seen[k]) { seen[k] = 1; C.teach('song_' + k, 'Shoalsong', S.book[k]); } }
     let schools = 0;
     for (let i = led.length - 1; i >= 0; i--) {
       const l = led[i];

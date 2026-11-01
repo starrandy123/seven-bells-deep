@@ -29,15 +29,17 @@ export async function gate(name, { budget = 170, engines = ['chromium', 'webkit'
   const qs = (id) => (QS_WALLS.has(name) && /^[A-G]\d/.test(id) ? 'QS-' + id : id);
   const line = (id, pass, what) => { R.push({ id, pass, what }); console.log(`${pass ? 'PASS' : 'FAIL'} ${qs(id)} ${what}`); };
   const note = (what) => console.log(`     ${what}`);
-  const want = (...ids) => !only || ids.some((i) => only.has(i));
+  const picked = (i) => only.has(i) || only.has(String(i).split('.')[0]);     // --only=C1t takes every C1t.x
+  const want = (...ids) => !only || ids.some(picked);
   let browser = null; const contexts = new Set();
   const finish = async (code) => {
     for (const c of contexts) await Promise.race([c.close().catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
     if (browser) await Promise.race([browser.close().catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
     fs.writeFileSync(path.join(out, `${name}_${engine}.json`), JSON.stringify({ name, engine, base, seed, results: R, seconds: Math.round((Date.now() - t0) / 1000) }, null, 1));
     const pass = R.filter((r) => r.pass).length, fail = R.filter((r) => !r.pass);
+    if (!R.length) console.log(`FAIL NOTHING ${name} read nothing: --only matched no check, so this run says nothing`);
     console.log(`${name} ${engine}: ${pass} of ${R.length} pass in ${Math.round((Date.now() - t0) / 1000)} s${fail.length ? '; failing: ' + fail.map((r) => r.id).join(' ') : ''}`);
-    process.exit(code ?? (fail.length ? 1 : 0));
+    process.exit(code ?? (fail.length || !R.length ? 1 : 0));
   };
   if (!engines.includes(engine)) { console.log(`     ${name} does not run in ${engine}: ${flags.why || 'see its head'}`); console.log(`${name} ${engine}: 0 of 0 pass in 0 s`); process.exit(0); }
   const dog = setTimeout(() => { line('TIME', false, `${name} ran out of its ${budget} s budget (the heavy lock is shared: split it)`); finish(3); }, budget * 1000); dog.unref();
@@ -72,7 +74,7 @@ export async function gate(name, { budget = 170, engines = ['chromium', 'webkit'
     if (!want(...ids)) return;
     const seen = () => new Set(R.map((r) => r.id));
     try { await fn(); } catch (e) { for (const id of ids) if (!seen().has(id)) line(id, false, `did not finish: ${String(e && e.message || e).split('\n')[0].slice(0, 240)}`); }
-    for (const id of ids) if (!seen().has(id) && (!only || only.has(id))) line(id, false, 'no reading: the wall never reached this check');
+    for (const id of ids) if (!seen().has(id) && (!only || picked(id))) line(id, false, 'no reading: the wall never reached this check');
   };
   // the GPU, printed once a run: a frame-rate reading from software would be a lie
   const gpu = async (page) => {

@@ -29,7 +29,7 @@ export function createCollect(G, Q) {
   function log(e) {
     if (!e || logged[e.id]) return;
     logged[e.id] = 1; G.audio.bubble();
-    G.ui.card(`Minnow's book: ${e.name}`, e.note, 6, 'book'); Q.milestone(); Q.m().fire('species', e.id);
+    G.ui.card(`Minnow's book: ${e.name}`, e.note, 4.5, 'book'); Q.milestone(); Q.m().fire('species', e.id);
   }
   // swim near it to log it: live animals by their species, drifters and enemies the same way
   const touch = (k, d) => { const e = kindTo.get(k); if (e && !logged[e.id] && d < (e.near || 16)) log(e); };
