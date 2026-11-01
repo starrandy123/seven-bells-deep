@@ -149,6 +149,8 @@ export function createWake(G, h, mesh) {
     if (surfing) {            // the ride throws a white wake off both sides of him, and rings run out behind on the water
       sprayT -= dt; ringT -= dt; const sn = Math.sin(h.heading), cs = Math.cos(h.heading), y0 = h.pos.y - 0.74, v = h.surf.v;
       if (sprayT <= 0) { sprayT = 0.03; const onL = h.surf.land, w0 = onL ? 0.22 : 0.4, w1 = onL ? 0.2 : 0.45; for (const s of [-1, 1]) puff(h.pos.x - sn + cs * s * (w0 + Math.random() * w1), y0 - 0.1 + Math.random() * 0.1, h.pos.z - cs - sn * s * (w0 + Math.random() * w1), onL ? 0.1 + v * 0.006 : 0.3 + v * 0.014, onL ? 0.3 : 0.42 + v * 0.006); }      // low and small: the camera looks down this wake at him, and anything taller stands between it and his body
+      // a hard carve throws its water off the outside rail, the way he's not leaning
+      const rail = Math.abs(h.surfLean || 0); if (rail > 0.2 && sprayT === 0.03) { const out = (h.surfLean > 0 ? 1 : -1), onL = h.surf.land; for (let i = 0; i < 2; i++) { const o = (onL ? 0.3 : 0.55) + Math.random() * 0.5, b = Math.random() * 0.8 - 0.2; puff(h.pos.x + cs * out * o - sn * b, y0 + Math.random() * 0.3, h.pos.z - sn * out * o - cs * b, (onL ? 0.12 : 0.3) + rail * (onL ? 0.22 : 0.6), onL ? 0.32 : 0.5); } }
       if (ringT <= 0) { ringT = 0.38; spot.set(h.pos.x - sn * 1.2, y0 + 0.02, h.pos.z - cs * 1.2); G.fx.ring(spot, h.surf.land ? 0.7 : 1.6 + v * 0.05, 0.45, 0xe8fbff); }
     }
     const sp = Math.hypot(h.vel.x, h.vel.z), onFoot = h.land && !h.air, fast = onFoot ? sp : 0;

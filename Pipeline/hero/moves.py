@@ -999,11 +999,12 @@ def surf_pose(sk, c, ph):
     stance: the feet stay as the coaches set them (ombe.co, rapturecamps.com: about 80 cm apart, the back foot across the line of travel, the front one 45 degrees toward it, both knees bent), and
     the whole body leans forward over the front foot from the ankles, hips carried ahead of the feet, never hinged at the waist with the seat out; chest low and turned toward the way he's going,
     head up and looking down the line, both arms swept back behind him with soft elbows, the hands trailing. He's never still: the legs pump, the arms answer a beat late. A carve (c: -1 left, the
-    heel side, +1 right, the toe side) sinks him and tips him in, the eyes leading."""
-    h = sk.foot['h']; a = 2 * math.pi * ph; s = math.sin(a); s2 = math.sin(2 * a); lag = math.sin(a - 0.9); lean = 20.0 * c; pump = 0.03 * s + 0.008 * s2; sink = 0.09 * abs(c)
-    return {'hips': (-24 - 2 * s, 40 - 6 * c + 2 * lag, lean * 0.7 + 1.2 * lag), 'off': (0.03 + 0.02 * lag + 0.04 * c, 0.15, -0.27 - sink + pump), 'spine': (-22 + 2 * s - 4 * abs(c), -20 + 6 * c + 2 * lag, lean * 0.5 + 3 - 2 * lag), 'head': (34 - 2 * s, -18 - 10 * c - 1.5 * lag, -lean * 0.5 - 3 + 1.2 * lag),
-            'R': {'g': (0.36 + 0.04 * c + 0.02 * lag, -0.46 - 0.03 * s, 0.80 - 0.5 * sink + 0.04 * lag), 'e': (0.75, -0.1, 0.35), 'palm': (-14, 0, 0), 'ku': 0.3},
-            'L': {'g': (-0.28 + 0.04 * c - 0.02 * lag, -0.40 + 0.03 * s, 0.84 - 0.5 * sink - 0.04 * lag), 'e': (-0.75, -0.1, 0.35), 'palm': (10, 0, 0), 'ku': 0.3},
+    heel side, +1 right, the toe side) sinks him and curls him in, the eyes leading, the inside arm dropping and the outside arm lifting. The lean itself is hero.js's: the whole body tips from the feet by
+    what the turn asks at that speed (Randy, 1 Nov: "The glide looks stiff and it doesn't lean dynamically when riding")."""
+    h = sk.foot['h']; a = 2 * math.pi * ph; s = math.sin(a); s2 = math.sin(2 * a); lag = math.sin(a - 0.9); lean = 16.0 * c; pump = 0.05 * s + 0.012 * s2; sink = 0.15 * abs(c)
+    return {'hips': (-24 + 9 * abs(c) - 3.5 * s, 40 - 8 * c + 3 * lag, lean * 0.45 + 2.2 * lag), 'off': (0.03 + 0.03 * lag + 0.05 * c, 0.15 - 0.05 * abs(c), -0.27 - sink + pump), 'spine': (-22 + 4 * s + 5 * abs(c), -20 + 8 * c + 3.5 * lag, lean * 0.3 + 3 - 3.5 * lag), 'head': (34 - 3.5 * s, -18 - 24 * c - 2.5 * lag, -lean * 0.9 - 3 + 2 * lag),
+            'R': {'g': (0.36 - 0.06 * c + 0.03 * lag, -0.46 - 0.05 * s + 0.05 * c, 0.80 - 0.5 * sink - 0.13 * c + 0.07 * lag), 'e': (0.75, -0.1, 0.35), 'palm': (-14, 0, 0), 'ku': 0.3},
+            'L': {'g': (-0.28 - 0.06 * c - 0.03 * lag, -0.40 + 0.05 * s - 0.05 * c, 0.84 - 0.5 * sink + 0.13 * c - 0.07 * lag), 'e': (-0.75, -0.1, 0.35), 'palm': (10, 0, 0), 'ku': 0.3},
             'legR': {'a': (0.05, -0.39, h + 0.02), 'p': 5 * c, 'y': -80, 't': 0, 'k': (0.75, 0.62, 0.1)}, 'legL': {'a': (-0.01, 0.42, h + 0.02), 'p': -5 * c, 'y': -42, 't': 0, 'k': (0.62, 0.75, 0.1)}, 'grip': (0.0, 0.3)}
 
 def surf_stand(sk, ph): return surf_pose(sk, 0.0, ph)
