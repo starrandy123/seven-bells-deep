@@ -66,14 +66,17 @@ export function dressCliffs({ data, heightAt, waterAt, solids, skip }) {
   const room = (x, y, r, k) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = taken.get(tk(x + a * CELL, y + b * CELL)); if (l) for (let i = 0; i < l.length; i += 3) if (Math.hypot(x - l[i], y - l[i + 1]) < (r + l[i + 2]) * k) return false; } return true; };
   const hold = (x, y, r) => { const q = tk(x, y); let l = taken.get(q); if (!l) taken.set(q, l = []); l.push(x, y, r); };
   const SLABS = ['slab_a', 'slab_b', 'slab_c'];
+  const steepAt = (x, y) => Math.hypot(heightAt(x + 1.5, y) - heightAt(x - 1.5, y), heightAt(x, y + 1.5) - heightAt(x, y - 1.5)) / 3;
   // how much face stands above a point: up the slope until it eases
   const faceAbove = (x, y, z, ux, uy) => { let t = 0, zz = z; for (let d = 2; d <= 26; d += 2) { const q = heightAt(x + ux * d, y + uy * d); if ((q - zz) / 2 < .6) break; zz = q; t = q - z; } return t; };
   // the face: slabs overlapped into one wall, big ones first, then what fits in the gaps. Each stands in the slope and stops about at the crest
   for (const [lo, hi, k, least] of [[1.0, 1.5, .62, FACE], [.6, .95, .58, FACE2]]) {
     for (let j = 0; j < n; j++) {
       const o = order(j); if (P[o + 3] < least) continue;
-      const x = P[o], y = P[o + 1], z = P[o + 2], t = faceAbove(x, y, z, P[o + 4], P[o + 5]), sc = Math.min(lo + rnd() * (hi - lo), (t + 2.4) / 8.6), r = 3.1 * sc;
-      if (sc < .34 || t < 3.5 || !room(x, y, r, k) || !clearOf(x, y, r) || wet(x, y, r * .8)) continue;
+      const x = P[o], y = P[o + 1], z = P[o + 2], ux = P[o + 4], uy = P[o + 5], t = faceAbove(x, y, z, ux, uy), sc = Math.min(lo + rnd() * (hi - lo), (t + 2.4) / 8.6), r = 3.1 * sc;
+      if (sc < .34 || t < 4.5 || !room(x, y, r, k) || !clearOf(x, y, r) || wet(x, y, r * .8)) continue;
+      // a cliff runs along: the ground either side of a slab has to be steep too, or it's a lone rock in a meadow
+      if (steepAt(x - uy * 5, y + ux * 5) < .85 || steepAt(x + uy * 5, y - ux * 5) < .85) continue;
       hold(x, y, r); add[SLABS[Math.floor(rnd() * 3)]].push(x, y, z - .9 * sc, LEAN + (rnd() - .5) * .5, sc, rnd());
       colliders.push({ t: 'cyl', x, y, r: r * .55, z0: z - 3, z1: z + 6 * sc });
     }

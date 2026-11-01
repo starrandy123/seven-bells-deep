@@ -761,7 +761,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   if (riverPlan) { const add = dressRivers(riverPlan, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }     // stones and plants along the water (rivers.js)
   // the rock over the land's bare faces, and what falls off them (cliffs.js): none on the Frost Isle's ice and none in the Cone's ash, for now
   const cliffPlan = dressCliffs({ data, heightAt, waterAt: riverPlan ? riverPlan.waterAt : () => null, solids: (data.colliders || []).concat(cityPlan.colliders),
-    skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 2.4 + Math.max(0, along) * .45 && along > -5 && along < 24; } });
+    skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;
@@ -1123,29 +1123,33 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             float tau = vF.x, across = vF.y, turb = vF.w, churn = vG.y;
             // (the noise tile holds ~48 cells: a ripple of a metre is ~.02 of the tile; finer than ~.1 a metre only aliases into stripes, so the finest layer
             // gives way with distance)
-            float a = texture(tOcNoise, vec2(across*.025 + .37, (tau - t)*.028)).b;
-            float b = texture(tOcNoise, vec2(across*.055 + .11 + t*.002, (tau - t*.82)*.06)).a;
-            float c3 = mix(texture(tOcNoise, vec2(across*.12 + .73 - t*.003, (tau - t*1.2)*.13)).b, .5, smoothstep(10.0, 34.0, dist));
-            float rough = .34 + .8*turb + 1.1*churn;
-            vec3 n = normalize(vec3(((a - .5)*.5 + (b - .5)*.42 + (c3 - .5)*.36)*rough, 1.0, ((b - .5)*.5 + (c3 - .5)*.4 - (a - .5)*.2)*rough));
+            // the ripples run along the current: each layer is drawn out five or six times longer than it is wide, so it reads as moving water and not as a blotched pane
+            float near = 1.0 - smoothstep(9.0, 30.0, dist);
+            float a = texture(tOcNoise, vec2(across*.07 + .37, (tau - t)*.017)).b;
+            float b = texture(tOcNoise, vec2(across*.19 + .11 + t*.002, (tau - t*.82)*.052)).a;
+            float c3 = mix(.5, texture(tOcNoise, vec2(across*.52 + .73 - t*.003, (tau - t*1.2)*.15)).b, near);
+            float c4 = mix(.5, texture(tOcNoise, vec2(across*1.35 + .29, (tau - t*1.5)*.38)).a, near);
+            float rough = .62 + .8*turb + 1.1*churn;
+            vec3 n = normalize(vec3(((a - .5)*.30 + (b - .5)*.42 + (c3 - .5)*.5 + (c4 - .5)*.34)*rough, 1.0, ((b - .5)*.24 + (c3 - .5)*.18 + (c4 - .5)*.12)*rough));
             float F = .02 + .98*pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
             vec3 Rr = reflect(rd, n);
-            // what it mirrors: the sky overhead, the green of its own banks toward its edges and low down (no water reads as water mirroring only the sky)
+            // what it mirrors: at a stream's low angle that is its own banks and the trees over them, dark and green, with the sky only where the ripples tip up; no water reads as water mirroring pale haze
             float edgeK = smoothstep(.35, 1.05, abs(across)/vF.z);
-            vec3 refl = mix(mix(ocSkyH, ocSkyZ, smoothstep(0.0, .6, Rr.y)), vec3(.05, .085, .045), clamp(.22 + .5*edgeK + .3*(1.0 - smoothstep(.0, .25, Rr.y)), 0.0, .85));
-            float deep = smoothstep(.06, 1.3, dep);
-            vec3 body = mix(vec3(.09, .12, .07), mix(ocSeaS, ocSeaD, .6)*.42, deep);              // clear over the shallows (the bed shows, drawn wet), tea-green as it deepens
-            vec3 c = mix(body, refl, F*.78);
+            vec3 skyR = mix(ocSkyH*.72, ocSkyZ*.94, smoothstep(.0, .42, Rr.y));
+            vec3 refl = mix(skyR, vec3(.022, .058, .030), clamp(.42 + .45*edgeK + .55*(1.0 - smoothstep(.02, .22, Rr.y)), 0.0, .92));
+            float deep = smoothstep(.06, 1.1, dep);
+            vec3 body = mix(vec3(.075, .098, .058), vec3(.012, .046, .040), deep);                 // clear over the shallows (the bed shows, drawn wet), bottle green as it deepens
+            vec3 c = mix(body, refl, min(F*.9, .82));
             vec3 Hh = normalize(ocSunA - rd);
-            c += ocSunCol*(.55 + .8*turb)*pow(max(dot(n, Hh), 0.0), 200.0);                      // glints
-            // bubbles and scum drawn out along the current (it reads as moving water even where it's calm); white in the rapids and the churn under a fall
-            float strk = smoothstep(.64, .82, texture(tOcNoise, vec2(across*.07 + .51, (tau - t)*.010)).b)*(1.0 - smoothstep(.55, 1.0, abs(across)/vF.z));
-            float fn = texture(tOcNoise, vec2(across*.06 + .2, (tau - t)*.065)).b*.6 + c3*.4;
+            c += ocSunCol*(.7 + .8*turb)*pow(max(dot(n, Hh), 0.0), 160.0);                         // glints
+            // flecks and thin lines of bubbles drawn out along the current; white in the rapids and the churn under a fall
+            float strk = smoothstep(.60, .86, texture(tOcNoise, vec2(across*.7 + .51 + a*.4, (tau - t*1.05)*.11)).b*.7 + c4*.3)*(1.0 - smoothstep(.55, 1.0, abs(across)/vF.z));
+            float fn = texture(tOcNoise, vec2(across*.12 + .2, (tau - t)*.05)).b*.6 + c3*.4;
             float white = smoothstep(.70 - .38*turb - .5*churn, .94 - .22*churn, fn + b*.15)*max(turb, churn);
             float lace = (1.0 - smoothstep(.02, .20, dep))*smoothstep(.45, .74, c3*.6 + a*.4);
             vec3 foamC = ocHaze*1.2 + vec3(.06);
-            c = mix(c, foamC, clamp(max(max(white, lace*.75), strk*.32), 0.0, 1.0));
-            float alpha = smoothstep(0.0, .10, dep)*mix(.24, .86, max(max(deep, F*.85), max(white, lace)))*vG.z;
+            c = mix(c, foamC, clamp(max(max(white, lace*.75), strk*.20), 0.0, 1.0));
+            float alpha = smoothstep(0.0, .10, dep)*mix(.30, .94, max(max(deep, F*.85), max(white, lace)))*vG.z;
             if (alpha < .004) discard;`}
             gl_FragColor = vec4(ocApply(c, vP), alpha);
             #include <tonemapping_fragment>
