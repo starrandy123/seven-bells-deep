@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { planCities } from './city.js';
+import { addIsle, raiseIsle, paintIsle, skyRock } from './fireisle.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
 import { fallStrips, FALL_V, FALL_F } from './falls.js';
@@ -153,6 +154,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // rivers levelled into the land (rivers.js): their channels and the falls' pools are carved here, before anything reads the field, so the ground drawn,
   // the ground walked on and every prop's footing all agree; written back into the 16 bits that heightAt and a lost context's rebuild read
   const riverPlan = planRivers(data, Hz, n, cell, ox, oy);
+  addIsle(data); raiseIsle(data, Hz, n, cell, ox, oy);      // the Burnt Isle: the Emberkin's own land, raised here as the rivers are carved, so everything reads the same ground
   if (tweakHeight) tweakHeight(Hz, n, cell, ox, oy);
   if (riverPlan || tweakHeight) for (let i = 0; i < n * n; i++) raw[i] = Math.max(0, Math.min(65535, Math.round((top - Hz[i]) / HK)));
 
@@ -200,7 +202,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   tBiome.minFilter = THREE.LinearMipmapLinearFilter; tBiome.magFilter = THREE.LinearFilter; tBiome.generateMipmaps = true; tBiome.needsUpdate = true;
 
   // The second weight file: cinder, ice, wrack, none. Absent on the small map.
-  const biome2Full = biome2Buf ? new Uint8Array(biome2Buf) : null, biome2Bytes = biome2Full ? coarse(biome2Full) : null;
+  const biome2Full = biome2Buf ? paintIsle(new Uint8Array(biome2Buf), bn, 2 * cell, ox, oy) : null, biome2Bytes = biome2Full ? coarse(biome2Full) : null;
   const tBiome2 = biome2Bytes ? freeAfter(new THREE.DataTexture(smaller(biome2Full), wN, wN, THREE.RGBAFormat, THREE.UnsignedByteType)) : new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType);
   tBiome2.minFilter = biome2Bytes ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter; tBiome2.magFilter = THREE.LinearFilter; tBiome2.generateMipmaps = !!biome2Bytes; tBiome2.needsUpdate = true;
 
@@ -1572,6 +1574,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       }`,
   });
   cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
+  skyRock(scene, look, U);
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
   for (const name in kinds) { const I = data.instances[name]; if (I) NS += (I.length / 6 | 0) * kinds[name].length; }
@@ -1854,7 +1857,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
 
   return {
     data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
-    glbs: { props: propsGLB, creatures: creaturesGLB },
+    glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;
       const out = []; let sum = 0;

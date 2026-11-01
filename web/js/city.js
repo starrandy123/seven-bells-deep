@@ -24,6 +24,9 @@ const CITIES = [
   { id: 'vesper', kind: 'sea', block: 33, street: 8, avenue: 14, angle: -0.5, keep: [], tint: [0.8, 0.86, 0.94] },
   // the harbour town climbs the hill behind the quays (the poi sits on the shoreline: the town's heart is moved up onto the land)
   { id: 'sunward_harbour', kind: 'land', block: 24, street: 7, avenue: 10, angle: 0.18, keep: [], tint: [1, 1, 1], shift: [-34, 4], radius: 1.2 },
+  // the Emberkin's: the same streets and houses in black stone with their windows always burning. Randy, 1 Nov: "We need actual cities on ground and sky too"
+  { id: 'ash_city', kind: 'land', block: 24, street: 7, avenue: 11, angle: 0.5, keep: [], tint: [0.2, 0.17, 0.17], radius: 1, fire: true, view: 470 },
+  { id: 'sky_city', kind: 'land', block: 22, street: 6, avenue: 9, angle: -0.3, keep: [], tint: [0.2, 0.17, 0.17], radius: 1, fire: true, sky: true, view: 470 },
 ];
 // existing kit pieces a new building must not stand on: their kind and how far to keep from them (m)
 const SOLID_KINDS = { tower: 9, tower_cold: 9, dome_hall: 14, wall_bay: 6, wall_windows: 6, wall_windows_cold: 6, wall_broken: 5, temple_front: 12, arena_bay: 8, arena_seats: 10, column: 3, column_broken: 3, arch: 14, statue_colossus: 30, bell_shrine: 8, stair: 8, stair_steep: 6, bridge_span: 10, roof_slab: 6, cottage_a: 7, cottage_b: 7, quay: 8, pier: 6, pier_house: 8, lighthouse: 12, stone_wall: 3, lamp: 2, forge_hall: 16, boat_fishing: 6 };
@@ -33,6 +36,7 @@ const CLEARS = { sea: ['wall_bay', 'wall_broken', 'wall_windows', 'wall_windows_
 // a land house's plaster, each house its own (the Mediterranean range: cream, ochre, white, rose, pale blue, straw)
 // a sea city's stone, each building its own: cream marble, honey sandstone, coral rose, jade, slate blue, ivory
 const SEA_STONE = [[1.1, 1.1, 1.06], [1.34, 0.96, 0.36], [1.3, 0.6, 0.54], [0.56, 1.08, 0.8], [0.6, 0.76, 1.06], [1.3, 1.24, 0.96], [1.0, 0.72, 1.0], [0.92, 0.6, 0.42]];      // and a violet, and a dark terracotta
+const SCORCHED = [[0.20, 0.17, 0.17], [0.27, 0.19, 0.16], [0.15, 0.13, 0.15], [0.34, 0.20, 0.14], [0.24, 0.22, 0.22], [0.42, 0.21, 0.13]];      // the Emberkin's stone: basalt, scorched, a little of it red
 const PLASTER = [[1.0, 0.97, 0.9], [1.04, 0.78, 0.42], [1.06, 1.06, 1.04], [1.0, 0.62, 0.5], [0.66, 0.8, 1.0], [0.98, 0.9, 0.72], [0.72, 0.88, 0.66], [1.02, 0.7, 0.74]];
 
 // ------------------------------------------------------------------------------------------------ a tiny seeded random
@@ -288,7 +292,7 @@ function landSet(phone) {
 
 // ------------------------------------------------------------------------------------------------ the plan
 export function planCities(data, heightAt, opts = {}) {
-  const phone = !!opts.phone, poi = new Map((data.poi || []).map((p) => [p.id, p])), colliders = [], cities = [], why = {};
+  const phone = !!opts.phone, poi = new Map((data.poi || []).map((p) => [p.id, p])), colliders = [], cities = [], why = {}, earth = heightAt;
   const no = (city, r) => { const k = city + ':' + r; why[k] = (why[k] || 0) + 1; };      // why a lot stayed empty (for the checks)
   const sets = { sea: seaSet(phone), land: landSet(phone) };
   // first each city clears its footprint of the clutter it replaces (so this runs before the world draws or collides with any instance)
@@ -319,6 +323,9 @@ export function planCities(data, heightAt, opts = {}) {
 
   for (const def of CITIES) {
     const p = poi.get(def.id); if (!p) continue;
+    // a city in the sky stands on its own rock: the rock's top is its ground, and it's a solid the hero can land on (fireisle.js draws it)
+    heightAt = def.sky ? (x, y) => (Math.hypot(x - p.x, y - p.y) < p.r * 1.04 ? p.z : -60) : earth;
+    if (def.sky) colliders.push({ t: 'cyl', x: p.x, y: p.y, z0: p.z - 14, z1: p.z, r: p.r * 1.06, city: def.id, type: 'rock' });
     const rand = rng((Math.round(p.x * 131 + p.y * 977) ^ 0x9e37) >>> 0), R = p.r * (def.radius || 0.96), ca = Math.cos(def.angle), sa = Math.sin(def.angle), A = sets[def.kind];
     const cx0 = p.x + (def.shift ? def.shift[0] : 0), cy0 = p.y + (def.shift ? def.shift[1] : 0);
     const keepPoi = def.keep.map((id) => poi.get(id)).filter(Boolean), sea = def.kind === 'sea', B = def.block, inner = B - def.street, half = Math.ceil(R / B);
@@ -396,11 +403,11 @@ export function planCities(data, heightAt, opts = {}) {
           const t = deal(), s = Math.min(1.1, foot / A[t].W);
           if (s < 0.7) continue;
           if (a === 0 && rand() < 0.3) yaw = def.angle - Math.PI / 2; else if (a === 1 && rand() < 0.3) yaw = def.angle + Math.PI / 2;      // a corner house to its cross street
-          put(t, x, y, z, yaw, s, s * (0.92 + rand() * 0.16), s, PLASTER[Math.floor(rand() * PLASTER.length)]);
+          put(t, x, y, z, yaw, s, s * (0.92 + rand() * 0.16), s, def.fire ? SCORCHED[Math.floor(rand() * SCORCHED.length)] : PLASTER[Math.floor(rand() * PLASTER.length)]);
         }
       }
     }
-    cities.push({ def, p, inst, plaza });
+    cities.push({ def, p, inst, plaza, lift: def.fire && plaza ? { x: plaza[0] + 9 * sa, y: plaza[1] - 9 * ca, z: plaza[2] + 0.2 } : null });
   }
   // every building's solids, turned and scaled as it stands. The archetype's local x and z (scene) become the world's x, y: local z is -y before the turn
   for (const c of cities) for (const type in c.inst) {
@@ -414,7 +421,7 @@ export function planCities(data, heightAt, opts = {}) {
       }
     }
   }
-  const count = {}; let total = 0, tris = 0;
+  heightAt = earth; const count = {}; let total = 0, tris = 0;
   for (const c of cities) { count[c.def.id] = {}; for (const t in c.inst) { count[c.def.id][t] = c.inst[t].length; if (t !== 'plinth' && t !== 'lamp') total += c.inst[t].length; tris += c.inst[t].length * (sets[c.def.kind][t].geo.index.count / 3); } }
 
   // the ink line (a comic's outline): each building drawn again inside out, pushed out along smooth normals (welded, so the hull closes at every corner)
@@ -445,7 +452,7 @@ export function planCities(data, heightAt, opts = {}) {
   function update(scene, cam, ph) {
     for (const c of cities) {
       const g = c.group || (c.group = scene.getObjectByName('city_' + c.def.id)); if (!g) continue;
-      const d = Math.hypot(cam.x - c.p.x, -cam.z - c.p.y); g.visible = d < c.p.r + (c.def.kind === 'land' ? (ph ? 700 : 1100) : (ph ? 300 : 560));
+      const d = Math.hypot(cam.x - c.p.x, -cam.z - c.p.y); g.visible = d < c.p.r + (c.def.view || (c.def.kind === 'land' ? (ph ? 700 : 1100) : (ph ? 300 : 560))) && !(c.def.fire && cam.y < -1);      // the Burnt Isle's cities stand in the air: nothing of them reaches a lens under the sea
       // the ink is gone by 120 m (world.js): past that its hulls are draw calls with nothing to show, two cities' worth of them in sight at once at Thalor
       const inked = d < c.p.r + 130; if (inked !== c.inked) { c.inked = inked; for (const o of g.children) if (o.name.endsWith('_ink')) o.visible = inked; }
     }

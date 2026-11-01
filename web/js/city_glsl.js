@@ -15,7 +15,7 @@ export const CITY_VERTEX_BEND = `vFac = aFac;
 
 export const CITY_PARS = /* glsl */`
 varying vec4 vFac; varying float vFacSeed;
-float ocWinM = 0.0, ocInkM = 0.0; vec3 ocWinC = vec3(0.0);
+float ocWinM = 0.0, ocInkM = 0.0, ocEmber = 0.0; vec3 ocWinC = vec3(0.0);
 float ocH1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
 // an ink line about a pixel and a half wide wherever d (in any unit) crosses zero: d over its own screen rate is its distance in pixels
 float ocLn(float d) { return 1.0 - smoothstep(.55, 1.55, abs(d)/max(fwidth(d), 1e-5)); }
@@ -39,6 +39,7 @@ export const CITY_ALBEDO = /* glsl */`{
   float ocLodW = 1.0 - smoothstep(.16, .42, ocMpp);                         // window-scale detail (windows, arches, pilasters, ledges, ribs, friezes) holds far longer
   float ocDeep = step(vOcP.y, -100.0);
   vec3 ocLitC = mix(vec3(1.0, .66, .32), vec3(.22, .95, .92), ocDeep);     // window light: warm, and the deep city's cold
+  ocEmber = 1.0 - step(230.0, length(vOcP.xz - vec2(300.0, 800.0))); ocLitC = mix(ocLitC, vec3(1.0, .40, .08), ocEmber);      // the Burnt Isle (fireisle.js): its windows burn day and night
   vec3 MARBLE = vec3(.66, .63, .55), PALE = vec3(.78, .75, .66), GOLD = vec3(.64, .44, .12), VERD = vec3(.16, .40, .33), ALG = vec3(.05, .16, .10);
   vec3 ocC = MARBLE*ocT; float ink = 0.0, inkW = 0.0; bool ocStoneish = true;
 
@@ -86,7 +87,7 @@ export const CITY_ALBEDO = /* glsl */`{
       if (abs(ux) < hw + .17 && vy > y0 - .14 && vy < y0) { c = PALE*ocT; ink = max(ink, ocLn(vy - (y0 - .14))); }     // the sill
       float sx = abs(ux) - hw - .06;
       if (sx > 0.0 && sx < hw*.62 && vy > y0 && vy < y1) {                                                  // a slatted shutter, the house's own colour
-        vec3 sc = mix(vec3(.08, .28, .22), vec3(.10, .20, .42), step(.5, ocH1(vec2(vFacSeed*31.0, 3.0))));
+        vec3 sc = mix(mix(vec3(.08, .28, .22), vec3(.10, .20, .42), step(.5, ocH1(vec2(vFacSeed*31.0, 3.0)))), vec3(.16, .022, .016), ocEmber);
         c = sc*(.82 + .2*step(.5, fract(vy/.13))); ink = max(ink, max(ocLn(sx), ocLn(sx - hw*.62)));
       }
     }
@@ -219,4 +220,4 @@ export const CITY_POST = /* glsl */`{
 }`;
 
 // windows lit when the lamps are lit and at night, and in the deep where no day reaches (Vesper at 150 m is seen by its own windows). Randy, 1 Nov: natural light under the water
-export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*mix(.05, 1.3, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)))*2.6*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition));`;      // a window is a lamp only where the day's light has gone: by day in the shallows it's dark glass, and at any depth its red goes first with distance
+export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(max(ocLamps, ocNight), ocEmber*.62), step(vOcP.y, -18.0)*mix(.05, 1.3, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)))*2.6*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition));`;      // a window is a lamp only where the day's light has gone: by day in the shallows it's dark glass, and at any depth its red goes first with distance

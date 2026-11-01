@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { FLAG } from './config.js';
+import { BURN } from './burn_glsl.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -15,39 +16,6 @@ const damp = (c, t, k, dt) => c + (t - c) * (1 - Math.exp(-k * dt));
 const rand = (a, b) => a + Math.random() * (b - a);
 const Y = new THREE.Vector3(0, 1, 0);
 const GR = 9.81, DRAG = 0.03;       // at 30 m/s the jets lie 70° over, at 12 m/s 24°: the drag is what lays him flat
-
-// what burns on a body: cells of slag, the seams between them molten, hottest where the mask says, each seam's light moving. In object space, so no texture memory and no seam at a UV edge
-const BURN = {
-  vertexDecl: 'attribute vec4 _mask; uniform vec4 uEmS; varying vec4 vEM; varying vec3 vEO;\n',
-  vertexBend: 'vEO = position*uEmS.w + uEmS.xyz; vEM = _mask;',
-  fragmentPars: /* glsl */`
-    uniform float uHeat, uEmT, uSide; varying vec4 vEM; varying vec3 vEO; vec3 emGlow;
-    vec3 emH(vec3 p) { p = fract(p*vec3(.1031, .1030, .0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx)*p.zyx); }
-    vec3 emCell(vec3 x) {
-      vec3 n = floor(x), f = x - n, b = step(.5, f) - 1.0; float F1 = 9.0, F2 = 9.0, id = 0.0;
-      for (int k = 0; k < 2; k++) for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) {
-        vec3 g = b + vec3(float(i), float(j), float(k)), h = emH(n + g), r = g + h - f; float d = dot(r, r);
-        if (d < F1) { F2 = F1; F1 = d; id = h.x; } else if (d < F2) F2 = d;
-      }
-      return vec3(sqrt(F1), sqrt(F2), id);
-    }`,
-  albedo: /* glsl */`
-    if (uSide > .5) {      // water: the same cells, running up the body, deep at the middle and bright where the surface turns from the eye
-      vec3 p = vEO*vec3(7.0, 5.0, 7.0); p.y -= uEmT*1.5; p += .4*sin(p.yzx*1.6 + uEmT*.7); vec3 c = emCell(p);
-      float seam = c.y - c.x, line = 1.0 - smoothstep(.02, .22, seam), rim = 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), ice = 1.0 - smoothstep(.2, .4, vEM.r);
-      diffuseColor.rgb = mix(vec3(.012, .13, .24), vec3(.05, .42, .62), rim*rim) + vec3(.22, .36, .42)*ice;
-      emGlow = vec3(.20, .70, 1.0)*(line*(.22 + .5*rim) + pow(rim, 2.4)*.55 + .08) + vec3(.8, .95, 1.0)*(pow(rim, 6.0)*.5 + vEM.g*2.4) + vec3(.1, .5, .9)*smoothstep(7.0, 34.0, length(vViewPosition))*.8;
-    } else
-    { vec3 p = vEO*vec3(10.0, 8.0, 10.0); p += .32*sin(p.yzx*1.4); vec3 c = emCell(p);
-      float seam = c.y - c.x, line = 1.0 - smoothstep(.02, .15, seam), halo = 1.0 - smoothstep(.04, .62, seam);
-      float run = .62 + .38*sin(vEO.y*5.0 - uEmT*2.4 + c.z*6.283), hot = clamp(vEM.r, 0.0, 1.0)*uHeat;
-      float T = line*(.34 + .66*hot)*run*smoothstep(0.0, .22, uHeat);
-      diffuseColor.rgb *= mix(vec3(.030, .024, .024), vec3(.095, .074, .066), c.z*c.z)*(1.0 - .55*line);
-      vec3 ramp = mix(vec3(.86, .10, .012), vec3(1.0, .40, .05), clamp(T*1.7, 0.0, 1.0)); ramp = mix(ramp, vec3(1.0, .86, .46), clamp(T*3.0 - 1.5, 0.0, 1.0));
-      float faraway = smoothstep(7.0, 34.0, length(vViewPosition));      // the seams go under a pixel with distance, and their light doesn't: the whole figure takes it on, so he reads as fire from far off
-      emGlow = ramp*(T*T*7.0 + halo*hot*.42) + vec3(1.0, .62, .22)*vEM.g*3.4*(.3 + .7*uHeat) + vec3(1.0, .34, .05)*pow(hot, 3.0)*1.1 + vec3(1.0, .30, .05)*faraway*uHeat*.9; }`,
-  glow: 'ocGlow = emGlow;',
-};
 
 export async function createEmber(G, { foeMaterial, D }) {
   const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 2 : 3, WATERS = Q.water.in_raids ? (phone ? 2 : 3) : 0, time = { value: 0 };
@@ -397,7 +365,15 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (R.water > 0 && (R.water -= dt) <= 0 && R.list.length && Q.water.in_raids) { if (callWater()) { if (!FLAG.film) G.ui.toast('A water elemental rises', 'It fights beside you', 4); } }      // it comes as the fire arrives
     for (let i = waters.length - 1; i >= 0; i--) { const e = waters[i]; if (e.prev) e.prev.copy(e.pos); else { e.prev = e.pos.clone(); e.draw = e.pos.clone(); } brain(e, dt); if (waters[i] !== e) continue; e.pos.addScaledVector(e.vel, dt); keepOut(e, dt); for (const o of waters) if (o !== e) { const d = e.pos.distanceTo(o.pos); if (d < 3 && d > 0.01) e.vel.addScaledVector(v1.subVectors(e.pos, o.pos).normalize(), (3 - d) * 6 * dt); } }
   }
-  function frame(dt) { time.value = G.time; for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); if (A().jet) A().jet(loud); loud = 0; }
+  // the rings of fire on the Burnt Isle's squares, drawn while he's near one
+  function rings() {
+    const cam = G.camera.position, L = G.world.lifts || []; for (const a of L) {
+      const x = a.x, y = a.z + 0.25, z = -a.y; if (Math.hypot(x - cam.x, y - cam.y, z - cam.z) > 90) continue; const R2 = 3.2, sp = 0.06 * Math.sin(G.time * 3);
+      G.fx.now('ring', x, y, z, R2 + sp, 0, 0, 0, 0, R2 + sp, FIRE, 1, 1, 0.8);
+      for (let i = 0; i < 6; i++) { const t = i * 1.047 + G.time * 0.7, cx = x + Math.cos(t) * 3, cz = z + Math.sin(t) * 3, Lk = 0.9 + 0.3 * Math.sin(G.time * 7 + i * 2), W2 = 0.42; v3.set(0, 1, 0); viewX.set(cx - cam.x, 0, cz - cam.z).normalize().cross(v3).normalize(); G.fx.now(i % 2 ? 'flame' : 'flame2', cx, y + Lk, cz, viewX.x * W2, 0, viewX.z * W2, 0, Lk, 0, FIRE, 1, 1, 0.6); }
+    }
+  }
+  function frame(dt) { time.value = G.time; rings(); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); if (A().jet) A().jet(loud); loud = 0; }
 
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX,

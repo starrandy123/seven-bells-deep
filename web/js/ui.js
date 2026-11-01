@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'A man in red flies in on fire. Stay near the surface. Water puts him out: Strike from range. Press him and he goes all fire';
+const NEWS = 'The Burnt Isle: a fire city on the ground and one in the sky. Swim south past the islet. A ring of fire lifts you up';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };

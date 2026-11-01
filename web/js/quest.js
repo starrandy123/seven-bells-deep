@@ -468,6 +468,8 @@ export function createQuest(G) {
       if (def.kind !== 'challenge' || !missions.ready(def) || (missions.rec[def.id] && missions.rec[def.id].st === 'active')) continue;
       const pl = startOf(def); if (pl && pl.p.distanceTo(h.pos) < 12) return { label: 'Run', go: () => missions.start(def.id) };
     }
+    // a ring of fire on each city's square of the Burnt Isle: it carries him between the ground and the city in the sky
+    { const L = G.world.lifts || []; for (let i = 0; i < L.length; i++) { const a = L[i]; if (Math.hypot(a.x - h.pos.x, a.y + h.pos.z, (a.z - h.pos.y) * 0.5) < 5) { const b = L[(i + 1) % L.length]; return { label: b.z > a.z ? 'Rise' : 'Descend', go: () => { G.ui.fade(true); st.travelAt = G.time + 0.75; st.travelTo = W(b.x + 3, b.y, b.z + 1.2); } }; } } }
     return null;
   }
   const startOf = (def) => (def.start ? places.resolve(def.start) : null);
