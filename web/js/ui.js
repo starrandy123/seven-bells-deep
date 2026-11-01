@@ -139,16 +139,13 @@ export function createUI(G) {
   };
   const bAtk = hold('bAtk', 'atk'), bBoost = hold('bBoost', 'boostB', true), bParry = hold('bParry', 'parry');
   const bRide = hold('bRide', 'ride'), bJump = hold('bJump', 'jump'), bStance = hold('bStance', 'stance');
-  // the hotbar (Randy, 1 Nov): a slot EQUIPS its power to the Power button; a tap on the slot already equipped uses it. The keys still use each
-  // power straight away (K Q E G V R), so a keyboard player never needs the hotbar.
-  const POWERS = ['dash', 'spin', 'wave', 'p4', 'cast', 'call'];
-  let equipped = null;
-  const usePower = (name, down) => { press(name); if (name === 'call') held.callB = down; };
+  // the hotbar (Randy, 1 Nov: "best practice standard MMO type HUD"): each slot uses its power, as an MMO action bar does; holding Call is
+  // Shoalsong (P13a). The keys still use each power straight away (K Q E G V R).
   const slot = (id, name) => {
     const b = $(id); b.classList.add('show');
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation(); b.classList.add('down'); b.classList.remove('pulse'); G.audio.start();
-      if (equipped === name) usePower(name, true); else equip(name);
+      press(name); if (name === 'call') held.callB = true;
       try { b.setPointerCapture(e.pointerId); } catch (_) {}
     });
     const up = () => { b.classList.remove('down'); if (name === 'call') held.callB = false; };
@@ -156,31 +153,10 @@ export function createUI(G) {
     return b;
   };
   const bDash = slot('bDash', 'dash'), bSpin = slot('bSpin', 'spin'), bWave = slot('bWave', 'wave'), bP4 = slot('bP4', 'p4'), bCast = slot('bCast', 'cast'), bCall = slot('bCall', 'call');
-  const bPow = $('bPow');
-  bPow.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); e.stopPropagation(); if (!equipped) return; bPow.classList.add('down'); bPow.classList.remove('pulse'); G.audio.start();
-    usePower(equipped, true); try { bPow.setPointerCapture(e.pointerId); } catch (_) {}
-  });
-  for (const ev of ['pointerup', 'pointercancel']) bPow.addEventListener(ev, () => { bPow.classList.remove('down'); held.callB = false; });
   for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast, bRide, bJump]) x.classList.remove('show');
   bJump.addEventListener('pointerdown', () => { held.jumpB = true; });          // how long it's held sets the jump's height
   for (const ev of ['pointerup', 'pointercancel']) bJump.addEventListener(ev, () => { held.jumpB = false; });
   const buttonOf = { dash: bDash, spin: bSpin, wave: bWave, p4: bP4, call: bCall, cast: bCast, atk: bAtk, parry: bParry, boost: bBoost, jump: bJump, stance: bStance, ice: bStance };
-  // the Power button wears the equipped slot's name; with nothing open it is not on the screen
-  function paintPow() {
-    for (const n of POWERS) buttonOf[n].classList.toggle('eq', n === equipped);
-    const b = equipped && buttonOf[equipped];
-    bPow.classList.toggle('show', !!b);
-    if (b) { bPow.textContent = b.textContent; bPow.setAttribute('aria-label', b.getAttribute('aria-label') || b.textContent); bPow.classList.toggle('out', b.classList.contains('call')); }
-    declareControls();
-  }
-  let chosen = false;                                                   // the player picked a slot: it stays equipped while it is open
-  function equip(name) { equipped = name; chosen = true; paintPow(); }
-  // the player's pick stays while it is open; otherwise the first open slot, the powers before Cast and Call
-  function reEquip() {
-    if (chosen && equipped && buttonOf[equipped].classList.contains('show')) { paintPow(); return; }
-    chosen = false; equipped = POWERS.find((n) => buttonOf[n].classList.contains('show')) || null; paintPow();
-  }
   // what the phone passes read (PUBLISHING.md §3): only what is on the screen right now, each with its key
   const KEYNAME = { Space: ' ', Shift: 'Shift' };
   function declareControls() {
@@ -188,7 +164,7 @@ export function createUI(G) {
     const act = (id, label, el, kind) => ({ id, label, keys: el.dataset.key ? [KEYNAME[el.dataset.key] || el.dataset.key.toLowerCase()] : [], touch: '#' + el.id, kind: kind || 'button' });
     const a = [];
     if (TOUCH) a.push({ id: 'move', label: 'Move', kind: 'move', keys: ['w', 'a', 's', 'd'], touch: '#stick' }, { id: 'look', label: 'Look', kind: 'look', keys: [], touch: true, target: 'canvas' });
-    for (const [id, label, b] of [['strike', 'Strike', bAtk], ['parry', 'Parry', bParry], ['boost', 'Boost', bBoost], ['jump', 'Jump', bJump], ['power', 'Power', bPow], ['stance', 'Stance', bStance],
+    for (const [id, label, b] of [['strike', 'Strike', bAtk], ['parry', 'Parry', bParry], ['boost', 'Boost', bBoost], ['jump', 'Jump', bJump], ['stance', 'Stance', bStance],
       ['slot-dash', 'Slot 1', bDash], ['slot-spin', 'Slot 2', bSpin], ['slot-wave', 'Slot 3', bWave], ['slot-p4', 'Slot 4', bP4], ['slot-cast', 'Cast', bCast], ['slot-call', 'Call', bCall], ['context', 'Ride / Talk', bRide]]) {
       if (on(b)) a.push(act(id, label, b));
     }
@@ -275,15 +251,15 @@ export function createUI(G) {
     const el = $('timer'); el.querySelector('small').textContent = label || ''; el.querySelector('span').textContent = up ? sec.toFixed(1) : String(Math.ceil(sec));
   }
   function objective(msg) { $('obj').textContent = msg; $('obj').style.display = msg ? '' : 'none'; }
-  function unlock(power) { const b = buttonOf[power]; if (b) b.classList.add('show'); reEquip(); }
-  function lockPowers() { for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast]) x.classList.remove('show'); reEquip(); }
+  function unlock(power) { const b = buttonOf[power]; if (b) b.classList.add('show'); declareControls(); }
+  function lockPowers() { for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast]) x.classList.remove('show'); declareControls(); }
   // combat calls this on every swap and whenever a power opens: four slots of { id, name, open }, and slots.ice once Ice is open
   function setStance(stance, slots) {
     document.body.dataset.stance = stance;
     const short = (n) => (n === 'Ice Path' ? n : n.split(' ').pop().replace('Maelstrom', 'Mael\u00adstrom'));      // the button says the last word: Lance, Breath, Wave
     [bDash, bSpin, bWave, bP4].forEach((b, i) => { b.textContent = short(slots[i].name); b.setAttribute('aria-label', slots[i].name); b.classList.toggle('show', !!slots[i].open); });
     bStance.textContent = stance === 'ice' ? 'Ice' : 'Water'; bStance.classList.toggle('show', !!slots.ice);
-    reEquip();
+    declareControls();
   }
   function hurt(a) { $('hurt').style.opacity = a; }
   // the moment to press: the button itself calls for it, and a word for keys
@@ -292,8 +268,7 @@ export function createUI(G) {
     if (name === 'parry') { bParry.classList.add('call'); cueT = 0.9; if (!TOUCH) tip('PARRY: right click or L', 0.9); }
   }
   function pulse(power, sec) {
-    const bs = [buttonOf[power]]; if (power === equipped) bs.push(bPow);
-    for (const b of bs) if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), sec * 1000); }
+    const b = buttonOf[power]; if (b) { b.classList.add('pulse'); setTimeout(() => b.classList.remove('pulse'), sec * 1000); }
   }
 
   // one contextual button: talk, a shrine, a run, or a whale's fin
@@ -367,7 +342,6 @@ export function createUI(G) {
     $('tide').firstElementChild.style.transform = `scaleX(${Math.max(0, h.tide / h.maxTide)})`;
     const pc = G.quest ? G.quest.pearlCount() : 0; if (pc !== update.pc) { update.pc = pc; $('pearls').textContent = `${pc} pearls`; }
     const c = h.cool; bDash.classList.toggle('cool', c.dash > 0); bSpin.classList.toggle('cool', c.spin > 0); bWave.classList.toggle('cool', c.wave > 0); bP4.classList.toggle('cool', c.p4 > 0); bCall.classList.toggle('cool', c.call > 0);
-    bPow.classList.toggle('cool', !!(equipped && c[equipped] > 0));
     // the compass: where the objective lies, across a strip as wide as a half turn
     const tgt = G.quest && G.quest.target();
     if (tgt && h.pos) {
@@ -387,8 +361,7 @@ export function createUI(G) {
 
   return {
     input, sample, setLoad, ready, fade, toast, tip, place, bark, card, done, event, timer, objective, unlock, lockPowers, hurt, rideHint, context, cue, pulse, hint, update, setPause, showPanel, openScreen,
-    setCast(out) { bCast.textContent = out ? 'Recall' : 'Cast'; bCast.classList.toggle('call', out); if (equipped === 'cast') paintPow(); },
-    equip, equipped: () => equipped,
+    setCast(out) { bCast.textContent = out ? 'Recall' : 'Cast'; bCast.classList.toggle('call', out); },
     lock, talkLine, talkTyping, talkFinish, applySettings, setStance, refreshTitle, remap, captureKey(a) { capture = a; }, screen: () => (G.paused ? screens.tab : 'play'), screens,
     objectiveChanged() { G.audio.bubble(); },
   };
