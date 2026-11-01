@@ -167,6 +167,15 @@ export function createAudio() {
     if (!on && sp) { for (const k of [sp.g, sp.g2, sp.og]) { k.gain.cancelScheduledValues(t); k.gain.setTargetAtTime(0, t, 0.35); } sp.n.stop(t + 1.6); sp.hi.stop(t + 1.6); sp.o.stop(t + 1.6); sp = null; }
   }
 
+  // the jets: a low roar that the nearest flyer sets, fire leaving a hand, and water on hot stone
+  let jetG = null, jetF = null;
+  function jet(level) {
+    if (!ctx || !noiseBuf) return; const t = ctx.currentTime;
+    if (!jetG) { const n = ctx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; jetF = ctx.createBiquadFilter(); jetF.type = 'bandpass'; jetF.frequency.value = 240; jetF.Q.value = 0.7; jetG = ctx.createGain(); jetG.gain.value = 0; n.connect(jetF); jetF.connect(jetG); jetG.connect(sfx); n.start(); }
+    jetG.gain.setTargetAtTime(Math.min(0.5, level) * 1.5, t, 0.08); jetF.frequency.setTargetAtTime(200 + level * 420, t, 0.12);
+  }
+  function fwoosh() { if (!ctx) return; const t = ctx.currentTime, n = ctx.createBufferSource(); n.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.1; f.frequency.setValueAtTime(1500, t); f.frequency.exponentialRampToValueAtTime(240, t + 0.3); const g = ctx.createGain(); env(g, t, 0.02, 0.7, 0.3); n.connect(f); f.connect(g); g.connect(sfx); n.start(t, Math.random() * 3); n.stop(t + 0.4); }
+  function hiss(k) { if (!ctx) return; const t = ctx.currentTime, n = ctx.createBufferSource(); n.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1500; const g = ctx.createGain(); env(g, t, 0.01, 0.8 + k * 1.6, 0.5 + k * 0.5); n.connect(f); f.connect(g); g.connect(sfx); n.start(t, Math.random() * 3); n.stop(t + 1.1); }
   function boom() {
     if (!ctx) return;
     const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.7); env(g, t, 0.01, 0.45, 0.8); o.connect(g); g.connect(sfx); o.start(t); o.stop(t + 1);
@@ -193,5 +202,5 @@ export function createAudio() {
     }
     const t = ctx.currentTime; fw.g.gain.setTargetAtTime(roar * 0.62 + babble * 0.07, t, 0.35); fw.g2.gain.setTargetAtTime(babble * 0.55 + roar * 0.35, t, 0.35);
   }
-  return { start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, freshwater, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
+  return { jet, fwoosh, hiss, start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, freshwater, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
 }

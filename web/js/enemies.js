@@ -6,6 +6,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { W } from './config.js';
+import { createEmber } from './ember.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -111,7 +112,8 @@ export async function createEnemies(G) {
     for (let i = 0; i < n; i++) { const g = new THREE.Group(), mat = foeMaterial(base, { uAmp: { value: 1 } }), m = new THREE.Mesh(geo, mat); m.frustumCulled = false; g.add(m); g.visible = false; if (crest) { const c = new THREE.Mesh(crest, crestMat); c.frustumCulled = false; c.scale.y = 0.03; g.add(c); g.userData.crest = c; } G.scene.add(g); pool.push({ g, busy: false, mat }); }
     pool.base = base; pool.geo = geo; pools[body] = pool; if (G.fx.warmList) G.fx.warmList.push(...pool.map((s) => s.g)); return pool;
   }
-  for (const k in FOES) { if (k !== '_doc' && FOES[k].body !== 'reaver') fishPool(FOES[k].body); }
+  const ember = G.ember = await createEmber(G, { foeMaterial, D }); pools.emberkin = ember.pool;
+  for (const k in FOES) { if (k !== '_doc' && FOES[k].body !== 'reaver' && !FOES[k].flyer) fishPool(FOES[k].body); }
   const sharkPool = pools.shark;
 
   // the Call of the Deep: a pack of sharks comes from behind the Warden and goes through what's in front of him
@@ -123,7 +125,7 @@ export async function createEnemies(G) {
   const harpoonGeo = new THREE.ConeGeometry(0.06, 1.9, 6).rotateX(Math.PI / 2), harpoonMat = new THREE.MeshBasicMaterial({ color: 0xffc070 });
   const shots = []; for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(harpoonGeo, harpoonMat); m.visible = false; m.frustumCulled = false; G.scene.add(m); shots.push({ m, on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, from: null, cued: false, dmg: 0, back: false }); }
 
-  G.fx.warmList.push(...reaverPool.map((s) => s.g), ...sharkPool.map((s) => s.g), ...shots.map((s) => s.m));
+  G.fx.warmList.push(...reaverPool.map((s) => s.g), ...sharkPool.map((s) => s.g), ...shots.map((s) => s.m), ...ember.warm);
   const data = G.world.data, encounters = (data.encounters || []).map((e) => ({ ...e, c: W(e.x, e.y, e.z), state: 'idle', list: [], cleared: false, cool: 0 }));
   // the fights on land: soldiers only, each at a named place (combat.json `land`). `at` is a poi or land id; dx, dy move it off that spot, onto ground that's open from where he arrives
   for (const f of (D.land && D.land.fights) || []) { const q = [...(data.poi || []), ...(data.land || [])].find((o) => o.id === f.at); if (!q) { console.error('a land fight at no place', f.id, f.at); continue; } const x = q.x + (f.dx || 0), y = q.y + (f.dy || 0), z = G.world.heightAt(x, y); encounters.push({ id: f.id, kind: 'reaver', mix: f.mix, n: f.mix.length, r: f.r || 30, spread: f.spread || 8, x, y, z, c: W(x, y, z + 0.92), state: 'idle', list: [], cleared: false, cool: 0, tied_to: null, land: true }); }
@@ -142,11 +144,12 @@ export async function createEnemies(G) {
     const e = {
       kind, def: F, slot, enc, pos: p.clone(), vel: new THREE.Vector3(), heading: Math.random() * 6.28, hp: F.hp * G.combat.difficulty().foe_hp, maxHp: F.hp * G.combat.difficulty().foe_hp, r: F.r, state: F.brain === 'fish' || F.brain === 'lurker' ? 'patrol' : 'swimTo', stunGuard: 0,
       t: 0, circleDir: Math.random() < 0.5 ? -1 : 1, phase: Math.random() * 6.28, cur: null, roll: 0, tilt: 0, hitDone: false, hold: false, blow: null, clock: 0,
-      home: p.clone(), struck: 0, struckT: 0, stance: 0, spine: false, spineT: F.spined ? F.spined.flat_s * 0.5 : 0, armour: (F.armour || 0), fishy: F.body !== 'reaver', hidden: F.brain === 'lurker', soaked: 0, chill: 0, chillT: 0, frozen: 0, stagger: 0, launched: 0, poise: F.poise, guardBroken: 0, pull: null, slow: 1, slowT: 0, missile: 0, u: slot.mat.U, shatter: false, cued: false,
+      home: p.clone(), struck: 0, struckT: 0, stance: 0, spine: false, spineT: F.spined ? F.spined.flat_s * 0.5 : 0, armour: (F.armour || 0), fishy: F.body !== 'reaver' && !F.flyer, hidden: F.brain === 'lurker', soaked: 0, chill: 0, chillT: 0, frozen: 0, stagger: 0, launched: 0, poise: F.poise, guardBroken: 0, pull: null, slow: 1, slowT: 0, missile: 0, u: slot.mat.U, shatter: false, cued: false,
       onHit(dmg, from, type, info = {}) { return takeBlow(e, dmg, from, type, info); },
       slowFor(s, k) { e.slowT = Math.max(e.slowT, s); e.slow = Math.min(e.slow, k); },
     };
     if (F.body === 'reaver') for (const n of ['idle_combat', 'swim_slow', 'swim_fast', 'run']) { const a = slot.acts[n]; if (a) { a.reset(); a.setEffectiveWeight(n === 'idle_combat' ? 1 : 0); a.play(); } }
+    if (F.flyer) ember.born(e);
     awake.push(e); return e;
   }
 
@@ -176,6 +179,7 @@ export async function createEnemies(G) {
     // the thornback: spines up, a blow at arm's length comes back on him. Reach it from afar, or wait for them to lie flat
     if (F.spined && e.spine && info.melee && e.frozen <= 0) { e.u.uFlash.value = 0.4; G.combat.log.push({ t: G.time, type: 'thorn', foe: e.kind }); G.hero.damage(F.spined.thorn, e.pos, {}); return 'blocked'; }
     let mul = 1;
+    if (F.flyer) { ember.struck(e, info); if (e.doused > 0) mul *= D.ember.heat.doused_mul; }
     if (e.frozen > 0) {
       if (info.move === 'riptide') { sendMissile(e, from); e.hp -= dmg; return e.hp <= 0 ? (die(e), 'dead') : 'missile'; }
       if (e.soaked > 0 || info.shatters) {
@@ -204,7 +208,7 @@ export async function createEnemies(G) {
     if (e.poise <= 0) { stagger(e); return 'hit'; }
     // a light blow doesn't stop a foe in its stride: it finishes what it told, and it can't be held down by mashing. A heavy blow, or a Siren's song, is what breaks a blow
     const told = e.state === 'tell' || e.state === 'strike', stops = info.heavy || F.fragile || (!told && e.stunGuard <= 0);
-    if (stops) { dropToken(e); e.state = 'stun'; e.t = info.stun || 0.45; e.stunGuard = 1.6; endTell(e); if (F.body === 'reaver') playClip(e, 'hit_front', 0.05, true); }
+    if (stops) { dropToken(e); e.state = 'stun'; e.t = info.stun || 0.45; e.stunGuard = 1.6; endTell(e); if (F.body === 'reaver' || (F.flyer && e.doused <= 0)) playClip(e, 'hit_front', 0.05, true); }
     return 'hit';
   }
   function addChill(e, n) { e.chill += n; if (e.chill >= S.chill_to_freeze) freeze(e, true); }
@@ -232,6 +236,7 @@ export async function createEnemies(G) {
     // the last of them: the moment leans out and the lens goes in
     if (e.enc && e.enc.list && e.enc.list.length && !e.enc.list.some((q) => q !== e && q.hp > 0 && !q.hidden)) { const Q = D.foeplay; G.slowT = Q.finish_s; G.slowK = Q.finish_k; G.fx.pushIn(e.pos, Q.finish_s * 1.5); G.combat.log.push({ t: G.time, type: 'finish', foe: e.kind }); G.audio.boom(); }
     if (!e.fishy && !broken) playClip(e, 'death', 0.08, true);
+    if (e.def.flyer) ember.died(e, broken);
     if (broken) e.slot.g.visible = false; else { G.fx.dissolve && G.fx.dissolve(e.pos, e.def.body); G.fx.bubbles(e.pos, 18, 1.4); }
     e.frozen = 0; e.stagger = 0; e.vel.multiplyScalar(0.4);
   }
@@ -284,7 +289,7 @@ export async function createEnemies(G) {
   }
   // where a foe may start near a point: sea things stay in water, a soldier on land stands on it
   function placeFor(kind, enc, p) {
-    const F = FOES[kind];
+    const F = FOES[kind]; if (F.flyer) return p;      // the air is open: a flyer starts where it's told
     // a place with no height (a NaN goes through clamp untouched and never leaves): stand it near the hero's own depth, and say who sent it
     if (!Number.isFinite(p.x) || !Number.isFinite(p.z)) { console.error('foe spawned with no place', kind, enc && enc.id); p.x = G.hero.pos.x; p.z = G.hero.pos.z; }
     if (!Number.isFinite(p.y)) { console.error('foe spawned with no height', kind, enc && enc.id); p.y = Math.min(SEA_Y, G.hero.pos.y); }
@@ -301,7 +306,7 @@ export async function createEnemies(G) {
   function comeRound(enc, dt) {
     const h = G.hero; if (enc.ours || h.air || (h.land && !enc.land)) return;
     for (const e of enc.list) {
-      if (e.hp <= 0 || e.hidden) continue; const d = e.pos.distanceTo(h.pos);
+      if (e.hp <= 0 || e.hidden || e.def.flyer) continue; const d = e.pos.distanceTo(h.pos);
       // on the ground a foe can also be held by a ledge with nothing in the way: if he's getting no nearer, that counts
       if ((e.seeT = (e.seeT || 0) - dt) <= 0) { e.seeT = 0.5; seeA.x = h.pos.x; seeA.y = -h.pos.z; seeA.z = h.pos.y; seeB.x = e.pos.x; seeB.y = -e.pos.z; seeB.z = e.pos.y; const held = enc.land && d > (e.def.hold_m || 6) + 2.5 && d > (e.lastD === undefined ? 1e9 : e.lastD) - 0.4; e.lastD = d; e.walled = held || (d < 30 && !!G.world.sweep(seeA, seeB, 0.4)); }
       if (!e.walled) { e.far = 0; continue; } if ((e.far = (e.far || 0) + dt) < 12) continue;
@@ -552,7 +557,8 @@ export async function createEnemies(G) {
     }
     blendSoldier(e);
   }
-  const BRAIN = { soldier, archer, fish, lurker, siren };
+  ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
+  const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain };
 
   // what holds a foe outside its own head: ice, a lash, being thrown. True means its brain sits this step out
   function held(e, dt) {
@@ -630,7 +636,7 @@ export async function createEnemies(G) {
       if (awake[i] !== e) continue;     // freed this step
       if (e.spun) continue;             // the column has him
       for (const o of awake) { if (o === e) continue; const d = e.pos.distanceTo(o.pos), min = e.r + o.r + 0.4; if (d < min && d > 0.001) { to.subVectors(e.pos, o.pos).normalize(); e.vel.addScaledVector(to, (min - d) * 6 * dt); } }
-      const px = e.pos.x, pz = e.pos.z; e.pos.addScaledVector(e.vel, dt); collide(e, e.r * 0.8, px, pz, dt);
+      const px = e.pos.x, pz = e.pos.z; e.pos.addScaledVector(e.vel, dt); if (e.def.flyer) ember.keepOut(e, dt); else collide(e, e.r * 0.8, px, pz, dt);
       // the last good place: a non-finite number here would spread to everything that reads it, so it stops at this line and names itself
       // and it's refused if it ends with his centre inside a solid: a knock up a slope under a rock has the rock pushing down and the bed pushing up, which cancel, and neither says so
       if (Number.isFinite(e.pos.x + e.pos.y + e.pos.z + e.vel.x + e.vel.y + e.vel.z)) {
@@ -639,16 +645,17 @@ export async function createEnemies(G) {
       }
       else { if (!e.nanTold) { e.nanTold = true; console.error('foe went non-finite', e.kind, e.state, e.enc && e.enc.id, JSON.stringify({ pos: [String(e.pos.x), String(e.pos.y), String(e.pos.z)], from: [px, pz], blow: e.blow && e.blow.id, t: e.t, slow: e.slow, pull: e.pull, launched: e.launched, frozen: e.frozen, missile: e.missile, vel: [e.vel.x, e.vel.y, e.vel.z] })); } e.pos.copy(e.safe || e.home); e.vel.set(0, 0, 0); }
       const sp = e.vel.length(), fishy = e.fishy;
-      if (e.frozen > 0) continue;
+      if (e.frozen > 0 || e.def.flyer) continue;
       if (sp > 0.6) { const y = Math.atan2(e.vel.x, e.vel.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-(fishy ? 5 : 7) * dt))); }
       if (!fishy && e.state !== 'dead' && e.state !== 'swimTo') { const y = Math.atan2(h.pos.x - e.pos.x, h.pos.z - e.pos.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-8 * dt))); }
       if (fishy && e.state === 'tell') { const y = Math.atan2(h.pos.x - e.pos.x, h.pos.z - e.pos.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-6 * dt))); }
     }
-    stepShots(dt);
+    stepShots(dt); ember.step(dt);
   }
 
   const tipW = new THREE.Vector3();
   function animate(dt) {
+    ember.frame(dt);
     swim.amp.value = 1 + (packT > 0 ? 0.6 : 0);
     if (packT > 0) {
       packT -= dt; const dist = (1.9 - packT) * 30 - 16;
@@ -660,6 +667,7 @@ export async function createEnemies(G) {
     for (const e of awake) {
       const g = e.slot.g; g.position.copy(e.draw || e.pos); if (e.hidden) continue;
       e.u.uFlash.value *= Math.exp(-16 * dt);
+      if (e.def.flyer) { ember.draw(e, dt); continue; }
       if (e.state === 'dead') e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 1.25);
       qY.setFromAxisAngle(AY, e.heading);
       if (e.flA > 0) { e.flT += dt; if (e.flT > 0.8) e.flA = 0; }
@@ -689,7 +697,7 @@ export async function createEnemies(G) {
     count: () => awake.filter((e) => e.hp > 0).length, kindAt, rosterOf,
     all: () => awake,
     encounters,
-    spawn(kind, p, enc = null) { const k = FOES[kind] && FOES[kind].body !== 'reaver' && !FOES[kind].walker && !wet(p) ? 'reaver' : kind, e = makeEnemy(k, enc, placeFor(k, enc, p.clone())); if (e && enc) enc.list.push(e); return e; },
+    spawn(kind, p, enc = null) { const k = FOES[kind] && FOES[kind].body !== 'reaver' && !FOES[kind].walker && !FOES[kind].flyer && !wet(p) ? 'reaver' : kind, e = makeEnemy(k, enc, placeFor(k, enc, p.clone())); if (e && enc) enc.list.push(e); return e; },
     freeze(e) { freeze(e, true); },
     // the spout: what's near is drawn in and round; what reaches it is picked up, spun up the column, and thrown
     spout(base, topY, dt) {
@@ -698,7 +706,7 @@ export async function createEnemies(G) {
         if (d < Q.grab_m) { dropToken(e); endTell(e); e.state = 'stun'; e.t = 30; e.spun = { a: Math.atan2(dz, dx), r: Math.max(d, Q.radius_m * 1.5), y: e.pos.y, t: Q.spun_s, hitT: 0.3, top: Math.min(topY - 3, Math.max(e.pos.y, 0) + Q.spun_up_m), base }; G.combat.log.push({ t: G.time, type: 'spun', foe: e.kind }); if (e.def.body === 'reaver') playClip(e, 'hit_front', 0.05, true); } } },
     pull(p, radius) { for (const e of awake) { if (e.hp <= 0 || e.frozen > 0) continue; const d = e.pos.distanceTo(p); if (d < radius) { to.subVectors(p, e.pos).normalize(); side.crossVectors(to, AY); e.vel.addScaledVector(to, 8).addScaledVector(side, 5); dropToken(e); endTell(e); e.state = 'stun'; e.t = 1.1; if (e.def.body === 'reaver') playClip(e, 'hit_front', 0.05, true); } } },
     drag(p, radius, dt) { for (const e of awake) { if (e.hp <= 0 || e.frozen > 0) continue; to.subVectors(p, e.pos); const d = to.length(); if (d < radius + 3 && d > 2.2) { to.multiplyScalar(1 / d); side.crossVectors(to, AY); e.vel.addScaledVector(to, 26 * dt).addScaledVector(side, 16 * dt); } } },
-    grab(e, speed) { if (e.vel && e.frozen <= 0 && e.hp > 0) { dropToken(e); endTell(e); e.pull = { speed, t: 0.8 }; if (e.def.body === 'reaver') playClip(e, 'hit_front', 0.05, true); } },
+    grab(e, speed) { if (e.vel && e.frozen <= 0 && e.hp > 0) { dropToken(e); endTell(e); e.pull = { speed, t: 0.8 }; if (e.def.body === 'reaver' || e.def.flyer) playClip(e, 'hit_front', 0.05, true); } },
     waveFrom(p, dir) { /* the wave's front now lives in powers.js */ void p; void dir; },
     callPack(p, dir) { packFrom.copy(p); packDir.copy(dir).normalize(); packT = 1.9; packHit.clear(); G.life && G.life.scatter(p, 50); },
     spawnNear(p, n, kind = 'reaver') { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; makeEnemy(kind, null, placeFor(kind, null, p.clone().add(new THREE.Vector3(Math.cos(a) * 12, 2, Math.sin(a) * 12)))); } },

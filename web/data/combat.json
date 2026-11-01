@@ -185,6 +185,17 @@
       "spined": { "up_s": 2.4, "flat_s": 2.6, "thorn": 7 },
       "blows": [ { "id": "dart", "tell_s": 0.7, "strike_s": 0.8, "recover_s": 1.5, "reach_m": 3.2, "speed_mps": 22, "damage": 11 } ] },
     "hammerhead": { "short": "Dodge the pair, then strike a flank", "name": "Hammerhead", "body": "hammerhead", "brain": "fish", "scale": 1.15, "pairs": true, "counter": "two at once: dodge the pair, then strike a flank (× 1.5 while it recovers)", "hp": 320, "r": 1.7, "poise": 130, "speed_mps": 7.5, "ring_m": 13, "wait_s": [1.4, 2.8], "flank_mul": 1.5, "blows": [
-      { "id": "charge", "tell_s": 0.85, "strike_s": 1.1, "recover_s": 1.6, "reach_m": 3.6, "speed_mps": 27, "damage": 16 } ] }
+      { "id": "charge", "tell_s": 0.85, "strike_s": 1.1, "recover_s": 1.6, "reach_m": 3.6, "speed_mps": 27, "damage": 16 } ] },
+    "emberkin": { "short": "Water puts it out", "name": "Emberkin", "counter": "water douses it: enough and its jets die and it falls, and then it can be struck for double. Parry a bolt and it goes back. On land it comes down, and that's when it stops flying", "body": "emberkin", "brain": "flyer", "flyer": true, "hp": 300, "r": 0.85, "poise": 120, "speed_mps": 20, "hold_m": 14, "wait_s": [1.3, 2.3], "blows": [
+      { "id": "bolt", "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "tell_s": 0.72, "strike_s": 0.5, "recover_s": 0.55, "burst": 2, "gap_s": 0.34, "speed_mps": 32, "lead": 0.7, "damage": 10 },
+      { "id": "strafe", "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "tell_s": 0.7, "strike_s": 1.1, "recover_s": 0.5, "burst": 3, "gap_s": 0.3, "pass_mps": 24, "speed_mps": 34, "lead": 0.8, "damage": 8 },
+      { "id": "swoop", "clip": "e_cross", "clip_t": [0.0, 0.6, 1.23], "tell_s": 0.8, "strike_s": 1.0, "recover_s": 0.8, "reach_m": 2.2, "lunge_mps": 24, "damage": 14 },
+      { "id": "slam", "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "land": true, "tell_s": 0.75, "strike_s": 2.2, "recover_s": 0.2, "lunge_mps": 22, "radius_m": 5.5, "hold_s": 1.5, "damage": 14 } ] }
+  },
+  "ember": {
+    "_doc": "the Emberkin (EPIC V2, V5). flight: speeds in m/s, accel in m/s2, heights in metres; turn_rad how fast the body swings to the jets' line. heat: 1 is burning; a hit of water takes `water`, of ice `ice`; the sea takes sea_per_s; at 0 it's doused: its jets die for doused_s, it falls, blows do doused_mul, and it relights at `relight`. raid: how a flyer comes in, in seconds and metres",
+    "flight": { "boost_mps": 46, "cruise_mps": 30, "ring_mps": 12, "climb_mps": 11, "accel": 38, "brake_m": 70, "ring_m": 13.5, "hover_m": 5.5, "over_m": 4.5, "turn_rad": 7, "water_drag": 2.4, "fall_g": 17, "dive_m": 9 },
+    "heat": { "water": 0.34, "ice": 0.2, "sea_per_s": 0.5, "regain_per_s": 0.05, "doused_s": 3.6, "doused_mul": 2, "relight": 0.6 },
+    "raid": { "first_s": 24, "again_s": 45, "from_m": 300, "high_m": 80, "deepest_m": 30 }
   }
 }

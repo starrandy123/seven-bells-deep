@@ -1032,7 +1032,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
   // In the Painted look it's a dark line. In either look, as a figure gets small on the screen, the line turns pale and the body goes dark (patch, for
   // { skinned } or { ink }): a dark shape reads on bright water, its pale edge on dark, so nothing has to guess what lies behind him and he keeps 3:1 on anything.
   const outlines = [];
-  function addOutline(mesh) {
+  function addOutline(mesh, opts = {}) {
     // (in the transparent list, after the sea: a body just under the surface keeps its line when the eye is above it)
     const m = new THREE.MeshBasicMaterial({ color: 0x12222e, side: THREE.BackSide, toneMapped: false, transparent: true });
     m.onBeforeCompile = (sh) => {
@@ -1047,9 +1047,9 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
           // a small figure keeps its own colours; its line is whatever stands out: dark on sky, bright water and sand, pale in the deep and at night
           vInkS = small*ocInkBg*(1.0 - step(0.0, cameraPosition.y)*(1.0 - step(.3, modelMatrix[3].y)));
         }`);
-      sh.fragmentShader = 'varying float vInkS;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb = mix(vec3(.004, .010, .018), vec3(.42, .86, 1.0), vInkS);');
+      sh.fragmentShader = 'varying float vInkS;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n diffuseColor.rgb = mix(vec3(.004, .010, .018), ${opts.warm ? 'vec3(1.0, .46, .10)' : 'vec3(.42, .86, 1.0)'}, vInkS);`);
     };
-    m.customProgramCacheKey = () => 'ink4';
+    m.customProgramCacheKey = () => (opts.warm ? 'ink4w' : 'ink4');
     let o;
     if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, m); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; } else o = new THREE.Mesh(mesh.geometry, m);
     o.frustumCulled = false; o.name = (mesh.name || 'mesh') + '_ink'; o.renderOrder = 17; o.visible = false;

@@ -13,6 +13,7 @@ const CELLS = {
   dot: [0, 512, 128, 128], bead: [128, 512, 128, 128], streak: [256, 512, 128, 128], glint: [384, 512, 128, 128],
   foam: [512, 512, 128, 128], bubble: [640, 512, 128, 128], shard: [768, 512, 128, 128], flake: [896, 512, 128, 128],
   beam: [0, 640, 512, 128], frost: [512, 640, 256, 256], burst: [768, 640, 256, 256],
+  flame: [0, 768, 128, 256], flame2: [128, 768, 128, 256], ball: [256, 768, 128, 128],
 };
 
 function atlasBytes() {
@@ -56,6 +57,13 @@ function atlasBytes() {
   });
   cell('foamRing', () => { for (let i = 0; i < 230; i++) { const a = r() * TAU, R = rr(0.7, 0.95), s = rr(0.012, 0.05); g.fillStyle = i % 3 ? body(0.8) : hot(0.8); g.beginPath(); g.arc(Math.cos(a) * R, Math.sin(a) * R, s, 0, TAU); g.fill(); } });
   cell('smoke', () => { for (let i = 0; i < 46; i++) { const a = r() * TAU, R = Math.sqrt(r()) * 0.6, s = rr(0.14, 0.38); g.save(); g.translate(Math.cos(a) * R, Math.sin(a) * R); radial(s, [[0, body(0.28)], [1, body(0)]]); g.restore(); } });
+  // a flame's tongue, root at the foot of the cell, tip at its head: built from soft blobs that thin and wander as they climb, a white heart in the lower half
+  const tongue = (seed, sway) => () => {
+    for (let i = 0; i < 34; i++) { const t = i / 33, wd = 0.86 * Math.pow(1 - t, 0.62) * (0.86 + 0.22 * Math.sin(t * 8 + seed)), x = sway * Math.sin(t * 5.2 + seed) * t + rr(-0.06, 0.06) * t, y = 0.86 - t * 1.76; g.save(); g.translate(x, y); g.scale(wd, 0.36); radial(1, [[0, body(0.42)], [0.55, body(0.22)], [1, body(0)]]); g.restore(); }
+    for (let i = 0; i < 16; i++) { const t = i / 15, wd = 0.46 * Math.pow(1 - t, 0.8), x = sway * 0.5 * Math.sin(t * 5.2 + seed) * t, y = 0.84 - t * 1.0; g.save(); g.translate(x, y); g.scale(wd, 0.3); radial(1, [[0, hot(0.5)], [1, hot(0)]]); g.restore(); }
+  };
+  cell('flame', tongue(1.3, 0.14)); cell('flame2', tongue(4.1, -0.2));
+  cell('ball', () => { radial(1, [[0, body(1)], [0.3, body(0.72)], [0.62, body(0.24)], [1, body(0)]]); radial(0.62, [[0, hot(1)], [0.45, hot(0.8)], [1, hot(0)]]); });
   cell('dot', () => { radial(1, [[0, body(1)], [0.35, body(0.5)], [1, body(0)]]); radial(0.5, [[0, hot(0.9)], [1, hot(0)]]); });
   cell('bead', () => {
     radial(0.92, [[0, body(0.16)], [0.6, body(0.26)], [0.84, body(0.95)], [0.93, body(0.85)], [1, body(0)]]);
@@ -650,9 +658,15 @@ export function createFx(G) {
 
   // ------------------------------------------------------------------ one frame
   const R = new THREE.Vector3(), U = new THREE.Vector3();
+  // a sprite that lasts this one frame, on axes of the caller's: a flame stays on the limb that throws it and turns with it, which a sprite that ages can't do
+  const held = []; let heldN = 0;
+  function now(cell, x, y, z, ax, ay, az, bx, by, bz, col, a, hot, add) { const q = held[heldN] || (held[heldN] = {}); heldN++; q.cell = cell; q.x = x; q.y = y; q.z = z; q.ax = ax; q.ay = ay; q.az = az; q.bx = bx; q.by = by; q.bz = bz; q.r = col.r; q.g = col.g; q.b = col.b; q.a = a; q.hot = hot; q.add = add; }
+  function ball(p, size, col, a = 1) { const c = G.camera.matrixWorld.elements; now('ball', p.x, p.y, p.z, c[0] * size, c[1] * size, c[2] * size, c[4] * size, c[5] * size, c[6] * size, col, a, 0.9, 1); }
   function writeSprites(dt) {
     const cam = G.camera; cam.updateMatrixWorld(); const e = cam.matrixWorld.elements; R.set(e[0], e[1], e[2]); U.set(e[4], e[5], e[6]);
     let n0 = 0, n1 = 0, live = 0;
+    for (let i = 0; i < heldN && n0 < inScene.cap; i++) { const q = held[i], o = n0++ * FLOATS, d = inScene.data, uv = uvOf[q.cell]; d[o] = q.x; d[o + 1] = q.y; d[o + 2] = q.z; d[o + 3] = q.ax; d[o + 4] = q.ay; d[o + 5] = q.az; d[o + 6] = q.bx; d[o + 7] = q.by; d[o + 8] = q.bz; d[o + 9] = uv[0]; d[o + 10] = uv[1]; d[o + 11] = uv[2]; d[o + 12] = uv[3]; d[o + 13] = q.r; d[o + 14] = q.g; d[o + 15] = q.b; d[o + 16] = q.a; d[o + 17] = q.hot; d[o + 18] = q.add; }
+    heldN = 0;
     for (let i = 0; i < pool.length; i++) {
       const s = pool[i]; if (!s.on) continue; live += s.burst;
       if (s.delay > 0) { s.delay -= dt; continue; }
@@ -727,5 +741,5 @@ export function createFx(G) {
     warmList.forEach((o, i) => { o.visible = was[i]; });
   }
 
-  return { update, speed, punch, prewarm, warmList, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
+  return { update, speed, punch, prewarm, warmList, sp, now, ball, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
 }
