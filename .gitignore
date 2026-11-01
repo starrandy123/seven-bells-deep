@@ -23,3 +23,7 @@ Pipeline/film/tmp/
 
 # scraped pages, not ours to keep
 Pipeline/research/scratch/
+
+# him cut out: the raw file is huge; a compressed copy goes in as all_small.mp4
+reel/takes/matte/all.mp4
+reel/takes/matte/*.part.mp4
