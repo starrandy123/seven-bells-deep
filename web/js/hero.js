@@ -143,7 +143,7 @@ export async function createHero(G) {
     for (let i = 0; i <= rows; i++) {
       const z = f.z0 - (H * i) / rows;
       for (; o < 60; o += 0.2) { const ly = -o; if (G.world.heightAt(f.x - ly * sn, f.y + ly * c) < z - 0.35) break; }
-      const ly = -(o + 0.35); row.push({ y: z, x: f.x - ly * sn, z: -(f.y + ly * c) });
+      const ly = -(o + 0.35); row.push({ y: z, x: f.x - ly * sn, z: -(f.y + ly * c), hw: f.hwAt ? f.hwAt(i / rows) : f.w * 0.5 });      // the sheet's own width at this height (world.js)
     }
     // out of the rock (game x, z): the sheet faces down its own local -y; along it: its local x
     return { f, row, hw: f.w * 0.5, out: { x: sn, z: c }, side: { x: c, z: -sn }, top: f.z0, bot: f.z1 };
@@ -153,11 +153,11 @@ export async function createHero(G) {
     if (y < F.bot - 0.6 || y > F.top + 0.4) return null;
     const t = clamp((F.top - y) / (F.top - F.bot), 0, 1) * (F.row.length - 1), i = Math.min(F.row.length - 2, Math.floor(t)), u = t - i, a = F.row[i], b = F.row[i + 1];
     const cx = a.x + (b.x - a.x) * u, cz = a.z + (b.z - a.z) * u, dx = x - cx, dz = z - cz;
-    return { cx, cz, across: dx * F.side.x + dz * F.side.z, outward: dx * F.out.x + dz * F.out.z };
+    return { cx, cz, hw: a.hw + (b.hw - a.hw) * u, across: dx * F.side.x + dz * F.side.z, outward: dx * F.out.x + dz * F.out.z };
   }
   const CLIMB_V = 6.5, CLIMB_BOOST = 11, CLIMB_SIDE = 3.2, CLIMB_OUT = 0.55;      // m/s up the falls, boosted, across them; how far out from the sheet's centre he swims
   function fallNear() {
-    for (const F of FALLS) { const q = onFall(F, h.pos.x, h.pos.y, h.pos.z); if (q && Math.abs(q.across) < F.hw + 0.4 && q.outward > -1.2 && q.outward < 2.4) return { F, q }; }
+    for (const F of FALLS) { const q = onFall(F, h.pos.x, h.pos.y, h.pos.z); if (q && Math.abs(q.across) < q.hw + 0.4 && q.outward > -1.2 && q.outward < 2.4) return { F, q }; }
     return null;
   }
   // in: he's at the water and pushing into it (toward the rock or up), or comes down into it from a jump
@@ -172,13 +172,13 @@ export async function createHero(G) {
   }
   function stepClimb(u, dt, boosting) {
     const F = h.climb, q = onFall(F, h.pos.x, h.pos.y, h.pos.z);
-    if (!q || Math.abs(q.across) > F.hw + 0.8) { h.climb = null; leave(0); return; }
+    if (!q || Math.abs(q.across) > q.hw + 0.8) { h.climb = null; leave(0); return; }
     // the stick: forward or up is up the water, back is down it, sideways runs across the sheet
     const up = clamp(u.my + Math.max(0, u.ud), -1, 1), side = clamp(u.mx, -1, 1), vUp = (boosting ? CLIMB_BOOST : CLIMB_V) * up;
     // across, measured against the camera: the sheet's own side, signed so stick-right goes to the screen's right
     const sr = (F.side.x * right.x + F.side.z * right.z) >= 0 ? 1 : -1, vSide = CLIMB_SIDE * side * sr;
     h.vel.y = damp(h.vel.y, vUp, 6, dt);
-    const across = clamp(q.across + vSide * dt, -F.hw + 0.3, F.hw - 0.3), outward = damp(q.outward, CLIMB_OUT, 8, dt);
+    const across = clamp(q.across + vSide * dt, -Math.max(0.2, q.hw - 0.3), Math.max(0.2, q.hw - 0.3)), outward = damp(q.outward, CLIMB_OUT, 8, dt);
     const ny = h.pos.y + h.vel.y * dt, q2 = onFall(F, h.pos.x, ny, h.pos.z) || q;
     h.pos.set(q2.cx + F.side.x * across + F.out.x * outward, ny, q2.cz + F.side.z * across + F.out.z * outward);
     // facing the rock, a breath of speed into it so the body points at the water, head up the fall

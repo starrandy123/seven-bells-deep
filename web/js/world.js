@@ -999,7 +999,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   const freshwater = (() => {
     const R = data.rivers || [], F = data.waterfalls || [];
     if (!R.length && !F.length) return null;
-    const pos = [], flow = [], idx = [], fpos = [], fflow = [], fidx = [];
+    const pos = [], flow = [], idx = [], fpos = [], fflow = [], fidx = [], wpos = [], wflow = [], widx = [];
     for (const r of R) {
       const pts = r.pts.map(q => new THREE.Vector3(q[0], q[2], -q[1]));
       if (pts.length < 2) continue;
@@ -1014,23 +1014,45 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         if (i < n) { const a = base + i * 3; idx.push(a, a + 3, a + 1, a + 1, a + 3, a + 4, a + 1, a + 4, a + 2, a + 2, a + 4, a + 5); }
       }
     }
+    const fallsMist = [];
     for (const f of F) {
       // The sheet follows the rock: each row walks out from the lip until it's clear of the ground at that height, so a slope makes a cascade, not a buried sheet.
-      const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), rows = 16, cols = 4, hw = f.w * .5, h = f.z0 - f.z1, base = fpos.length / 3, last = new Float32Array(cols + 1);
+      // Randy, 1 Nov: "the waterfall looks disconnected from the land". So the sheet leaves the lip at the width of the river that feeds it and spreads as it
+      // falls (hwAt); a dark wet band on the rock behind and around it; a plunge pool that carries it on to the river below; mist off the foot.
+      const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), rows = 20, cols = 8, h = f.z0 - f.z1, base = fpos.length / 3, wbase = wpos.length / 3, last = new Float32Array(cols + 1);
+      const feed = R.find(r => { const q = r.pts[r.pts.length - 1]; return Math.hypot(q[0] - f.x, q[1] - f.y) < 3; });
+      const hwTop = feed ? Math.min(f.w * .5, feed.w * .5 + .4) : f.w * .5, hwAt = t => (hwTop + (f.w * .5 - hwTop) * (t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t))) * (1 + t * .10);
+      f.hwAt = hwAt;                                                    // the hero's climb reads the same width
+      let footX = f.x, footY = f.y;
       for (let i = 0; i <= rows; i++) {
-        const t = i / rows, z = f.z0 - h * t;
+        const t = i / rows, z = f.z0 - h * t, hw = hwAt(t);
         for (let k = 0; k <= cols; k++) {
-          const sd = k / cols * 2 - 1, lx = sd * hw * (1 + t * .10);
+          const sd = k / cols * 2 - 1, lx = sd * hw;
           let o = last[k];
-          for (; o < 60; o += .4) { const ly = -o; if (heightAt(f.x + lx * c - ly * sn, f.y + lx * sn + ly * c) < z - .35) break; }
+          for (; o < 60; o += .25) { const ly = -o; if (heightAt(f.x + lx * c - ly * sn, f.y + lx * sn + ly * c) < z - .35) break; }
           last[k] = o;
-          const ly = -(o + .35);
+          const ly = -(o + .35), wl = sd * hw * 1.45, wy = -(o + .05);
           fpos.push(f.x + lx * c - ly * sn, z, -(f.y + lx * sn + ly * c)); fflow.push(t * h, sd, f.w, t);
+          wpos.push(f.x + wl * c - wy * sn, z + .02, -(f.y + wl * sn + wy * c)); wflow.push(t * h, sd, f.w, t);
+          if (i === rows && k === cols / 2) { footX = f.x - ly * sn; footY = f.y + ly * c; }
         }
-        if (i < rows) for (let k = 0; k < cols; k++) { const a = base + i * (cols + 1) + k, b = a + cols + 1; fidx.push(a, b, a + 1, a + 1, b, b + 1); }
+        if (i < rows) for (let k = 0; k < cols; k++) { const a = base + i * (cols + 1) + k, b = a + cols + 1; fidx.push(a, b, a + 1, a + 1, b, b + 1); const wa = wbase + i * (cols + 1) + k, wb = wa + cols + 1; widx.push(wa, wb, wa + 1, wa + 1, wb, wb + 1); }
       }
+      // the plunge pool: an oval from the foot of the sheet to where the river below begins, churning white by the fall and calming toward its outflow
+      const out = R.find(r => Math.hypot(r.pts[0][0] - footX, r.pts[0][1] - footY) < 30);
+      const ox = out ? out.pts[0][0] : footX - sn * 6, oy = out ? out.pts[0][1] : footY - c * 6;
+      const mx = (footX + ox) * .5, my = (footY + oy) * .5, ax = ox - footX, ay = oy - footY, al = Math.hypot(ax, ay) || 1, ux = ax / al, uy = ay / al;
+      const ra = al * .5 + hwAt(1) * .7, rb = Math.max(hwAt(1) * 1.25, (out ? out.w : 4) * .8), RINGS = 7, SEG = 32, pbase = pos.length / 3;
+      for (let i = 0; i <= RINGS; i++) for (let k = 0; k < SEG; k++) {
+        const rr = i / RINGS, a = k / SEG * 6.2831853, lu = Math.cos(a) * ra * rr, lv = Math.sin(a) * rb * rr;
+        const x = mx + ux * lu - uy * lv, y = my + uy * lu + ux * lv, dFoot = Math.hypot(x - footX, y - footY);
+        pos.push(x, Math.max(f.z1 + .1, heightAt(x, y) + .05), -y); flow.push(dFoot, rr * (k % 2 ? 1 : -1), 4, Math.max(0, 1 - dFoot / (hwAt(1) * 1.6)));
+      }
+      for (let k = 0; k < SEG; k++) idx.push(pbase, pbase + SEG + k, pbase + SEG + (k + 1) % SEG);
+      for (let i = 1; i < RINGS; i++) for (let k = 0; k < SEG; k++) { const a = pbase + i * SEG + k, b = pbase + i * SEG + (k + 1) % SEG, a2 = a + SEG, b2 = b + SEG; idx.push(a, a2, b, b, a2, b2); }
+      fallsMist.push({ x: footX - sn * .5, y: footY - c * .5, z: f.z1 + .2, r: hwAt(1) * .55, h: Math.min(9, h * .45), puffs: 12, deep: 2 });
     }
-    const make = (P, A, I, fall) => {
+    const make = (P, A, I, fall, wet) => {
       if (!I.length) return null;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('aF', new THREE.Float32BufferAttribute(A, 4)); g.setIndex(I);
@@ -1044,7 +1066,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           void main() {
             vec3 v = vP - cameraPosition; float dist = length(v); vec3 rd = v/dist;
             float t = ocTime;
-            ${fall ? /* glsl */`
+            ${wet ? /* glsl */`
+            // the wet rock behind and beside a fall: darker, glossy, a film of water sliding down it
+            float s1 = texture(tOcNoise, vec2(vF.y*vF.z*.2 + .1, vF.x*.03 - t*.35)).b;
+            vec3 c = vec3(.012, .016, .016) + ocSunCol*.05*smoothstep(.62, .8, s1);
+            float alpha = (1.0 - smoothstep(.35 + .3*s1, 1.0, abs(vF.y)))*(.42 + .18*s1)*smoothstep(0.0, .06, vF.a + .02);` : fall ? /* glsl */`
             // a fall (Randy, 1 Nov: "the water on land is unnatural"): glassy and see-through at the lip, water-coloured streams of every width pouring down,
             // churning white toward the foot, its sides fraying into spray instead of ending on a hard line
             float down = vF.a, across = vF.y;
@@ -1076,22 +1102,23 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             vec3 L = normalize(ocSunW + vec3(0.0, .0001, 0.0)), H = normalize(L - rd);
             c += ocSunCol*.9*pow(max(dot(n, H), 0.0), 120.0);                                    // glints
             float lace = smoothstep(.62, .80, a*.6 + d*.4)*smoothstep(.62, .95, across);
-            c = mix(c, ocHaze*1.2 + vec3(.04), lace*.75);
-            float alpha = (1.0 - smoothstep(.80, 1.0, across))*mix(.38, .93, max(max(deep, F), lace));`}
+            float churn = vF.w*smoothstep(.30, .62, a*.45 + d*.55 + vF.w*.25);              // a plunge pool: white where the fall hits, calming away from it
+            c = mix(c, ocHaze*1.25 + vec3(.05), max(lace*.75, churn));
+            float alpha = (1.0 - smoothstep(.80, 1.0, across))*mix(.38, .93, max(max(deep, F), max(lace, churn)));`}
             gl_FragColor = vec4(ocApply(c, vP), alpha);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
           }`,
       });
-      const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = fall ? 14 : 13; scene.add(mesh);
+      const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = wet ? 12 : fall ? 14 : 13; scene.add(mesh);
       return mesh;
     };
-    return { river: make(pos, flow, idx, false), falls: make(fpos, fflow, fidx, true) };
+    return { river: make(pos, flow, idx, false), falls: make(fpos, fflow, fidx, true), wet: make(wpos, wflow, widx, false, true), mist: fallsMist };
   })();
 
   // ---------------------------------------------------------------- smoke over a crater: soft puffs rising in a loop, one draw for all of them
   const plumes = (() => {
-    const list = (data.plumes || []).map(f => ({ ...f, puffs: 10, deep: 0 }));
+    const list = (data.plumes || []).map(f => ({ ...f, puffs: 10, deep: 0 })).concat(freshwater ? freshwater.mist : []);
     {                                                                   // each black smoker's own smoke, lit from the fire under it
       const L = data.instances.smoker || [], g = geoms.smoker || geoms.smoker__far;
       let top = 8; if (g) { g.geometry.computeBoundingBox(); top = g.geometry.boundingBox.max.clone().applyMatrix4(g.node).y; }
@@ -1114,12 +1141,13 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         void main() {
           vD = aQ.z;
           if (aQ.z > .5 && distance(position, cameraPosition) > 210.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
-          float t = fract(ocTime*(aQ.z > .5 ? .055 : .018) + aA.x), rise = aA.w*(t*.88 + t*t*.12), drift = aQ.z > .5 ? .25 : 1.0;
+          float mist = step(1.5, aQ.z);                                  // a fall's spray: quick, low, wide, drifting off the foot
+          float t = fract(ocTime*(mist > .5 ? .16 : aQ.z > .5 ? .055 : .018) + aA.x), rise = aA.w*(t*.88 + t*t*.12), drift = mist > .5 ? .12 : aQ.z > .5 ? .25 : 1.0;
           vec3 p = position + vec3(10.0*t*t*drift + (aA.y - .5)*aA.z*t*2.2, rise, -7.0*t*t*drift + sin(aA.y*40.0)*aA.z*t*1.6);
           float sz = aA.z*(aQ.z > .5 ? 1.0 + 3.4*t : .75 + 3.4*t);
           vec4 c = viewMatrix*vec4(p, 1.0);
           vP = p; vQ = aQ.xy; vT = t; vS = aA.y;
-          c.xy += aQ.xy*sz*vec2(1.0, aQ.z > .5 ? 1.9 : 1.0);
+          c.xy += aQ.xy*sz*vec2(1.0, mist > .5 ? 1.0 : aQ.z > .5 ? 1.9 : 1.0);
           gl_Position = projectionMatrix*c;
         }`,
       fragmentShader: /* glsl */`
@@ -1133,7 +1161,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           float lit = clamp(.5 + dot(normalize(vec3(vQ, .4)), vec3(.4, .6, .4))*.5 + (n - .5), 0.0, 1.0);
           vec3 c = mix(vec3(.050, .046, .050), vec3(.46, .44, .44), lit*(.3 + .7*vT));
           c = c*(.25 + .75*ocSunGain) + vec3(1.2, .42, .10)*(1.0 - smoothstep(.0, .16, vT))*.5;
-          if (vD > .5) {                                                 // black smoke, the fire's red on its underside, fading up the column
+          if (vD > 1.5) {                                                // a fall's mist: white, lit by the sky, thin
+            c = mix(ocHaze*1.05, vec3(.92, .96, 1.0), .45 + .35*lit)*(.45 + .55*ocSunGain);
+            a *= .42;
+          } else if (vD > .5) {                                          // black smoke, the fire's red on its underside, fading up the column
             float n2 = texture(tOcNoise, vQ*.9 + vec2(vS*5.0, vT*1.3)).b*.6 + texture(tOcNoise, vQ*2.3 - vec2(vT*.9, vS*3.0)).a*.4;
             a = (1.0 - smoothstep(.25, 1.0, r + (n2 - .5)*1.3))*(1.0 - smoothstep(.55, 1.0, vT))*smoothstep(.0, .05, vT)*.86;
             float fire = (1.0 - smoothstep(.0, .55, vT))*(.5 + .5*(1.0 - smoothstep(-.8, .1, vQ.y + (n2 - .5))));
