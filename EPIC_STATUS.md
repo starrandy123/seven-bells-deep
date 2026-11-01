@@ -129,6 +129,9 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
+| V10 | Fire cities | todo | his words logged, what he sees is asked before building |
+| V11 | Sky fortresses | todo | his words logged, what he sees is asked before building |
+| V12 | Clips of the two sides fighting | todo | the aim of the first Emberkin step; how to film it is his |
 | M20 | Swim up waterfalls | building | from inside the pool by the stick: lip reached in about 3 s, Chromium, driven; his thumb owed |
 | M21 | Sprint and climb uphill | building | read 1 Nov 18:22, driven with Boost held on Sunward's hill, Chromium phone tier: rolls into the ride in 1.5 s, 36 to 56 m up in 4 s at 19 m/s, no stop. The plain sprint uphill not read apart from the ride |
 | M22 | Land ride, and the water it leaves | building | stance, width and pool under him redone from references, CR-40; the water left behind still to read. Re-opened 18:22: the ride holds 19 m/s for 5.8 s; looking back straight after and 20 s later the water can't be seen, his ask isn't met |

@@ -14,14 +14,16 @@ function fallbackGeometry() { return new THREE.CylinderGeometry(0.4, 2.2, 60, 14
 // The head is one carved mesh with its lower jaw dropped 26 degrees about a hinge (Pipeline/world/gen_creatures.py). In three.js coordinates, along the serpent:
 const HINGE_Y = 0.4, HINGE_Z = 23.75;
 // teeth are part of the mesh, so the path bends them and the jaw carries them: ivory cones along each jaw's edge, plain position/normal/colour so they merge into a body of any layout
+const toothed = new WeakMap();     // one body for every serpent of a source mesh: the Leviathan and the Frost Wyrm differ in their row of combat.json, never in their shape, so they share what the phone holds
 function withTeeth(src) {
+  const had = toothed.get(src); if (had) return had;
   const plain = new THREE.BufferGeometry(), keep = ['position', 'normal', 'color', 'jawFix'], n = src.attributes.position.count;
   for (const k of keep) { const a = src.attributes[k]; if (!a) continue; const items = k === 'color' ? 3 : 3, out = new Float32Array(n * items); for (let i = 0; i < n; i++) { out[i * 3] = a.getX(i); out[i * 3 + 1] = a.getY(i); out[i * 3 + 2] = a.getZ(i); } plain.setAttribute(k, new THREE.BufferAttribute(out, items)); }
   if (src.index) plain.setIndex(Array.from(src.index.array));
   if (!plain.attributes.color || !plain.attributes.normal) return src;
-  const parts = [plain.index ? plain.toNonIndexed() : plain], ivory = [0.6, 0.57, 0.46];   // under the serpent's own glow threshold, or a tooth burns white
+  const parts = [plain], ivory = [0.6, 0.57, 0.46];   // under the serpent's own glow threshold, or a tooth burns white
   parts[0].setAttribute('jawFix', new THREE.BufferAttribute(new Float32Array(parts[0].attributes.position.count), 1));
-  const tooth = (x, y, z, len, tip) => { const g = new THREE.ConeGeometry(0.1, len, 5, 1, true).toNonIndexed(); if (tip < 0) g.rotateX(Math.PI); g.translate(x, y + (tip * len) / 2, z); const c = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < c.length; i += 3) { c[i] = ivory[0]; c[i + 1] = ivory[1]; c[i + 2] = ivory[2]; } g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.deleteAttribute('uv'); g.setAttribute('jawFix', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(tip < 0 ? 1 : 0), 1)); parts.push(g); };   // the upper row stays with the skull
+  const tooth = (x, y, z, len, tip) => { const g = new THREE.ConeGeometry(0.1, len, 5, 1, true); if (tip < 0) g.rotateX(Math.PI); g.translate(x, y + (tip * len) / 2, z); const c = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < c.length; i += 3) { c[i] = ivory[0]; c[i + 1] = ivory[1]; c[i + 2] = ivory[2]; } g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.deleteAttribute('uv'); g.setAttribute('jawFix', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(tip < 0 ? 1 : 0), 1)); parts.push(g); };   // the upper row stays with the skull
   for (const s of [-1, 1]) for (let i = 0; i < 9; i++) {
     const t = i / 8, Y = -6.7 + t * 4.6, up = 0.42 - 0.04 * (Y + 7) - 0.02;                    // along the palate, head-local Blender Y to three.js z
     tooth(s * (0.72 + t * 0.42), up, 22.95 - Y, 0.5 - t * 0.14, -1);
@@ -29,7 +31,7 @@ function withTeeth(src) {
     tooth(s * (0.62 + t * 0.4), wz, 22.95 - wy, 0.4 - t * 0.1, 1);
   }
   const merged = mergeGeometries(parts.map((p) => { for (const k of Object.keys(p.attributes)) if (!keep.includes(k)) p.deleteAttribute(k); return p; }), false);
-  return merged || src;
+  toothed.set(src, merged || src); return merged || src;
 }
 
 // One serpent, of any name: the Leviathan and the Frost Wyrm differ only in their row of combat.json. A mesh, a path and a head that hunts.

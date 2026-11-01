@@ -43,7 +43,7 @@ async function boot() {
 
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const pick = async (url, had) => { const out = {}; try { const g = had || await loader.loadAsync(url); g.scene.updateMatrixWorld(true); g.scene.traverse((o) => { if (o.isMesh) { const m = o.material; if (m && !m.__patched && url.includes('props')) { look.patch(m, {}); m.__patched = true; } out[/^mesh_\d+/.test(o.name) && o.parent ? o.parent.name : o.name] = o; } }); } catch (e) { console.warn(url, e); } return out; };
-  G.props = await pick('assets/props.glb', G.world.glbs && G.world.glbs.props); G.creatures = await pick('assets/creatures.glb', G.world.glbs && G.world.glbs.creatures);
+  G.props = await pick('assets/props.glb', G.world.glbs && G.world.glbs.props); G.creatures = await pick('assets/creatures.glb', G.world.glbs && G.world.glbs.creatures); G.world.glbs = null;     // the meshes are out of them, and a parser keeps the whole file it read
   G.ui.setLoad(0.65, 'Waking the Warden');
 
   G.sky = createSky({ scene, look, tier: G.tier });
