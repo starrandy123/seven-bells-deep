@@ -1045,21 +1045,39 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             vec3 v = vP - cameraPosition; float dist = length(v); vec3 rd = v/dist;
             float t = ocTime;
             ${fall ? /* glsl */`
-            // a fall: white ropes of water streaming down, thicker toward the foot
-            float a = texture(tOcNoise, vec2(vF.y*vF.z*.21 + .3, vF.x*.011 - t*.19)).b, b = texture(tOcNoise, vec2(vF.y*vF.z*.47 + .7, vF.x*.021 - t*.31)).a, cc = texture(tOcNoise, vec2(vF.y*vF.z*1.1, vF.x*.05 - t*.47)).b;
-            float rope = smoothstep(.40, .66, a*.46 + b*.34 + cc*.20 + vF.a*.10);
-            vec3 foamC = ocHaze*1.3 + vec3(.02);
-            vec3 c = mix(mix(ocSeaS, ocSeaD, .3)*.8, foamC, rope);
-            float alpha = (.46 + .54*rope)*(1.0 - smoothstep(.70, 1.0, abs(vF.y)));` : /* glsl */`
-            // a river: the sky in its surface, the stream's lines running down it, white where it breaks at the banks
+            // a fall (Randy, 1 Nov: "the water on land is unnatural"): glassy and see-through at the lip, water-coloured streams of every width pouring down,
+            // churning white toward the foot, its sides fraying into spray instead of ending on a hard line
+            float down = vF.a, across = vF.y;
+            float s1 = texture(tOcNoise, vec2(across*vF.z*.13 + .3, vF.x*.020 - t*.55)).b;
+            float s2 = texture(tOcNoise, vec2(across*vF.z*.41 + .7, vF.x*.045 - t*.95)).a;
+            float s3 = texture(tOcNoise, vec2(across*vF.z*1.30, vF.x*.120 - t*1.6)).b;
+            float stream = s1*.5 + s2*.32 + s3*.18;
+            float rope = smoothstep(.45 - .18*down, .72 - .10*down, stream);                 // streams merge into a white curtain as the water falls
+            vec3 water = mix(ocSeaS, ocSeaD, .25)*.9 + vec3(.02, .05, .05);
+            vec3 foamC = ocHaze*1.25 + vec3(.06);
+            vec3 c = mix(water, foamC, clamp(rope*(.55 + .55*down), 0.0, 1.0));
+            c += ocSunCol*.10*pow(max(s3 - .55, 0.0)*2.2, 2.0);                               // the sun caught in the falling water
+            float churn = smoothstep(.70, 1.0, down)*smoothstep(.35, .7, s2);
+            c = mix(c, foamC*1.08, churn*.8);
+            float edge = 1.0 - smoothstep(.55 - .25*s1, 1.0, abs(across));                    // the sides fray
+            float alpha = edge*mix(.22 + .30*down, .92, max(rope*(.5 + .5*down), churn));`  : /* glsl */`
+            // a river (Randy, 1 Nov: "the water on land is unnatural"): deep and dark in its channel, shallow and see-through at its banks so the bed and the
+            // grass show through, the sky and the sun in a surface that moves downstream, and only a thin lace of foam where it laps the banks
+            float across = abs(vF.y);
             float a = texture(tOcNoise, vec2(vF.y*.11*vF.z + .31, vF.x*.045 - t*.30)).b, b = texture(tOcNoise, vec2(vF.y*.27*vF.z, vF.x*.13 - t*.62)).a;
-            vec3 n = normalize(vec3((a - .5)*.5, 1.0, (b - .5)*.5));
+            float d = texture(tOcNoise, vec2(vF.y*.6*vF.z + .5, vF.x*.31 - t*1.1)).b;
+            vec3 n = normalize(vec3((a - .5)*.55 + (d - .5)*.25, 1.0, (b - .5)*.55 + (d - .5)*.2));
             float F = .02 + .98*pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
             vec3 sky = mix(ocSkyH, ocSkyZ, .45);
-            vec3 c = mix(mix(ocSeaS, ocSeaD, .55)*.62, sky, F*.8);
-            float foam = smoothstep(.60, .76, a*.6 + b*.4)*(.28 + .72*smoothstep(.5, 1.0, abs(vF.y)));
-            c = mix(c, ocHaze*1.25 + vec3(.02), foam);
-            float alpha = (1.0 - smoothstep(.72, 1.0, abs(vF.y)))*mix(.66, .96, max(F, foam));`}
+            float deep = 1.0 - smoothstep(0.0, .85, across);                                    // 1 in the channel, 0 at the bank
+            vec3 bed = vec3(.20, .23, .15);                                                      // the shallow bed seen through the water
+            vec3 body = mix(mix(bed, mix(ocSeaS, ocSeaD, .3)*.75, .55), mix(ocSeaS, ocSeaD, .7)*.45, deep);
+            vec3 c = mix(body, sky, F*.75);
+            vec3 L = normalize(ocSunW + vec3(0.0, .0001, 0.0)), H = normalize(L - rd);
+            c += ocSunCol*.9*pow(max(dot(n, H), 0.0), 120.0);                                    // glints
+            float lace = smoothstep(.62, .80, a*.6 + d*.4)*smoothstep(.62, .95, across);
+            c = mix(c, ocHaze*1.2 + vec3(.04), lace*.75);
+            float alpha = (1.0 - smoothstep(.80, 1.0, across))*mix(.38, .93, max(max(deep, F), lace));`}
             gl_FragColor = vec4(ocApply(c, vP), alpha);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>

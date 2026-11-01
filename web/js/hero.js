@@ -29,7 +29,9 @@ const DRIVE_V = 13, DRIVE_NEAR = 4, DRIVE_DEEP = 0.5, PORPOISE_T = 0.42, CHAIN_L
 const SHOT_FAR = 5.5, SHOT_RISE = 0.4, SHOT_AWAY = 1.9, SHOT_LOW = 1.1, SHOT_HIGH = 0.33, SHOT_FOV = 50;
 const ARM_HOLD = 3;       // s after the last blow that the trident stays in his hand
 const WEDGE = 0.31;      // m, his body's half width (A1)
-const TAN_CLIMB = Math.tan((42 * Math.PI) / 180), STEP_UP = 0.52, SLOPE_READ = 0.6, SKIN = 0.02;       // A7: the steepest ground he walks up, and the highest top he stands on without a jump: his sphere (0.42, centred 0.92 up) clears anything under 0.50
+// Randy, 1 Nov: "I can't sprint or climb uphill". Measured: at 40° he stood frozen, and 16% of the islands' land is 36° or steeper. Open-world standard: he walks up
+// to 50°, slowing; scrambles up to 68°, slower still; only a real cliff stops him
+const TAN_CLIMB = Math.tan((50 * Math.PI) / 180), TAN_WALL = Math.tan((68 * Math.PI) / 180), STEP_UP = 0.52, SLOPE_READ = 0.6, SKIN = 0.02;       // A7: the steepest ground he walks up, and the highest top he stands on without a jump: his sphere (0.42, centred 0.92 up) clears anything under 0.50
 
 // what each thing he can wear does to him: the suit's tint, the bronze's. And each form of the trident: its tint, and how much it glows. Ids from web/data/gear.json
 const OUTFITS = { warden: [[1, 1, 1], [1, 1, 1]], gilded: [[1.12, 0.96, 0.62], [1.4, 1.12, 0.6]], ember: [[0.78, 0.36, 0.3], [0.72, 0.5, 0.42]], keeper: [[0.62, 0.76, 0.86], [0.86, 0.92, 1.04]] };
@@ -303,8 +305,8 @@ export async function createHero(G) {
     wallCut = false;
     const g0 = groundAt(h.pos.x, h.pos.z), depth = Math.max(0, -g0), wade = 1 - 0.42 * smooth(0, 0.3, depth), sn = Math.sin(h.heading), cn = Math.cos(h.heading);
     // the ground ahead: he slows up a hill, and what's too steep he doesn't climb
-    const ahead = (groundAt(h.pos.x + sn * 0.7, h.pos.z + cn * 0.7) - g0) / 0.7, hill = 1 - 0.55 * smooth(0.12, TAN_CLIMB, ahead) + 0.12 * smooth(0.1, 0.6, -ahead);
-    const top = h.surge > 0.4 ? LAND_SUPER : boosting ? LAND_SPRINT : LAND_RUN;
+    const ahead = (groundAt(h.pos.x + sn * 0.7, h.pos.z + cn * 0.7) - g0) / 0.7, hill = 1 - 0.3 * smooth(0.15, TAN_CLIMB, ahead) - 0.3 * smooth(TAN_CLIMB, TAN_WALL, ahead) + 0.12 * smooth(0.1, 0.6, -ahead);
+    const top = h.surge > 0.4 ? LAND_SUPER : boosting ? LAND_SPRINT : LAND_RUN;      // h.surge is the sea's: it fades on land (below), so it only carries a run out of the water
     let target = top * amt * wade * hill; h.stick = amt; h.landGoal = target;
     const wishYaw = amt > 0.04 ? Math.atan2(wx, wz) : h.heading, err = wrap(wishYaw - h.heading);
     // a sharp reverse at speed: plant, brake, turn on the spot, go
@@ -333,8 +335,8 @@ export async function createHero(G) {
     let run = Math.hypot(h.pos.x - px, h.pos.z - pz);
     // too steep: read over a stride's reach ahead, so a step he can take isn't a wall and a bank taken in tiny frames is still a bank. The push up the slope is lost, the rest runs along it, so a bank stops him cleanly
     // a bank's own steepness counts as well as the way he's going across it: nobody traverses a 55° face just by going at it slantwise
-    const steep = (x0, z0, x1, z1, len) => { const B = Math.max(len, SLOPE_READ), ux = (x1 - x0) / Math.max(len, 1e-5), uz = (z1 - z0) / Math.max(len, 1e-5); if ((terrain(x0 + ux * B, z0 + uz * B) - t0) / B > TAN_CLIMB) return true;
-      const e = SLOPE_READ, gx = (terrain(x1 + e, z1) - terrain(x1 - e, z1)) / (2 * e), gz = (terrain(x1, z1 + e) - terrain(x1, z1 - e)) / (2 * e); return Math.hypot(gx, gz) > TAN_CLIMB && ux * gx + uz * gz > 0.15; };
+    const steep = (x0, z0, x1, z1, len) => { const B = Math.max(len, SLOPE_READ), ux = (x1 - x0) / Math.max(len, 1e-5), uz = (z1 - z0) / Math.max(len, 1e-5); if ((terrain(x0 + ux * B, z0 + uz * B) - t0) / B > TAN_WALL) return true;
+      const e = SLOPE_READ, gx = (terrain(x1 + e, z1) - terrain(x1 - e, z1)) / (2 * e), gz = (terrain(x1, z1 + e) - terrain(x1, z1 - e)) / (2 * e); return Math.hypot(gx, gz) > TAN_WALL && ux * gx + uz * gz > 0.15; };
     if (run > 1e-4 && steep(px, pz, h.pos.x, h.pos.z, run)) {
       const e = SLOPE_READ, gx = terrain(px + e, pz) - terrain(px - e, pz), gz = terrain(px, pz + e) - terrain(px, pz - e), l = Math.hypot(gx, gz) || 1, nx = gx / l, nz = gz / l, vn = h.vel.x * nx + h.vel.z * nz;
       if (vn > 0) { h.vel.x -= nx * vn; h.vel.z -= nz * vn; }
@@ -441,8 +443,8 @@ export async function createHero(G) {
     const inputAmt = Math.min(1, wish.length()); if (inputAmt > 0.001) wish.normalize();
 
     if (h.boostFuel <= 0.02) h.boostOut = true; else if (h.boostFuel > 0.3) h.boostOut = false;   // one impulse per burst, never a stutter at the bottom of the tank
-    const boosting = u.boost && !h.boostOut && inputAmt > 0.2 && h.state === 'swim' && !h.air;
-    h.boostFuel = clamp(h.boostFuel + (boosting ? -0.065 : 0.22) * dt, 0, 1);
+    const boosting = u.boost && (h.land || !h.boostOut) && inputAmt > 0.2 && h.state === 'swim' && !h.air;
+    h.boostFuel = clamp(h.boostFuel + (boosting && !h.land ? -0.065 : 0.22) * dt, 0, 1);      // a sprint on land costs nothing; the sea's boost has its tank
     // Tidepulse: boost pressed in time with his kick steps him up a tier; a miss keeps the tier he has; held, it's tier 1, so nobody's locked out of it. Plain swimming costs nothing
     if (!h.land && !h.air && h.state === 'swim') {
       h.tideT = Math.max(0, (h.tideT || 0) - dt); if (h.tideT <= 0) h.tideTier = 0;
@@ -453,7 +455,7 @@ export async function createHero(G) {
     if (boosting && !h.wasBoost) { if (!h.land) h.vel.addScaledVector(wish, 6); G.fx.ring(h.pos.clone(), 3, 0.45, 0xbdf7ff, wish.clone().negate()); G.audio.bubble(); }
     h.wasBoost = boosting;
     // hold it and the sea lets go of you: super speed
-    h.boostHeld = boosting ? h.boostHeld + dt : 0;
+    h.boostHeld = boosting && !h.land ? h.boostHeld + dt : 0;      // super speed is the sea's: held on land it stays a sprint
     const surgeWas = h.surge; h.surge = damp(h.surge, h.boostHeld > LEVEL_HOLD[speedLevel] ? 1 : 0, h.boostHeld > LEVEL_HOLD[speedLevel] ? 3.2 : 4.5, dt);
     if (surgeWas < 0.45 && h.surge >= 0.45) { G.fx.ring(h.pos.clone(), 11, 0.7, 0xdffaff, wish.clone().negate()); G.fx.bubbles(h.pos, 30, 1.2); G.audio.boom(); G.shake(0.4); G.quest && G.quest.note('super'); G.life && G.life.scatter(h.pos, 24); }
     if (h.surge > 0.4 && G.enemies) { for (const e of G.enemies.alive()) { if (e.pos.distanceTo(h.pos) < 3.2 + (e.r || 0.8) && (!e.ramT || G.time > e.ramT)) { e.ramT = G.time + 1; e.onHit(34, h.pos, 'atk_dash'); G.fx.sparks(e.pos, 18, 0xdffaff, 10); G.audio.hit(true); G.shake(0.3); G.hitstop = Math.max(G.hitstop, 0.05); } } }
