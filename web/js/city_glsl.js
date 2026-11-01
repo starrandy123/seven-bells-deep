@@ -63,10 +63,14 @@ export const CITY_ALBEDO = /* glsl */`{
     if (st > .5) inkW = max(inkW, ocLn(vy - .26)*.9);
     // the window (or the sea's ground arcade, or a land house's door)
     float hw = clamp(ocBw*.22, .42, 1.0), y0 = sea ? 1.15 : .95, y1 = sea ? 2.95 : 2.25, arch = sea ? 1.0 : 0.0, open = 0.0;
+    // each building draws its windows its own way: arched, square, tall and narrow, or low and wide
+    float ocWs = fract(vFacSeed*7.31);
+    if (sea && ocK == 1) { if (ocWs < .3) arch = 0.0; else if (ocWs < .55) { hw *= .62; y0 = .8; y1 = 3.2; } else if (ocWs < .75) { hw *= 1.25; y1 = 2.5; arch = 0.0; } }
+    if (!sea) { if (ocWs < .3) arch = 1.0; else if (ocWs < .55) hw *= .8; }
     if (ocK == 15 && st < .5) { hw = ocBw*.33; y0 = 0.0; y1 = 2.6; open = 1.0; }
     if (ocK == 2 && st < .5 && ocH1(vec2(bi, 7.0) + vFacSeed*5.0) < .34) { hw = .56; y0 = 0.0; y1 = 2.25; open = 2.0; }
     float sd = ocSdWin(vec2(ux, vy), hw, y0, y1, arch), fb = sea ? .17 : .1;
-    float lit = step(.34, ocH1(vec2(bi, st) + vFacSeed*17.0));
+    float lit = step(.14 + .5*fract(vFacSeed*3.17), ocH1(vec2(bi, st) + vFacSeed*17.0));      // some buildings mostly dark, some blazing
     if (!pil && sd < fb) {
       if (sd < 0.0) {
         if (open > 1.5) { c = vec3(.22, .12, .06)*(.82 + .3*step(.5, fract(ux*2.2 + .25))); ink = max(ink, ocLnGrid(ux*2.2 + .25)*.6); }
@@ -97,7 +101,8 @@ export const CITY_ALBEDO = /* glsl */`{
     float r = ocBw, ang = ocUV.x/r, cphi = sqrt(max(1.0 - (ocUV.y/r)*(ocUV.y/r), .04));
     float su = ocUV.x*cphi/.9, sv = ocUV.y/.55, row = floor(sv), q = fract(su + row*.5) - .5, p = fract(sv);
     float sc = length(vec2(q, (p - 1.0)*1.25));
-    vec3 v = VERD*ocT*(.82 + .32*ocH1(vec2(floor(su + row*.5), row)));
+    float ocDs = fract(vFacSeed*5.73); vec3 ocVD = ocDs < .4 ? VERD : ocDs < .62 ? vec3(.62, .40, .10) : ocDs < .82 ? vec3(.46, .16, .12) : vec3(.10, .17, .42);      // verdigris, gold, rose copper, lapis
+    VERD = ocVD; vec3 v = VERD*ocT*(.82 + .32*ocH1(vec2(floor(su + row*.5), row)));
     vec3 c = mix(v*.62, v, smoothstep(.0, .5, 1.0 - sc));
     ink = max(ink, ocLn(sc - .5)*.7);
     float rb = fract(ang/6.2831853*12.0), rd = min(rb, 1.0 - rb)*6.2831853*r*cphi/12.0;      // metres from the nearest of twelve ribs
@@ -161,17 +166,18 @@ export const CITY_ALBEDO = /* glsl */`{
   else if (ocK == 3) {
     // ---------------- terracotta roof tiles: rounded courses up the slope, staggered
     float rv = ocUV.y/.32, row = floor(rv), tu = ocUV.x/.26 + row*.5;
-    vec3 t = vec3(.50, .17, .08)*(.82 + .3*ocH1(vec2(floor(tu), row) + vFacSeed*3.0));
+    float ocRs = fract(vFacSeed*9.13); vec3 ocRc = ocRs < .46 ? vec3(.50, .17, .08) : ocRs < .7 ? vec3(.56, .30, .11) : ocRs < .86 ? vec3(.34, .10, .07) : vec3(.20, .22, .26);      // terracotta, ochre, oxblood, slate
+    vec3 t = ocRc*(.82 + .3*ocH1(vec2(floor(tu), row) + vFacSeed*3.0));
     t *= mix(.68, 1.0, smoothstep(.0, .4, fract(rv)));
     ink = max(ink, ocLnGrid(rv)*.6); ink = max(ink, ocLnGrid(tu)*.25);
-    ocC = mix(vec3(.44, .16, .08), t, ocLod); ocStoneish = false;
+    ocC = mix(ocRc*.9, t, ocLod); ocStoneish = false;
   }
   else if (ocK == 10) { ocC = vec3(1.0, .88, .62); ocWinM = 1.0; ocWinC = mix(vec3(1.0, .72, .40), vec3(.35, .95, .95), ocDeep); ocStoneish = false; }
   else if (ocK == 11) { ocC = mix(vec3(.62, .10, .07), vec3(.88, .82, .68), step(.5, fract(ocUV.x/.5))); ink = max(ink, ocLnGrid(ocUV.x/.5)*.4); ocStoneish = false; }
   else if (ocK == 12) {
     // ---------------- the frieze: a running wave in gold on sea green, gold borders
     float x = ocUV.x/1.1, y = ocUV.y/.9, wave = .5 + .26*sin(x*6.2831853) + .1*sin(x*12.566 + 1.3), d = abs(y - wave);
-    vec3 bg = vec3(.07, .26, .29), c = d < .12 ? GOLD : bg;
+    float ocFs = fract(vFacSeed*4.37); vec3 bg = ocFs < .4 ? vec3(.07, .26, .29) : ocFs < .7 ? vec3(.30, .09, .10) : vec3(.07, .10, .30), c = d < .12 ? GOLD : bg;
     if (y < .12 || y > .88) c = GOLD*.9;
     inkW = max(inkW, max(ocLn(d - .12), max(ocLn(y - .12), ocLn(y - .88))));
     ocC = mix(mix(bg, GOLD, .35), c, ocLodW); ocStoneish = false;
@@ -203,6 +209,11 @@ export const CITY_POST = /* glsl */`{
   float ocHf = 1.0 - smoothstep(.2, .5, max(fwidth(ocT1), fwidth(ocT2)));      // only while its lines stay three pixels or more apart
   float ocS1 = (1.0 - smoothstep(-.06, .22, ocNdl)), ocS2 = (1.0 - smoothstep(-.52, -.18, ocNdl));
   outgoingLight *= 1.0 - .36*ocHf*clamp(ocLnGrid(ocT1)*ocS1 + ocLnGrid(ocT2)*ocS2, 0.0, 1.0)*(1.0 - ocWinM);
+  // under the water the sun's colours are gone a few metres down, and a street of coral, sandstone and jade reads as one blue: a soft light of its own keeps each building its colour through the haze
+  { float ocUnder = 1.0 - smoothstep(-6.0, -1.0, vOcP.y), ocD = min(length(vOcP - cameraPosition), 90.0);
+    outgoingLight += diffuseColor.rgb*vec3(.70, .66, .60)*ocUnder*(.72 + .28*max(ocNdl, 0.0))*(1.0 - .75*ocWinM);
+    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.72), ocUnder);
+    float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .42*ocUnder*(1.0 - ocWinM)), vec3(0.0)); }      // and the haze greys what's left: the stone keeps its hue
   outgoingLight = mix(outgoingLight, vec3(.010, .020, .028), clamp(ocInkM, 0.0, 1.0));
 }`;
 

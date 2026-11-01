@@ -31,6 +31,8 @@ const SOLID_KINDS = { tower: 9, tower_cold: 9, dome_hall: 14, wall_bay: 6, wall_
 // land. Never a landmark (those stand in a city's `keep` and keep their radius), a temple, a statue, the arena, a shrine or a lamp
 const CLEARS = { sea: ['wall_bay', 'wall_broken', 'wall_windows', 'wall_windows_cold', 'tower', 'tower_cold', 'roof_slab', 'column_broken', 'column_fallen'], land: ['stone_wall'] };
 // a land house's plaster, each house its own (the Mediterranean range: cream, ochre, white, rose, pale blue, straw)
+// a sea city's stone, each building its own: cream marble, honey sandstone, coral rose, jade, slate blue, ivory
+const SEA_STONE = [[1.1, 1.1, 1.06], [1.34, 0.96, 0.36], [1.3, 0.6, 0.54], [0.42, 1.16, 0.74], [0.5, 0.74, 1.4], [1.3, 1.24, 0.96], [1.04, 0.64, 1.16], [0.92, 0.6, 0.42]];      // and a violet, and a dark terracotta
 const PLASTER = [[1.0, 0.97, 0.9], [1.0, 0.86, 0.62], [1.06, 1.06, 1.04], [1.0, 0.8, 0.74], [0.82, 0.92, 1.02], [0.98, 0.9, 0.72]];
 
 // ------------------------------------------------------------------------------------------------ a tiny seeded random
@@ -158,6 +160,35 @@ function seaSet(phone) {
   };
   A.spireTall = spire(28);
   A.spireShort = spire(15);
+  // a drum tower: round, not square: a tall drum of arched windows, a gallery, a narrower drum, a dome and its point
+  {
+    const m = new Mk(); m.box(0, 0, 13.5, 13.5, -2.5, 0.6, K.STONE, K.PAVING, 3);
+    m.cyl(0, 0, 5.6, 5.3, 0.6, 12.6, seg, K.DRUM, { bays: 10 });
+    m.cyl(0, 0, 6.2, 6.2, 12.6, 13.3, seg, K.FRIEZE, { cap: K.STONE });
+    m.cyl(0, 0, 4.0, 3.8, 13.3, 21.3, seg, K.DRUM, { bays: 8 });
+    m.cyl(0, 0, 4.5, 4.5, 21.3, 21.9, seg, K.GOLD, { cap: K.STONE });
+    m.dome(0, 0, 3.9, 21.9, seg, phone ? 4 : 6, K.DOME);
+    m.cyl(0, 0, 0.4, 0.02, 25.6, 28.0, 6, K.GOLD, { solid: false });
+    A.drum = { geo: m.geometry(), solids: m.S, H: 28, W: 13.5 };
+  }
+  // a hall: long and low, a columned porch along its front under a pitched roof, a gable at each end
+  {
+    const m = new Mk(); m.box(0, 0, 13.6, 12.4, -2.5, 1.0, K.STONE, K.PAVING, 3);
+    m.box(0, -1.4, 12, 8, 1.0, 9.0, K.SEA_WALL, null, SEA_BAY, 1.0);
+    for (let i = 0; i < 6; i++) m.column(-5.5 + i * 2.2, 4.6, 0.36, 1.0, 7.4, cseg);
+    m.box(0, 4.6, 12.6, 1.5, 8.4, 9.0, K.FRIEZE, K.STONE, 1.1, 8.4, false);
+    m.roof(0, -0.2, 12.4, 10.6, 9.0, 3.4, 0.35, K.STONE, 1.0);
+    A.hall = { geo: m.geometry(), solids: m.S, H: 12.4, W: 13.6 };
+  }
+  // a stepped pyramid: blank courses going up in terraces, a frieze at each, a small shrine on top
+  {
+    const m = new Mk(); m.box(0, 0, 13.6, 13.6, -2.5, 0.6, K.STONE, K.PAVING, 3);
+    let y = 0.6;
+    for (const [w, h] of [[12.6, 3.6], [10.0, 3.2], [7.6, 3.0], [5.4, 2.8]]) { m.box(0, 0, w, w, y, y + h, K.STONE, K.PAVING, 3); m.box(0, 0, w + 0.2, w + 0.2, y + h - 0.7, y + h, K.FRIEZE, null, 1.1, y + h - 0.7, false); y += h; }
+    m.box(0, 0, 3.2, 3.2, y, y + 3.0, K.DRUM, K.STONE, 2.0, y);
+    m.cyl(0, 0, 2.5, 0.05, y + 3.0, y + 6.0, 4, K.DOME, { rot: Math.PI / 4 });
+    A.step = { geo: m.geometry(), solids: m.S, H: y + 6.0, W: 13.6 };
+  }
   // a low house: two storeys over its arcade, a frieze, a flat roof, a gilded pergola
   {
     const m = new Mk(); m.box(0, 0, 13, 13, -2.5, 0.6, K.STONE, K.PAVING, 3);
@@ -200,6 +231,29 @@ function landSet(phone) {
   };
   A.house2 = house(7.0, 6.0, 2, 2.4);
   A.house3 = house(5.8, 6.2, 3, 2.1);
+  // a house with a wing: two roofs at two heights, so a street's skyline isn't one ridge after another
+  {
+    const m = new Mk(); m.box(0, 0, 9.4, 7.0, -1.5, 0.2, K.STONE, K.PAVING, 3);
+    m.box(-1.2, 0, 6.4, 6.0, 0.2, 0.2 + 2 * LAND_S, K.LAND_WALL, null, LAND_BAY, 0.2); m.roof(-1.2, 0, 6.4, 6.0, 0.2 + 2 * LAND_S, 2.3, 0.4, K.LAND_WALL, 0.2);
+    m.box(3.1, -0.6, 2.8, 4.4, 0.2, 0.2 + LAND_S, K.LAND_WALL, null, LAND_BAY, 0.2); m.roof(3.1, -0.6, 2.8, 4.4, 0.2 + LAND_S, 1.5, 0.3, K.LAND_WALL, 0.2);
+    A.houseWing = { geo: m.geometry(), solids: m.S, H: 0.2 + 2 * LAND_S + 2.3, W: 9.4 };
+  }
+  // a tower house: tall and narrow, four storeys under a tiled pyramid
+  {
+    const m = new Mk(); m.box(0, 0, 5.4, 5.4, -1.5, 0.2, K.STONE, K.PAVING, 3);
+    m.box(0, 0, 4.6, 4.6, 0.2, 0.2 + 4 * LAND_S, K.LAND_WALL, null, LAND_BAY, 0.2);
+    m.box(0, 0, 5.0, 5.0, 0.2 + 4 * LAND_S, 0.4 + 4 * LAND_S, K.STONE, null, 3, null, false);
+    m.cyl(0, 0, 3.9, 0.05, 0.4 + 4 * LAND_S, 3.0 + 4 * LAND_S, 4, K.TILE, { rot: Math.PI / 4 });
+    A.towerHouse = { geo: m.geometry(), solids: m.S, H: 3.0 + 4 * LAND_S, W: 5.4 };
+  }
+  // a loggia: an arcade below, plaster over it, a flat roof terrace with a parapet
+  {
+    const m = new Mk(); m.box(0, 0, 8.6, 6.6, -1.5, 0.2, K.STONE, K.PAVING, 3);
+    m.box(0, 0, 8, 6, 0.2, 3.6, K.SEA_GROUND, null, 2.6, 0.2);
+    m.box(0, 0, 8, 6, 3.6, 3.6 + LAND_S, K.LAND_WALL, null, LAND_BAY, 3.6);
+    m.box(0, 0, 8.4, 6.4, 3.6 + LAND_S, 4.1 + LAND_S, K.STONE, K.PAVING, 3);
+    A.loggia = { geo: m.geometry(), solids: m.S, H: 4.1 + LAND_S, W: 8.6 };
+  }
   // the town's bell tower, on its plaza: a stone shaft, a belfry of open arches, a tiled pyramid
   {
     const m = new Mk(); m.box(0, 0, 6, 6, -1.5, 0.3, K.STONE, K.PAVING, 3);
@@ -327,19 +381,20 @@ export function planCities(data, heightAt, opts = {}) {
         if (sea) {
           const room = surface - z;                                         // how tall a building can stand here and stay under the water
           const fits = (t) => A[t].H * Math.min(1.12, foot / A[t].W) < room;
-          const order = ring < 0.38 ? [['dome', 0.26], ['spireTall', 0.4], ['spireShort', 0.46], ['terrace5', 0.72], ['terrace3', 0.92], ['terrace2', 1.01]]
-            : ring < 0.66 ? [['spireTall', 0.12], ['spireShort', 0.2], ['terrace5', 0.38], ['terrace3', 0.72], ['terrace2', 0.92], ['low', 1.01]]
-              : [['terrace3', 0.25], ['terrace2', 0.6], ['low', 1.01]];
-          let hit = order.find(([t, w8]) => r0 < w8 && fits(t)); if (!hit) hit = [['terrace3'], ['terrace2'], ['low']].find(([t]) => fits(t));
+          // Randy, 1 Nov: "The buildings need variety": a street holds towers, drums, halls and stepped pyramids, each its own stone, width and height
+          const order = ring < 0.38 ? [['dome', 0.18], ['spireTall', 0.3], ['drum', 0.46], ['terrace5', 0.62], ['step', 0.74], ['hall', 0.88], ['terrace3', 1.01]]
+            : ring < 0.66 ? [['spireTall', 0.08], ['drum', 0.24], ['spireShort', 0.32], ['terrace5', 0.42], ['step', 0.54], ['hall', 0.7], ['terrace3', 0.84], ['terrace2', 0.94], ['low', 1.01]]
+              : [['drum', 0.14], ['hall', 0.36], ['step', 0.46], ['terrace3', 0.62], ['terrace2', 0.8], ['low', 1.01]];
+          let hit = order.find(([t, w8]) => r0 < w8 && fits(t)); if (!hit) hit = [['hall'], ['terrace3'], ['terrace2'], ['low']].find(([t]) => fits(t));
           if (!hit) continue;
-          const t = hit[0], s = Math.min(1.12, foot / A[t].W), tone = 0.93 + rand() * 0.12;
+          const t = hit[0], s = Math.min(1.12, foot / A[t].W), tone = 0.93 + rand() * 0.12, stone = SEA_STONE[Math.floor(rand() * SEA_STONE.length)], wide = 0.92 + rand() * 0.16, tall = t === 'hall' || t === 'dome' ? 1 : 0.84 + rand() * 0.34;
           if (s < 0.6) continue;
-          put(t, x, y, z, yaw + (t === 'dome' || t.startsWith('spire') ? rand() * 0.3 : 0), s, s, s, [def.tint[0] * tone, def.tint[1] * tone, def.tint[2] * tone]);
+          put(t, x, y, z, yaw + (t === 'dome' || t.startsWith('spire') ? rand() * 0.3 : t === 'hall' ? (rand() < 0.5 ? Math.PI / 2 : 0) : 0), s * wide, s * tall, s * wide, [def.tint[0] * tone * stone[0], def.tint[1] * tone * stone[1], def.tint[2] * tone * stone[2]]);
         } else {
-          const t = r0 < 0.55 ? 'house2' : 'house3', s = Math.min(1.1, foot / A[t].W);
+          const t = r0 < 0.36 ? 'house2' : r0 < 0.6 ? 'house3' : r0 < 0.76 ? 'houseWing' : r0 < 0.9 ? 'loggia' : 'towerHouse', s = Math.min(1.1, foot / A[t].W);
           if (s < 0.7) continue;
           if (a === 0 && rand() < 0.3) yaw = def.angle - Math.PI / 2; else if (a === 1 && rand() < 0.3) yaw = def.angle + Math.PI / 2;      // a corner house to its cross street
-          put(t, x, y, z, yaw, s, s * (0.95 + rand() * 0.1), s, PLASTER[Math.floor(rand() * PLASTER.length)]);
+          put(t, x, y, z, yaw, s, s * (0.92 + rand() * 0.16), s, PLASTER[Math.floor(rand() * PLASTER.length)]);
         }
       }
     }
@@ -378,7 +433,7 @@ export function planCities(data, heightAt, opts = {}) {
         L.forEach(([x, y, z, yaw, sx, sy, sz, tint], i) => { v.set(x, z, -y); e.set(0, yaw, 0); q.setFromEuler(e); s.set(sx, sy, sz); m4.compose(v, q, s); im.setMatrixAt(i, m4); col.setRGB(tint[0], tint[1], tint[2]); im.setColorAt(i, col); });
         im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.frustumCulled = false; im.name = 'city_' + c.def.id + '_' + type;
         group.add(im); meshes.push(im);
-        const ink = type === 'plinth' ? null : matFor('ink');
+        const ink = type === 'plinth' || type === 'lamp' ? null : matFor('ink');      // (a lamp is thinner than its own outline)
         if (ink) { const om = new THREE.InstancedMesh(hullOf(A.geo), ink, L.length); om.instanceMatrix.copy(im.instanceMatrix); om.frustumCulled = false; om.name = im.name + '_ink'; group.add(om); }
       }
     }
@@ -386,7 +441,12 @@ export function planCities(data, heightAt, opts = {}) {
   }
   // a whole city is drawn only while the camera is near enough to see it through the water (or across the haze on land)
   function update(scene, cam, ph) {
-    for (const c of cities) { const g = scene.getObjectByName('city_' + c.def.id); if (!g) continue; const d = Math.hypot(cam.x - c.p.x, -cam.z - c.p.y); g.visible = d < c.p.r + (c.def.kind === 'land' ? (ph ? 700 : 1100) : (ph ? 340 : 560)); }
+    for (const c of cities) {
+      const g = c.group || (c.group = scene.getObjectByName('city_' + c.def.id)); if (!g) continue;
+      const d = Math.hypot(cam.x - c.p.x, -cam.z - c.p.y); g.visible = d < c.p.r + (c.def.kind === 'land' ? (ph ? 700 : 1100) : (ph ? 300 : 560));
+      // the ink is gone by 120 m (world.js): past that its hulls are draw calls with nothing to show, two cities' worth of them in sight at once at Thalor
+      const inked = d < c.p.r + 130; if (inked !== c.inked) { c.inked = inked; for (const o of g.children) if (o.name.endsWith('_ink')) o.visible = inked; }
+    }
   }
   return { colliders, cities, count, total, tris, why, cleared, build, update };
 }

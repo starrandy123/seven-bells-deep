@@ -82,7 +82,7 @@ export function createWake(G, h, mesh) {
       }` });
   const wet = new THREE.Mesh(wtG, wtM); wet.frustumCulled = false; wet.renderOrder = 1; G.scene.add(wet);
   const trail = new THREE.Mesh(trG, trM); trail.frustumCulled = false; trail.renderOrder = 2; G.scene.add(trail);
-  const trPts = []; let trT = 0, lastStamp = null; const TRAIL_LIFE = 6.0, TRAIL_W = 1.15;
+  const trPts = []; let trT = 0, lastStamp = null; const TRAIL_LIFE = 6.0, TRAIL_W = 0.36;
   const swell = new THREE.Mesh(swG, swM); swell.frustumCulled = false; swell.renderOrder = 2; swell.visible = true; G.scene.add(swell);
   let sprayT = 0, ringT = 0; const FOAM = new THREE.Color(0.94, 0.99, 1), SAND = new THREE.Color(0.86, 0.8, 0.66);
 
@@ -139,17 +139,17 @@ export function createWake(G, h, mesh) {
         if (i > 0 && live) along += Math.hypot(q.x - trPts[k - 1].x, q.z - trPts[k - 1].z);
         const lx = cx + (q.lx - cx) * shrink, lz = cz + (q.lz - cz) * shrink, rx = cx + (q.rx - cx) * shrink, rz = cz + (q.rz - cz) * shrink;
         trP[o] = lx; trP[o + 1] = q.ly; trP[o + 2] = lz; trP[o + 3] = rx; trP[o + 4] = q.ry; trP[o + 5] = rz;
-        wtP[o] = cx + (q.lx - cx) * 1.7; wtP[o + 1] = q.ly - 0.03; wtP[o + 2] = cz + (q.lz - cz) * 1.7; wtP[o + 3] = cx + (q.rx - cx) * 1.7; wtP[o + 4] = q.ry - 0.03; wtP[o + 5] = cz + (q.rz - cz) * 1.7;
+        wtP[o] = cx + (q.lx - cx) * 1.45; wtP[o + 1] = q.ly - 0.03; wtP[o + 2] = cz + (q.lz - cz) * 1.45; wtP[o + 3] = cx + (q.rx - cx) * 1.45; wtP[o + 4] = q.ry - 0.03; wtP[o + 5] = cz + (q.rz - cz) * 1.45;
         const ag = live ? age : 1; trA.set([ag, -1, along, ag, 1, along], i * 6);
       }
       trG.attributes.position.needsUpdate = true; trG.attributes.aA.needsUpdate = true; wtG.attributes.position.needsUpdate = true; wtG.attributes.aA.needsUpdate = true;
     }
-    if (!warm) { const y = surfing ? h.swellY || 0 : 0; swell.visible = surfing || swM.uniforms.uA.value > 0.02; swM.uniforms.uA.value += ((surfing ? 1 : 0) - swM.uniforms.uA.value) * (1 - Math.exp(-6 * dt)); if (swell.visible) { swell.position.set(h.pos.x, 0.02 + (h.surfBase ?? (G.sky && G.sky.waveAt ? G.sky.waveAt(h.pos.x, h.pos.z) : 0)), h.pos.z); swell.scale.set(5.5 + h.surf?.v * 0.1 || 5.5, Math.max(y, 0.05), 5.5 + h.surf?.v * 0.1 || 5.5); swell.rotation.y = h.heading; } }
+    if (!warm) { const y = surfing ? h.swellY || 0 : 0; swell.visible = surfing || swM.uniforms.uA.value > 0.02; swM.uniforms.uA.value += ((surfing ? (h.surf.land ? 0.62 : 1) : 0) - swM.uniforms.uA.value) * (1 - Math.exp(-6 * dt)); if (swell.visible) { swell.position.set(h.pos.x, 0.02 + (h.surfBase ?? (G.sky && G.sky.waveAt ? G.sky.waveAt(h.pos.x, h.pos.z) : 0)), h.pos.z); const onLand = h.surf && h.surf.land; swell.scale.set(onLand ? 1.05 : 3.4, Math.max(y, 0.05), onLand ? 2.3 : 6.0); swell.rotation.y = h.heading; } }      // a tongue of water under his feet, longer than it's wide (Randy, 1 Nov: "too wide": it was a disc 15 m across)
     foamT = Math.max(0, foamT - dt); mat.uniforms.uCol.value.copy(surfing || foamT > 0 || (!h.land && !h.air) ? FOAM : SAND);
     if (surfing) {            // the ride throws a white wake off both sides of him, and rings run out behind on the water
       sprayT -= dt; ringT -= dt; const sn = Math.sin(h.heading), cs = Math.cos(h.heading), y0 = h.pos.y - 0.74, v = h.surf.v;
-      if (sprayT <= 0) { sprayT = 0.03; for (const s of [-1, 1]) puff(h.pos.x - sn + cs * s * (0.4 + Math.random() * 0.45), y0 - 0.1 + Math.random() * 0.1, h.pos.z - cs - sn * s * (0.4 + Math.random() * 0.45), 0.3 + v * 0.014, 0.42 + v * 0.006); }      // low and small: the camera looks down this wake at him, and anything taller stands between it and his body
-      if (ringT <= 0) { ringT = 0.38; spot.set(h.pos.x - sn * 1.2, y0 + 0.02, h.pos.z - cs * 1.2); G.fx.ring(spot, 1.6 + v * 0.05, 0.45, 0xe8fbff); }
+      if (sprayT <= 0) { sprayT = 0.03; const onL = h.surf.land, w0 = onL ? 0.22 : 0.4, w1 = onL ? 0.2 : 0.45; for (const s of [-1, 1]) puff(h.pos.x - sn + cs * s * (w0 + Math.random() * w1), y0 - 0.1 + Math.random() * 0.1, h.pos.z - cs - sn * s * (w0 + Math.random() * w1), onL ? 0.1 + v * 0.006 : 0.3 + v * 0.014, onL ? 0.3 : 0.42 + v * 0.006); }      // low and small: the camera looks down this wake at him, and anything taller stands between it and his body
+      if (ringT <= 0) { ringT = 0.38; spot.set(h.pos.x - sn * 1.2, y0 + 0.02, h.pos.z - cs * 1.2); G.fx.ring(spot, h.surf.land ? 0.7 : 1.6 + v * 0.05, 0.45, 0xe8fbff); }
     }
     const sp = Math.hypot(h.vel.x, h.vel.z), onFoot = h.land && !h.air, fast = onFoot ? sp : 0;
     // a steady wake once strides can't keep up

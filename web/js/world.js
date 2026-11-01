@@ -1378,7 +1378,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   let cursor = 0;
   const lastCam = new THREE.Vector3(1e9, 0, 0), lastDir = new THREE.Vector3(), dirNow = new THREE.Vector3();
   // A batch's list on the GPU holds what's in view, not the whole world's copies of a kind: it starts short and grows the first time a view asks for more (1 Nov: every list at full
-  // size was 3.7 MB once all of them had been drawn). The old list is handed back, and a grown one keeps a margin so a kind doesn't grow every few steps.
+  // size was 2.0 MB on the GPU, and as much again in the page's own copy, once all of them had been drawn). The old list is handed back, and a grown one keeps a margin so a kind doesn't grow every few steps.
   function roomFor(m, need, most) {
     if (need <= m.instanceMatrix.count) return;
     const n = Math.min(most, Math.ceil(need * 1.5)), a = new THREE.InstancedBufferAttribute(new Float32Array(n * 16), 16), c = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
@@ -1548,20 +1548,27 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   const G8 = data.arena && data.arena.gate;
   // the cities' solids join the world's own (planned above, before any instance was drawn)
   data.colliders = (data.colliders || []).concat(cityPlan.colliders, cliffPlan.colliders);
-  // the cities' ink: the hull pushed out a constant 1.6 px on the screen near, thinning to nothing by 170 m so a far city never turns black in the haze
-  const cityInk = new THREE.MeshBasicMaterial({ color: 0x0a1820, side: THREE.BackSide });
-  cityInk.onBeforeCompile = (sh) => {
-    sh.uniforms.ocInkH = U.ocInkH;
-    // a basic material has no objectNormal of its own (only a skinned one does): the hull's normal, turned by its instance, then by the view
-    sh.vertexShader = 'uniform float ocInkH;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
-      { vec3 ocN = normal;
+  // the cities' ink: the hull pushed out a constant 1.2 px on the screen near, thinning to nothing by 120 m. It's in the water's haze like everything else (Randy, 1 Nov: "there is a
+  // black outline that follows when I'm approaching them": drawn flat black, the outline hung in the water ahead of buildings the haze had already taken)
+  const cityInk = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: U,
+    vertexShader: /* glsl */`uniform float ocInkH; varying vec3 vP;
+      void main() {
+        vec3 ocN = normal; vec4 wp = vec4(position, 1.0);
         #ifdef USE_INSTANCING
-          ocN = mat3(instanceMatrix)*ocN;
+          ocN = mat3(instanceMatrix)*ocN; wp = instanceMatrix*wp;
         #endif
-        vec3 nv = normalize(normalMatrix*ocN); float d = max(-mvPosition.z, .1), perM = projectionMatrix[1][1]*ocInkH*.5/d;
-        mvPosition.xyz += nv*1.6*(1.0 - smoothstep(90.0, 170.0, d))/perM; gl_Position = projectionMatrix*mvPosition; }`);
-  };
-  cityInk.customProgramCacheKey = () => 'cityInk2';
+        wp = modelMatrix*wp; vec4 mv = viewMatrix*wp; vP = wp.xyz;
+        vec3 nv = normalize(normalMatrix*ocN); float d = max(-mv.z, .1), perM = projectionMatrix[1][1]*ocInkH*.5/d;
+        mv.xyz += nv*1.2*(1.0 - smoothstep(50.0, 120.0, d))/perM; gl_Position = projectionMatrix*mv;
+      }`,
+    fragmentShader: /* glsl */`varying vec3 vP;
+      ${look.glsl}
+      void main() {
+        gl_FragColor = vec4(ocApply(vec3(.016, .040, .052), vP), 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
   cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;

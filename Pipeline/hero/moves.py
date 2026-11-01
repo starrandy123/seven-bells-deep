@@ -995,11 +995,14 @@ def sprint(sk, ph):
     return d
 
 def surf_pose(sk, c, ph):
-    """Up on the sea: side on to the way he's going, left foot leading, knees loaded, weight low, the trident trailing out to the right like a rudder and the free arm out for balance. c: -1 leaning into a carve left, +1 right."""
-    h = sk.foot['h']; a = 2 * math.pi * ph; s = math.sin(a); lean = 13.0 * c
-    return {'hips': (-12, 26 - 6 * c, lean), 'off': (0.0, -0.02, -0.25 - 0.03 * abs(c) + 0.015 * s), 'spine': (-8, -20 + 8 * c, lean * 0.4), 'head': (8, -6 - 16 * c, -lean * 0.3),
-            'R': {'g': (0.62 + 0.12 * c, -0.34, 0.86 - 0.14 * c), 't': (0.46, -0.84, -0.28), 'e': (0.8, -0.5, -0.2), 'fixed': True}, 'L': {'g': (-0.54 + 0.12 * c, 0.34, 1.26 + 0.10 * c), 'e': (-0.8, -0.2, -0.5), 'palm': (10, 0, 12 * c)},
-            'legR': {'a': (0.20, -0.26, h + 0.02), 'p': 4 * c, 't': 0, 'k': (0.25, 1.0, 0.1)}, 'legL': {'a': (-0.14, 0.34, h + 0.02), 'p': -4 * c, 't': 0, 'k': (-0.1, 1.0, 0.1)}, 'grip': (0.0, 0.3)}
+    """Riding (Randy, 1 Nov: "The stance during the surf boost is not good and stiff too", "Look at surfing types", "Online I mean"). Keyed from photographs of riders and the coaches' own lists (ombe.co, rapturecamps.com), since no library here holds it: feet about 80 cm apart, the back foot across the
+    line of travel and the front one 45 degrees toward it; both knees well bent, the back knee tucked in toward the front one, weight between them, seat over the heels and never stuck out behind; the back fairly straight, tipped over the front leg, hips part open to the way he's going, chest more so; arms wide at about shoulder height with the
+    elbows soft, front hand ahead, back hand behind; head level, eyes down the line. He's never still: the legs pump, the arms answer a beat late. A carve (c: -1 left, the heel side, +1 right, the toe side) sinks him and tips him in, the front arm pointing into it and the eyes leading."""
+    h = sk.foot['h']; a = 2 * math.pi * ph; s = math.sin(a); s2 = math.sin(2 * a); lag = math.sin(a - 0.9); lean = 20.0 * c; pump = 0.035 * s + 0.008 * s2; sink = 0.09 * abs(c)
+    return {'hips': (-7 - 3 * s, 52 - 7 * c + 2 * lag, lean * 0.7 + 1.2 * lag), 'off': (0.03 + 0.02 * lag + 0.04 * c, -0.03, -0.26 - sink + pump), 'spine': (-15 + 3 * s - 5 * abs(c), -24 + 8 * c + 2.5 * lag, lean * 0.5 + 5 - 2 * lag), 'head': (11 - 2 * s, -26 - 14 * c - 1.5 * lag, -lean * 0.5 - 4 + 1.2 * lag),
+            'R': {'g': (0.52 + 0.10 * c + 0.03 * lag, -0.36 - 0.03 * s, 0.96 - 0.5 * sink - 0.10 * c + 0.05 * lag), 'e': (0.7, -0.5, -0.5), 'palm': (-14, 0, -8 * c), 'ku': 0.3},
+            'L': {'g': (-0.30 + 0.24 * c - 0.03 * lag, 0.56 + 0.04 * s, 0.98 - 0.5 * sink - 0.20 * c - 0.05 * lag), 'e': (-0.75, 0.1, -0.65), 'palm': (10, 0, 12 * c), 'ku': 0.3},
+            'legR': {'a': (0.05, -0.39, h + 0.02), 'p': 5 * c, 'y': -80, 't': 0, 'k': (0.75, 0.62, 0.1)}, 'legL': {'a': (-0.01, 0.42, h + 0.02), 'p': -5 * c, 'y': -42, 't': 0, 'k': (0.62, 0.75, 0.1)}, 'grip': (0.0, 0.3)}
 
 def surf_stand(sk, ph): return surf_pose(sk, 0.0, ph)
 def surf_carve_L(sk, ph): return surf_pose(sk, -1.0, ph)
@@ -1203,6 +1206,8 @@ def cap_swim(sk, take, start, n, fade=10):
     for b in ('clav', 'arm', 'fore', 'hand'):
         src = tracks[b + '_R']; tracks[b + '_L'] = [(src[(k + n // 2) % n][0], src[(k + n // 2) % n][1], -src[(k + n // 2) % n][2], -src[(k + n // 2) % n][3]) for k in range(n)]
     for s in 'RL': limit_twist(tracks['hand_' + s], unit(sk.off['hand_' + s]))
+    # the take runs the arms the wrong way round for a body lying on its front (Randy, 1 Nov: "the swimming in the water has the hand motion reversed"): read in the game the hand above his back went toward his feet. Played the other way a hand recovers over the water toward his head and pulls back under him
+    for b in KEYED: tracks[b].reverse()
     stops(sk, tracks)
     for b in KEYED:
         tracks[b].append(tracks[b][0])

@@ -724,7 +724,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   let painter = null;
   function stepClouds(all) {
     if (U.tOcClouds.value !== blank || U.ocPaint.value <= 0) return;
-    painter ||= paintClouds(Math.atan2(look.sunA.x, look.sunA.z), phone ? .5 : 1);
+    painter ||= paintClouds(Math.atan2(look.sunA.x, look.sunA.z), phone ? .34 : 1);      // (the clouds are soft: 3.1 MB at .5 was the most the Painted look cost a phone, and the most Q5 had to give)
     const t0 = performance.now();
     for (;;) {
       const r = painter.next();
