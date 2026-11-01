@@ -97,5 +97,7 @@ export function createWetMap(renderer, U) {
     U.ocWetM.value.set(origin.x, origin.y, 1 / SIZE, 1);
     renderer.setRenderTarget(prevT); renderer.autoClear = prevAuto; renderer.setClearColor(prevCol, prevA);
   }
-  return { stamp, update, get origin() { return origin; }, get live() { return live; }, restore() { clearNow = true; } };
+  // its two programs are compiled at boot: left to the first ride, they stalled that frame 150 ms (pace, 1 Nov: world.update, 1 new program, 2 new textures)
+  function prewarm() { renderer.compile(copyScene, cam); renderer.compile(stampScene, cam); }
+  return { stamp, update, prewarm, get origin() { return origin; }, get live() { return live; }, restore() { clearNow = true; } };
 }

@@ -259,7 +259,8 @@ export function createCombat(G, h, api) {
       h.vel.x = damp(h.vel.x, v1.x, 10, dt); h.vel.y = damp(h.vel.y, v1.y, 10, dt); h.vel.z = damp(h.vel.z, v1.z, 10, dt);
     } else brake(a, dt);
   }
-  function brake(a, dt) { h.vel.multiplyScalar(Math.exp(-(a.def.brake || 5) * dt)); }
+  // a blow never roots him: as it dies away the stick has him again, so he comes out of it moving
+  function brake(a, dt) { h.vel.multiplyScalar(Math.exp(-(a.def.brake || 5) * dt)); const s = stickDir(v2); if (s) { const k = 1 - Math.exp(-7 * dt), S = D.input.drift_mps; h.vel.x += (s.x * S - h.vel.x) * k; h.vel.z += (s.z * S - h.vel.z) * k; } }
 
   function rise(a, dt) {
     const d = a.def;

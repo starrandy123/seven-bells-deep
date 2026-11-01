@@ -56,9 +56,12 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
     const len = curve.getLength(), N = Math.max(2, Math.round(len / DS)), ds = len / N;
     const X = new Float32Array(N + 1), Y = new Float32Array(N + 1), TX = new Float32Array(N + 1), TY = new Float32Array(N + 1), HW = new Float32Array(N + 1), D = new Float32Array(N + 1);
     const Wr = new Float64Array(N + 1), p = new THREE.Vector3(), tg = new THREE.Vector3(), hw0 = r.w * .5, depth = .55 + .07 * r.w;
+    const end = r.pts[r.pts.length - 1], lip = F.some((f) => Math.hypot(f.x - end[0], f.y - end[1]) < 3);       // this river goes over a fall
     for (let i = 0; i <= N; i++) {
       const u = i / N; curve.getPointAt(u, p); curve.getTangentAt(u, tg);
-      const tl = Math.hypot(tg.x, tg.y) || 1; X[i] = p.x; Y[i] = p.y; TX[i] = tg.x / tl; TY[i] = tg.y / tl; HW[i] = hw0; D[i] = depth;
+      // a stream's width wanders, and it fans out over a fall's lip (Randy, 1 Nov: the stream on the ground "looks sloppy"; a level ribbon of one width is what he saw)
+      const sAt = i * ds, wander = 1 + .26 * Math.sin(sAt * .17 + r.w * 3.1) + .15 * Math.sin(sAt * .41 + r.w * 7.7), toLip = (len - sAt), fan = lip ? 1 + 1.3 * smooth(10, 0, toLip) : 1;
+      const tl = Math.hypot(tg.x, tg.y) || 1; X[i] = p.x; Y[i] = p.y; TX[i] = tg.x / tl; TY[i] = tg.y / tl; HW[i] = hw0 * Math.max(wander, 1 - smooth(4, 0, sAt)) * fan; D[i] = depth;
       const nx = -TY[i], ny = TX[i], hw = HW[i];
       let bed = 1e9; for (let d = -.6 * hw; d <= .6 * hw + 1e-6; d += .5) bed = Math.min(bed, at(X[i] + nx * d, Y[i] + ny * d));
       const bank = (sd) => .5 * (at(X[i] + nx * sd * (hw + 1), Y[i] + ny * sd * (hw + 1)) + at(X[i] + nx * sd * (hw + 2.2), Y[i] + ny * sd * (hw + 2.2)));
@@ -181,7 +184,12 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
   for (const [k, q] of near) { const Wl = lerpAt(rivers[q[0]].W, q[1], q[2]); if (Wl > .05 && Hz[k] > Wl - 2.2) lv.set(k, Wl); }
   for (const [k, pq] of nearPool) { const Wl = pools[pq[0]].W; if ((pq[1] < 1.25 || !lv.has(k)) && Hz[k] > Wl - 2.2) lv.set(k, Wl); }
   const LK = Int32Array.from(lv.keys()), LW = Float32Array.from(lv.values());
-  const fillLevel = () => { const g = new Float32Array(n * n).fill(NO_WATER); for (let j = 0; j < LK.length; j++) g[LK[j]] = LW[j]; return g; };
+  // Laid on the box round the water, not the whole map: 2 MB of GPU memory for a sliver of the world (the box's edge is dry, so a clamped read outside it says no water)
+  let gx0 = n, gx1 = 0, gy0 = n, gy1 = 0;
+  for (let j = 0; j < LK.length; j++) { const gx = LK[j] % n, gy = Math.floor(LK[j] / n); gx0 = Math.min(gx0, gx); gx1 = Math.max(gx1, gx); gy0 = Math.min(gy0, gy); gy1 = Math.max(gy1, gy); }
+  gx0 = Math.max(0, gx0 - 2); gy0 = Math.max(0, gy0 - 2); gx1 = Math.min(n - 1, gx1 + 2); gy1 = Math.min(n - 1, gy1 + 2);
+  const lw = gx1 - gx0 + 1, lh = gy1 - gy0 + 1;
+  const fillLevel = () => { const g = new Float32Array(lw * lh).fill(NO_WATER); for (let j = 0; j < LK.length; j++) g[(Math.floor(LK[j] / n) - gy0) * lw + (LK[j] % n) - gx0] = LW[j]; return g; };
 
   // where he is in which water: river samples hashed in 4 m cells
   const HS = 4, hash = new Map();
@@ -224,7 +232,7 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
     }
     if (changed) data.instances[kind] = keep;
   }
-  return { rivers, pools, fillLevel, levelNodes: LK.length, waterAt, stats: { nodes: nodes.size, dug, built, maxDig: +maxDig.toFixed(2), digAt, maxBuild: +maxBuild.toFixed(2), buildAt, moved, dropped } };
+  return { rivers, pools, fillLevel, level: { w: lw, h: lh, map: [n / lw, n / lh, gx0 / lw, gy0 / lh] }, levelNodes: LK.length, waterAt, stats: { nodes: nodes.size, dug, built, maxDig: +maxDig.toFixed(2), digAt, maxBuild: +maxBuild.toFixed(2), buildAt, moved, dropped } };
 }
 
 // What grows and lies along the water: stones at the waterline and in the rapids, ferns and grass on the banks, a bush further back, stones round a pool's

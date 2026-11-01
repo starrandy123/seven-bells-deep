@@ -8,6 +8,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { planCities } from './city.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
+import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
+import { fallStrips, FALL_V, FALL_F } from './falls.js';
 import { createWetMap } from './wetmap.js';
 import { CITY_VERTEX_DECL, CITY_VERTEX_BEND, CITY_PARS, CITY_ALBEDO, CITY_POST, CITY_GLOW } from './city_glsl.js';
 
@@ -67,7 +69,7 @@ function unquantize(glb) {
 function familyOf(name) {
   if (/palm|snow_pine/.test(name)) return 'palm';
   if (/^ice_(ceiling|pillar|floe|wall|gate)|iceberg/.test(name)) return 'ice';
-  if (/^rock_|sea_arch|^islet|cliff_rock|beach_rock|kelp_spire|wreck_stand/.test(name)) return 'rock';
+  if (/^rock_|^slab_|sea_arch|^islet|cliff_rock|beach_rock|kelp_spire|wreck_stand/.test(name)) return 'rock';
   if (/^tree_/.test(name)) return 'tree';
   if (/grass_patch/.test(name)) return 'meadow';
   if (/wildflower/.test(name)) return 'flowers';
@@ -93,7 +95,7 @@ const MEADOW_V = (uReach) => /* glsl */`
     float ocG = texture(tOcHeight, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w).r;
     float ocDist = distance(ocWp.xyz, cameraPosition);
     float ocFade = (1.0 - smoothstep(${uReach}*.55, ${uReach}, ocDist))*smoothstep(.25, .75, ocG);
-    float ocRd = ocG - texture(tOcRiver, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w).r;
+    float ocRd = ocG - texture(tOcRiver, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w*ocRiverM.xy - ocRiverM.zw).r;
     ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);      // none under a river (deeper than any channel is a face beside it)
     vec2 ocWu = vec2(ocWp.x - ocWetM.x, ocWetM.y - ocWp.z)*ocWetM.z + .5;
     if (ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996) { vec2 ocWv = texture(tOcWet, ocWu).rg; ocFade *= (1.0 - .8*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y)); }      // laid flat where a ride ran, under water in a puddle (wetmap.js)
@@ -158,7 +160,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   tHeight.internalFormat = 'R16F'; tHeight.minFilter = tHeight.magFilter = THREE.LinearFilter; tHeight.needsUpdate = true; freeAfter(tHeight);
   U.tOcHeight.value = tHeight; U.ocMap.value.set(ox, oy, cell, n);
   // the rivers' surface level on the same grid: the ground's shader draws their wet bed and banks from it, and no grass grows under it
-  const tRiver = riverPlan ? new THREE.DataTexture(riverPlan.fillLevel(), n, n, THREE.RedFormat, THREE.FloatType) : null;
+  const tRiver = riverPlan ? new THREE.DataTexture(riverPlan.fillLevel(), riverPlan.level.w, riverPlan.level.h, THREE.RedFormat, THREE.FloatType) : null;
+  if (tRiver) U.ocRiverM.value.fromArray(riverPlan.level.map);
   if (tRiver) { tRiver.internalFormat = 'R16F'; tRiver.minFilter = tRiver.magFilter = THREE.LinearFilter; tRiver.needsUpdate = true; freeAfter(tRiver); U.tOcRiver.value = tRiver; }
   const wetMap = createWetMap(renderer, U);                              // the water a land ride leaves behind on the ground (wetmap.js)
 
@@ -401,7 +404,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           alb = mix(alb, ground, smoothstep(-2.8, -.5, P.y));
           // a river's bed and banks (rivers.js): under its water a bed of stones, mossy where it's deep, the sun's ripples running over it; along its edge a
           // band of damp, darker earth with a sheen on it, its edge wandering as a real one does
-          float rUnder = texture(tOcRiver, uv).r - P.y;
+          float rUnder = texture(tOcRiver, uv*ocRiverM.xy - ocRiverM.zw).r - P.y;
           if (rUnder > -1.4 && rUnder < 2.4) {                // (deeper than any channel is a rock face beside the water, not its bed)
             float damp = smoothstep(-1.05 + (n4 - .5)*.6, -.04, rUnder), bedK = smoothstep(-.06, .10, rUnder);
             float st = texture(tOcNoise, P.xz*.045 + wand*.01).a, pb = texture(tOcNoise, P.zx*.15 + .37).b;      // read from above: a bank's slope mustn't smear it into stripes
@@ -563,7 +566,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.82); }`,
     }),
     meadow: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n',
+      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n',
       fragmentPars: 'varying vec2 vOcGust;\nuniform vec3 ocLandGL, ocLandGD;\n',
       // the ground's own colours, the same noise, so the blades melt into the land; a gust lightens the tips as it passes
       albedo: /* glsl */`{ float ocM = ocMeadow(vOcP.xz);
@@ -572,7 +575,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = ocG*(1.0 + ocFar*vOcGust.y*(.14 + .30*max(vOcGust.x, 0.0)))*mix(1.62, 1.0, ocPaint); }`,
     }),
     flowers: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
+      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
     }),
     boat: () => look.patch(lit({ vertexColors: true }), {
       key: 'boat',
@@ -757,6 +760,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // the cities (city.js): planned here, before any instance is drawn, lit or collided with, because each city clears its footprint of the clutter it replaces
   const cityPlan = planCities(data, heightAt, { phone });
   if (riverPlan) { const add = dressRivers(riverPlan, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }     // stones and plants along the water (rivers.js)
+  // the rock over the land's bare faces, and what falls off them (cliffs.js): none on the Frost Isle's ice and none in the Cone's ash, for now
+  const cliffPlan = dressCliffs({ data, heightAt, waterAt: riverPlan ? riverPlan.waterAt : () => null, solids: (data.colliders || []).concat(cityPlan.colliders),
+    skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
+  for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
+  cliffPlan.add = null;
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;
   // Cards scattered over a mesh's foliage (its green corners), in real metres; `normal` points out from the canopy, so the mass lights as one.
   function leafCards(G, want) {
@@ -803,13 +811,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     }
     return out;
   }
+  const UP3 = new THREE.Vector3(0, 1, 0), X3 = new THREE.Vector3(1, 0, 0), leanN = new THREE.Vector3(), leanQ = new THREE.Quaternion(), yawQ = new THREE.Quaternion();
+  for (const [k, sd] of [['slab_a', 7141], ['slab_b', 90127], ['slab_c', 31337]]) geoms[k] = { geometry: slabGeometry(sd), node: IDENTITY };
   for (const name of Object.keys(data.instances)) {
     const family = familyOf(name);
     const placed = data.instances[name].length / 6;
     const src = gather(name, family, data.instances[name]);
     // A near mesh in a region pack arrives after first play: until then its far mesh draws at every distance, so there's never a hole.
     const G = geoms[name] || geoms[name + '__far'] || { geometry: standIn(name), node: new THREE.Matrix4() }, waiting = !geoms[name] && !!geoms[name + '__far'];
-    if (family === 'rock' || family === 'tree') smoothNormals(G.geometry);     // (a tree's foliage triangles are not drawn; its leaf cards have their own normals)
+    if ((family === 'rock' || family === 'tree') && !name.startsWith('slab_')) smoothNormals(G.geometry);     // (a tree's foliage triangles are not drawn; its leaf cards have their own normals. A slab stays flat shaded)
     const total = src.length / 6;
     const rate = keep[name] || 1;
     const order = [];
@@ -835,7 +845,13 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     for (let k = 0; k < count; k++) {
       const i = order[k], o = i * 6, s = src[o + 4], t = src[o + 5];
       maxS = Math.max(maxS, s);
-      dummy.position.set(src[o], src[o + 2] + (name === 'lava_crack' ? .16 : 0), -src[o + 1]); dummy.rotation.set(0, src[o + 3], 0); dummy.scale.setScalar(s); dummy.updateMatrix();
+      dummy.position.set(src[o], src[o + 2] + (name === 'lava_crack' ? .16 : 0), -src[o + 1]); dummy.scale.setScalar(s);
+      if (src[o + 3] >= LEAN - 3) {                                      // set into a slope (cliffs.js): a slab faces down it and lies back with it; a stone leans with it, turned about its own axis first
+        const e = 1.5, gx = (heightAt(src[o] + e, src[o + 1]) - heightAt(src[o] - e, src[o + 1])) / (2 * e), gy = (heightAt(src[o], src[o + 1] + e) - heightAt(src[o], src[o + 1] - e)) / (2 * e), sl = Math.hypot(gx, gy) || 1e-3;
+        if (name.startsWith('slab_')) { const back = Math.min(.62, Math.PI / 2 - Math.atan(sl)); yawQ.setFromAxisAngle(UP3, Math.atan2(-gx, gy) + (src[o + 3] - LEAN)); leanQ.setFromAxisAngle(X3, -back); dummy.quaternion.copy(yawQ).multiply(leanQ); }
+        else { leanN.set(-gx, 1, gy).normalize().lerp(UP3, .25).normalize(); leanQ.setFromUnitVectors(UP3, leanN); yawQ.setFromAxisAngle(UP3, src[o + 3] - LEAN); dummy.quaternion.copy(leanQ).multiply(yawQ); }
+      } else dummy.rotation.set(0, src[o + 3], 0);
+      dummy.updateMatrix();
       dummy.matrix.multiply(G.node).toArray(M, k * 16);
       if (family === 'glow') tc.setRGB(t < .5 ? .15 : 1.0, t < .5 ? .95 : .20, t < .5 ? .85 : .68);
       else if (family === 'coral' || family === 'anemone') {
@@ -1056,35 +1072,25 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   const freshwater = (() => {
     const R = data.rivers || [], F = data.waterfalls || [];
     if (!R.length && !F.length) return null;
-    const fpos = [], fflow = [], fidx = [], wpos = [], wflow = [], widx = [];
+    const fpos = [], fflow = [], fgeo = [], fidx = [], wpos = [], wflow = [], widx = [];
     // the rivers and the falls' pools (rivers.js): level water in the channels the land was carved to, its edges in under the banks so the ground draws the shore
     const rg = riverPlan ? riverGeometry(riverPlan, heightAt) : null;
     const fallsMist = [];
     for (const f of F) {
-      // The sheet follows the rock: each row walks out from the lip until it's clear of the ground at that height, so a slope makes a cascade, not a buried sheet.
-      // Randy, 1 Nov: "the waterfall looks disconnected from the land". So the sheet leaves the lip at the width of the river that feeds it and spreads as it
-      // falls (hwAt); a dark wet band on the rock behind and around it; it pours on down into its pool (rivers.js) and goes under its surface; mist off the foot.
-      const bot = f.pool !== undefined ? Math.min(f.z1, f.pool - .25) : f.z1;
-      const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), rows = 22, cols = 8, h = f.z0 - bot, base = fpos.length / 3, wbase = wpos.length / 3, last = new Float32Array(cols + 1);
-      const feed = R.find(r => { const q = r.pts[r.pts.length - 1]; return Math.hypot(q[0] - f.x, q[1] - f.y) < 3; });
-      const hwTop = feed ? Math.min(f.w * .5, feed.w * .5 + .4) : f.w * .5, hwAt = t => (hwTop + (f.w * .5 - hwTop) * (t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t))) * (1 + t * .10);
+      // Randy, 1 Nov: "the waterfall looks disconnected from the land", "just a sheet of paper". The strips leave the lip at the height and the width of the river that feeds it and
+      // pour on down into its pool (falls.js), a dark wet band on the rock behind and around them, mist off the foot.
+      const pl = riverPlan ? riverPlan.pools.find((q) => q.f === f) : null, bot = f.pool !== undefined ? Math.min(f.z1, f.pool - .25) : f.z1;
+      const feed = R.find(r => { const q = r.pts[r.pts.length - 1]; return Math.hypot(q[0] - f.x, q[1] - f.y) < 3; }), rv = feed && riverPlan ? riverPlan.rivers.find((r) => r.id === feed.id) : null;
+      if (rv) f.z0 = rv.W[rv.N] + .1;                                   // the lip is where the river's surface comes to it
+      const hwTop = rv ? Math.min(f.w * .5, rv.HW[rv.N] + .3) : f.w * .5, hwAt = t => (hwTop + (f.w * .5 - hwTop) * (t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t))) * (1 + t * .06);
+      const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), h = f.z0 - bot;
       f.hwAt = (t) => hwAt(Math.min(1, t * (f.z0 - f.z1) / h));          // the hero's climb reads the same width (its rows run lip to z1)
-      let footX = f.x, footY = f.y;
-      for (let i = 0; i <= rows; i++) {
-        const t = i / rows, z = f.z0 - h * t, hw = hwAt(t);
-        for (let k = 0; k <= cols; k++) {
-          const sd = k / cols * 2 - 1, lx = sd * hw;
-          let o = last[k];
-          for (; o < 60; o += .25) { const ly = -o; if (heightAt(f.x + lx * c - ly * sn, f.y + lx * sn + ly * c) < z - .35) break; }
-          last[k] = o;
-          const ly = -(o + .35), wl = sd * hw * 1.45, wy = -(o + .05);
-          fpos.push(f.x + lx * c - ly * sn, z, -(f.y + lx * sn + ly * c)); fflow.push(t * h, sd, f.w, t);
-          wpos.push(f.x + wl * c - wy * sn, z + .02, -(f.y + wl * sn + wy * c)); wflow.push(t * h, sd, f.w, t);
-          if (i === rows && k === cols / 2) { footX = f.x - ly * sn; footY = f.y + ly * c; }
-        }
-        if (i < rows) for (let k = 0; k < cols; k++) { const a = base + i * (cols + 1) + k, b = a + cols + 1; fidx.push(a, b, a + 1, a + 1, b, b + 1); const wa = wbase + i * (cols + 1) + k, wb = wa + cols + 1; widx.push(wa, wb, wa + 1, wa + 1, wb, wb + 1); }
-      }
-      fallsMist.push({ x: footX - sn * .5, y: footY - c * .5, z: (f.pool !== undefined ? f.pool : f.z1) + .2, r: hwAt(1) * .38, h: Math.min(7, h * .35), puffs: 10, deep: 2 });
+      const foot = pl ? (pl.ft.x - f.x) * sn - (pl.ft.y - f.y) * c : 6;
+      const S = fallStrips(f, { heightAt, hwAt, lipZ: f.z0, bot, foot, water: pl ? pl.W : f.z1 });
+      const off = fpos.length / 3; fpos.push(...S.P); fflow.push(...S.A); fgeo.push(...S.B); for (const i of S.I) fidx.push(i + off);
+      const wo = wpos.length / 3; wpos.push(...S.W); wflow.push(...S.WA); for (const i of S.WI) widx.push(i + wo);
+      const r0 = hwAt(1) * .30, Wz = pl ? pl.W : f.z1;
+      for (const [sd, puffs] of [[-.6, 5], [0, 7], [.6, 5]]) { const lx = sd * hwAt(1), o = foot + 1.4; fallsMist.push({ x: f.x + lx * c + o * sn, y: f.y + lx * sn - o * c, z: Wz + .2, r: r0, h: Math.min(6, h * .3), puffs, deep: 2 }); }
     }
     const make = (P, A, I, kind, B) => {
       if (!I.length) return null;
@@ -1093,10 +1099,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       const river = kind === 'river', fall = kind === 'fall', wet = kind === 'wet';
       const m = new THREE.ShaderMaterial({
         transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: U,
-        vertexShader: river ? `attribute vec4 aF, aG; varying vec3 vP; varying vec4 vF, vG; void main(){ vP = position; vF = aF; vG = aG; gl_Position = projectionMatrix*viewMatrix*vec4(position, 1.0); }`
+        vertexShader: fall ? FALL_V : river ? `attribute vec4 aF, aG; varying vec3 vP; varying vec4 vF, vG; void main(){ vP = position; vF = aF; vG = aG; gl_Position = projectionMatrix*viewMatrix*vec4(position, 1.0); }`
           : `attribute vec4 aF; varying vec3 vP; varying vec4 vF; void main(){ vP = position; vF = aF; gl_Position = projectionMatrix*viewMatrix*vec4(position, 1.0); }`,
         fragmentShader: /* glsl */`
-          varying vec3 vP; varying vec4 vF;${river ? ' varying vec4 vG;' : ''}
+          varying vec3 vP; varying vec4 vF;${river || fall ? ' varying vec4 vG;' : ''}
           ${look.glsl}
           uniform vec3 ocSkyZ, ocSkyH, ocSeaS, ocSeaD;
           void main() {
@@ -1107,22 +1113,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             float s1 = texture(tOcNoise, vec2(vF.y*vF.z*.2 + .1, vF.x*.03 - t*.35)).b;
             vec3 c = vec3(.012, .016, .016) + ocSunCol*.05*smoothstep(.62, .8, s1);
             float alpha = (1.0 - smoothstep(.35 + .3*s1, 1.0, abs(vF.y)))*(.42 + .18*s1)*smoothstep(0.0, .06, vF.a + .02);` : fall ? /* glsl */`
-            // a fall (Randy, 1 Nov: "the water on land is unnatural"): glassy and see-through at the lip, water-coloured streams of every width pouring down,
-            // churning white toward the foot, its sides fraying into spray instead of ending on a hard line
-            float down = vF.a, across = vF.y;
-            float s1 = texture(tOcNoise, vec2(across*vF.z*.13 + .3, vF.x*.020 - t*.55)).b;
-            float s2 = texture(tOcNoise, vec2(across*vF.z*.41 + .7, vF.x*.045 - t*.95)).a;
-            float s3 = texture(tOcNoise, vec2(across*vF.z*1.30, vF.x*.120 - t*1.6)).b;
-            float stream = s1*.5 + s2*.32 + s3*.18;
-            float rope = smoothstep(.45 - .18*down, .72 - .10*down, stream);                 // streams merge into a white curtain as the water falls
-            vec3 water = mix(ocSeaS, ocSeaD, .25)*.9 + vec3(.02, .05, .05);
-            vec3 foamC = ocHaze*1.25 + vec3(.06);
-            vec3 c = mix(water, foamC, clamp(rope*(.55 + .55*down), 0.0, 1.0));
-            c += ocSunCol*.10*pow(max(s3 - .55, 0.0)*2.2, 2.0);                               // the sun caught in the falling water
-            float churn = smoothstep(.70, 1.0, down)*smoothstep(.35, .7, s2);
-            c = mix(c, foamC*1.08, churn*.8);
-            float edge = 1.0 - smoothstep(.55 - .25*s1, 1.0, abs(across));                    // the sides fray
-            float alpha = edge*mix(.22 + .30*down, .92, max(rope*(.5 + .5*down), churn));`  : /* glsl */`
+            ${FALL_F}`  : /* glsl */`
             // a river or a fall's pool (Randy, 1 Nov: "the water on land is unnatural", "ride out on the ground"): level water in its own channel. How deep it
             // is comes from the ground under it, so it's clear over the shallows and the bed shows through, deep and green-dark in the channel. Its surface
             // rides the current at the river's own speed (aF.x is the time the water takes to get here, so the pattern runs faster and stretches where the river
@@ -1133,39 +1124,43 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             float tau = vF.x, across = vF.y, turb = vF.w, churn = vG.y;
             // (the noise tile holds ~48 cells: a ripple of a metre is ~.02 of the tile; finer than ~.1 a metre only aliases into stripes, so the finest layer
             // gives way with distance)
-            float a = texture(tOcNoise, vec2(across*.025 + .37, (tau - t)*.028)).b;
-            float b = texture(tOcNoise, vec2(across*.055 + .11 + t*.002, (tau - t*.82)*.06)).a;
-            float c3 = mix(texture(tOcNoise, vec2(across*.12 + .73 - t*.003, (tau - t*1.2)*.13)).b, .5, smoothstep(10.0, 34.0, dist));
-            float rough = .34 + .8*turb + 1.1*churn;
-            vec3 n = normalize(vec3(((a - .5)*.5 + (b - .5)*.42 + (c3 - .5)*.36)*rough, 1.0, ((b - .5)*.5 + (c3 - .5)*.4 - (a - .5)*.2)*rough));
+            // the ripples run along the current: each layer is drawn out five or six times longer than it is wide, so it reads as moving water and not as a blotched pane
+            float near = 1.0 - smoothstep(9.0, 30.0, dist);
+            float a = texture(tOcNoise, vec2(across*.07 + .37, (tau - t)*.017)).b;
+            float b = texture(tOcNoise, vec2(across*.19 + .11 + t*.002, (tau - t*.82)*.052)).a;
+            float c3 = mix(.5, texture(tOcNoise, vec2(across*.52 + .73 - t*.003, (tau - t*1.2)*.15)).b, near);
+            float c4 = mix(.5, texture(tOcNoise, vec2(across*1.35 + .29, (tau - t*1.5)*.38)).a, near);
+            float rough = .62 + .8*turb + 1.1*churn;
+            vec3 n = normalize(vec3(((a - .5)*.30 + (b - .5)*.42 + (c3 - .5)*.5 + (c4 - .5)*.34)*rough, 1.0, ((b - .5)*.24 + (c3 - .5)*.18 + (c4 - .5)*.12)*rough));
             float F = .02 + .98*pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
             vec3 Rr = reflect(rd, n);
-            // what it mirrors: the sky overhead, the green of its own banks toward its edges and low down (no water reads as water mirroring only the sky)
+            // what it mirrors: at a stream's low angle that is its own banks and the trees over them, dark and green, with the sky only where the ripples tip up; no water reads as water mirroring pale haze
             float edgeK = smoothstep(.35, 1.05, abs(across)/vF.z);
-            vec3 refl = mix(mix(ocSkyH, ocSkyZ, smoothstep(0.0, .6, Rr.y)), vec3(.05, .085, .045), clamp(.22 + .5*edgeK + .3*(1.0 - smoothstep(.0, .25, Rr.y)), 0.0, .85));
-            float deep = smoothstep(.06, 1.3, dep);
-            vec3 body = mix(vec3(.09, .12, .07), mix(ocSeaS, ocSeaD, .6)*.42, deep);              // clear over the shallows (the bed shows, drawn wet), tea-green as it deepens
-            vec3 c = mix(body, refl, F*.78);
+            vec3 skyR = mix(ocSkyH*.72, ocSkyZ*.94, smoothstep(.0, .42, Rr.y));
+            vec3 refl = mix(skyR, vec3(.022, .058, .030), clamp(.42 + .45*edgeK + .55*(1.0 - smoothstep(.02, .22, Rr.y)), 0.0, .92));
+            float deep = smoothstep(.06, 1.1, dep);
+            vec3 body = mix(vec3(.075, .098, .058), vec3(.012, .046, .040), deep);                 // clear over the shallows (the bed shows, drawn wet), bottle green as it deepens
+            vec3 c = mix(body, refl, min(F*.9, .82));
             vec3 Hh = normalize(ocSunA - rd);
-            c += ocSunCol*(.55 + .8*turb)*pow(max(dot(n, Hh), 0.0), 200.0);                      // glints
-            // bubbles and scum drawn out along the current (it reads as moving water even where it's calm); white in the rapids and the churn under a fall
-            float strk = smoothstep(.64, .82, texture(tOcNoise, vec2(across*.07 + .51, (tau - t)*.010)).b)*(1.0 - smoothstep(.55, 1.0, abs(across)/vF.z));
-            float fn = texture(tOcNoise, vec2(across*.06 + .2, (tau - t)*.065)).b*.6 + c3*.4;
+            c += ocSunCol*(.7 + .8*turb)*pow(max(dot(n, Hh), 0.0), 160.0);                         // glints
+            // flecks and thin lines of bubbles drawn out along the current; white in the rapids and the churn under a fall
+            float strk = smoothstep(.60, .86, texture(tOcNoise, vec2(across*.7 + .51 + a*.4, (tau - t*1.05)*.11)).b*.7 + c4*.3)*(1.0 - smoothstep(.55, 1.0, abs(across)/vF.z));
+            float fn = texture(tOcNoise, vec2(across*.12 + .2, (tau - t)*.05)).b*.6 + c3*.4;
             float white = smoothstep(.70 - .38*turb - .5*churn, .94 - .22*churn, fn + b*.15)*max(turb, churn);
             float lace = (1.0 - smoothstep(.02, .20, dep))*smoothstep(.45, .74, c3*.6 + a*.4);
             vec3 foamC = ocHaze*1.2 + vec3(.06);
-            c = mix(c, foamC, clamp(max(max(white, lace*.75), strk*.32), 0.0, 1.0));
-            float alpha = smoothstep(0.0, .10, dep)*mix(.24, .86, max(max(deep, F*.85), max(white, lace)))*vG.z;
+            c = mix(c, foamC, clamp(max(max(white, lace*.75), strk*.20), 0.0, 1.0));
+            float alpha = smoothstep(0.0, .10, dep)*mix(.30, .94, max(max(deep, F*.85), max(white, lace)))*vG.z;
             if (alpha < .004) discard;`}
             gl_FragColor = vec4(ocApply(c, vP), alpha);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
           }`,
       });
-      const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = wet ? 12 : fall ? 14 : 13; scene.add(mesh);
+      const mesh = new THREE.Mesh(g, m); mesh.name = kind; mesh.frustumCulled = false; mesh.renderOrder = wet ? 12 : fall ? 14 : 13; scene.add(mesh);
       return mesh;
     };
-    return { river: rg ? make(rg.P, rg.A, rg.I, 'river', rg.B) : null, falls: make(fpos, fflow, fidx, 'fall'), wet: make(wpos, wflow, widx, 'wet'), mist: fallsMist };
+    return { river: rg ? make(rg.P, rg.A, rg.I, 'river', rg.B) : null, falls: make(fpos, fflow, fidx, 'fall', fgeo), wet: make(wpos, wflow, widx, 'wet'), mist: fallsMist };
   })();
 
   // ---------------------------------------------------------------- smoke over a crater: soft puffs rising in a loop, one draw for all of them
@@ -1255,7 +1250,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     const m = look.patch(lit({ side: THREE.DoubleSide }), {
       wrap: .5, key: 'nearGrass', uniforms: { uBox: { value: BOX }, uAhead: { value: nearAhead }, uFoc: terrainU.uFocus, tBiomeG: { value: tBiome } },
       vertexDecl: 'varying vec2 vOcGust;\nattribute vec4 aRoot;\nattribute vec2 aShape;\n',
-      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, uFoc, ocWetM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
+      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, uFoc, ocWetM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
       vertexExtra: /* glsl */`
         vec2 ocRel = mod(aRoot.xy - uAhead + uBox, 2.0*uBox) - uBox;
         vec2 ocW2 = uAhead + ocRel;
@@ -1264,7 +1259,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         float ocBi = texture(tBiomeG, ocUv).g;
         float ocD3 = distance(vec3(ocW2.x, ocG, ocW2.y), cameraPosition);
         float ocFade = (1.0 - smoothstep(uBox*.72, uBox*.98, length(ocRel)))*smoothstep(.2, .7, ocG)*smoothstep(.15, .45, ocBi + aRoot.w*.2);
-        float ocRd = ocG - texture(tOcRiver, ocUv).r; ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);
+        float ocRd = ocG - texture(tOcRiver, ocUv*ocRiverM.xy - ocRiverM.zw).r; ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);
         vec2 ocWu = vec2(ocW2.x - ocWetM.x, ocWetM.y - ocW2.y)*ocWetM.z + .5;
         vec2 ocWv = ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996 ? texture(tOcWet, ocWu).rg : vec2(0.0);      // laid flat where a ride ran, under water in a puddle (wetmap.js)
         float ocH = (.28 + .46*aRoot.z)*ocFade*(1.0 - .82*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y));
@@ -1541,7 +1536,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // Most solids are copies per instance, so world.json can hold a kind's shape once. The arena gate is the world's: its solids and mesh stand until setGateOpen(true), then it sinks into the sand.
   const G8 = data.arena && data.arena.gate;
   // the cities' solids join the world's own (planned above, before any instance was drawn)
-  data.colliders = (data.colliders || []).concat(cityPlan.colliders);
+  data.colliders = (data.colliders || []).concat(cityPlan.colliders, cliffPlan.colliders);
   // the cities' ink: the hull pushed out a constant 1.6 px on the screen near, thinning to nothing by 170 m so a far city never turns black in the haze
   const cityInk = new THREE.MeshBasicMaterial({ color: 0x0a1820, side: THREE.BackSide });
   cityInk.onBeforeCompile = (sh) => {
@@ -1838,7 +1833,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   prog(1);
 
   return {
-    data, heightAt, regionAt, biomeAt, cities: cityPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
+    data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     glbs: { props: propsGLB, creatures: creaturesGLB },
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;

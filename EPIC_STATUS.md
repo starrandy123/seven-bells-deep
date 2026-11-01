@@ -107,6 +107,8 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | Q23 | Published bytes match the frozen copy | todo | |
 | Q24 | Files the first view doesn't need load after first play | check green | load Q24 on a copy of the live map: 3 packs load late, 0.97 MB; 3.82 MB as sent before first play. Packs wait for the hero to move, or half a minute at the title |
 
+<!-- 1 Nov 17:50: Pipeline/wip/combat merged: footwork (20 s fight, 3 Reavers: sea 10 feints 8 cuts 5 back; land 18, 17, 9), flinch, arcs, the slow finish, stick drift through recovery. walls_fights all green. walls_page 82 of 85: the camera's 0.328 m against 0.3 (unread), the gull at 0,-1000 (known), 1.20 s against 1.2 (rounding). -->
+
 ## Part 2 (§20, CR-35). `accepted` is his word alone
 
 | ID | What | Status | Check |
@@ -127,16 +129,29 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
-| M20 | Swim up waterfalls | building | `8d95b35`; from inside the pool never run |
-| M21 | Sprint and climb uphill | building | `f850eb1`, read headless by the cloud only |
-| M22 | Land ride, and the water it leaves | building | half done, see §20 |
-| M23 | Surf real waves | building | he outruns the wave |
-| W23 | Falls and streams meet the land | building | seen from Crown Falls to the sea, plain and glassy; his 16:57 word: sheet of paper |
-| W24 | Real cities | building | Thalor 83 draws 395k, Vesper 64 and 445k on the Mac's GPU; not looked at on a phone |
+| M20 | Swim up waterfalls | building | from inside the pool by the stick: lip reached in about 3 s, Chromium, driven; his thumb owed |
+| M21 | Sprint and climb uphill | building | read 1 Nov 18:22, driven with Boost held on Sunward's hill, Chromium phone tier: rolls into the ride in 1.5 s, 36 to 56 m up in 4 s at 19 m/s, no stop. The plain sprint uphill not read apart from the ride |
+| M22 | Land ride, and the water it leaves | building | re-opened 18:22: the ride holds 19 m/s for 5.8 s; looking back straight after and 20 s later the water can't be seen, his ask isn't met |
+| M23 | Surf real waves | building | re-opened 18:22: from 60 m out he's on a ride by 34 m, past the waterline 1.5 s later and on up the beach at 19 m/s. Rideable, not surfing: no lock to the face |
+| W23 | Falls and streams meet the land | building | `falls.js` layered fall on the free-fall arc, `rivers.js` width and fan, river surface along the current; read in `falls_shots.mjs` on the Mac's GPU; his eye owed |
+| W24 | Real cities | building | looked at 18:22 at phone size from a swimmer's height: Thalor 79 draws 336k, Meridon 83 and 320k, Vesper 66 and 450k, Sunward town 71 and 330k. Streets and towers read; an olive wedge beside the Processional unexplained; his eye owed |
 | W25 | Ocean environment pass | todo | |
-| W26 | Natural cliffs and mountain edges | todo | |
+| W26 | Natural cliffs and mountain edges | building | `cliffs.js`: columned slabs on faces over 45°, crest and foot plants, by rule, on every island (Crown Falls shown to him first); his eye owed |
 | G13 | His phone HUD | check green | CR-36: `g_hud` G7h and `input` C1t 21 of 21 in WebKit. `ui` C3 (hotbar 5 px apart) and E1h (labels 14 px) stay red, his call |
 | G14 | One line at a time | building | in `ui.js`; a wall owed |
+
+## The "not yet checked" commits, read (Phase 0, 1 Nov 18:22)
+
+| Commit | What it said | Now |
+|---|---|---|
+| `d51d8ae`, `af05bb3`, `b025723` | Phone HUD | closed: WebKit `input` C1t and `g_hud` G7h on his layout (G13), CR-36. Never on a real iPhone |
+| `8d95b35` | Swim up waterfalls | closed by reading: pool to lip by the stick, about 3 s (M20) |
+| `f850eb1` | Hills, sprint | closed for the ride; plain sprint uphill unread (M21) |
+| `b3c241c`, `5609dab` mist | The falls meet the land | replaced by `falls.js` (W23) |
+| `3f840fb`, `c66a460`, `814e5e1` wet map | Land ride and the water it leaves | re-opened: M22 |
+| `82b7379`, `5609dab`, `5423e14` | Cities | looked at, W24. Two detail levels not separately read |
+| `5423e14` | Surfable breakers | re-opened: M23 |
+| `814e5e1`, `1c198c2` | Rivers, river surface | surface replaced; carve and pool stand (W23). Falls and stream sound never heard: no one here can hear it |
 
 ## Pick-up: missions, paused 2026-11-01 on his word ("Pause on the missions for now")
 
