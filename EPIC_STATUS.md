@@ -86,9 +86,9 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | Q2 | At most 5% long frames | building | perf B4, pace B4p B4s, turned B4t B4st: 0.08% at worst in r6, both engines |
 | Q3 | No frame over 50 ms after the first input | building | r6: B4p red in WebKit, 294 ms at 59.5 s; Chromium's first read 259 ms, its second none. B4pc on a cold cache red in both: Chromium 119 ms at 12.2 s, WebKit 104 ms at 56.6 s with `thing_net` first drawn then; each stall now prints what was first drawn |
 | Q4 | Frame work at or under 11 ms at p95 | building | perf B3j: p95 2.6 ms Chromium, 2.0 WebKit, r6 |
-| Q5 | Working memory under 96 MB | building | weigh F2, CR-22: 90.0 MB in the starting look, 6.0 MB of room, r6 Chromium; F2p red in Painted at 111.0 MB. A definition chosen, not a pass earned; a real iPhone owed. WebKit gives no heap, so it has no Q5 reading |
+| Q5 | Working memory under 96 MB | building | weigh, Build 32, both engines 8 of 8: F2 90.7 MB in the starting look, F2p 92.2 in Painted, F2m 93.5 after the whole map, F2n 95.0 in Painted after it. The lead's second read: the route doesn't saturate what loads, so plan on 0 to 1 MB of room. A definition chosen, not a pass earned; a real iPhone is owed |
 | Q6 | Working memory peak under 128 MB | building | weigh F2t red: 158.9 MB at most, at load, the raw heap at 114.8-124.9, r6 Chromium; F2l, with a collection at every sample, 93.6 MB. Soak Q6 now binds play. WebKit gives no heap, so it has no Q6 reading |
-| Q7 | At most 100 draw calls | building | perf B5, turned B5tt: 62 draws at most, r6, both engines; the big map not read yet |
+| Q7 | At most 100 draw calls | building | 98 at Thalor on the big map, Build 30 onward, read by hand at phone size in WebKit; far hulls hidden past 130 m; no wall reads the big map's worst view yet |
 | Q8 | At most 500k triangles (TBR) | building | perf B5t, turned B5tt: 367k at most, r6, both engines; the big map not read yet |
 | Q9 | At most 20 MB before first play | building | load B1: 5.24 MB as sent, r6, both engines |
 | Q10 | On screen in 1 s, playable in 10 s, at 10 Mbps | building | load B2p 96 ms, B2 6,473 ms on a 4x slower CPU, WebKit 31 and 5,449 ms, r6 |
