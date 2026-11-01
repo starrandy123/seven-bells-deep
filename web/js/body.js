@@ -2,6 +2,7 @@
 //   clips (sampled here, phase-locked) → inertialization on every switch → lean from followers → a foot that's down held on the real ground → two-bone IK → mantle and hair.
 // On land the whole body is the capture's, legs included, and the clip runs at the rate that matches his speed (formulas/gait.js). All that's added is what a body on real ground needs: a foot that's down stays
 // where it came down, on the ground under it, and the leg bends to reach it. Sim and body are apart: hero.js moves the body through the world, this only draws it.
+import { aimChain } from './formulas/aim.js';
 import * as THREE from 'three';
 import { second, follower, chase, first, nearAngle } from './formulas/follow.js';
 import { quintic, at } from './formulas/inertial.js';
@@ -383,8 +384,15 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   }
   const tvW = new THREE.Quaternion(), tvP = new THREE.Vector3();
   // ---------------------------------------------------------------- a leap's body: one curve from the nose to the toes, the shape of the path he's on. Going up he's long and a little arched back, over the top he folds round it, and he goes in long again, with a slow wave running down him all the way
+  let flyK = 0; const faceL = new THREE.Vector3(...K.qrot(K.qconj(REST.q.head), [0, 0, 1])), lookC = [bones.spine_3, bones.neck, bones.head], lookS = [0.14, 0.38, 0.48];
+  const sideAxisZ = {}, flyW = [1, 0, 0, 0], FLY_CL = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'];
   const sideAxis = {}, LEG0 = 0.34, SHIN0 = -0.42;       // the legs long: what takes the swim-dodge pose's bent hips and knees out
   function bend(n, a) { const i = index[n]; if (i === undefined || !a) return; const ax = sideAxis[n] || (sideAxis[n] = K.qrot(K.qconj(REST.q[n]), [1, 0, 0])), q = K.qaxis(ax, a), o = i * 4, r = K.qmul([pose[o], pose[o + 1], pose[o + 2], pose[o + 3]], q); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3]; }
+  // in flight: the chest goes into a turn first and the legs swing after it, the head stays with the horizon: an S from the head to the feet, as anything flying at speed has
+  function rollBone(n, a) { const i = index[n]; if (i === undefined || !a) return; const ax = sideAxisZ[n] || (sideAxisZ[n] = K.qrot(K.qconj(REST.q[n]), [0, 0, 1])), q = K.qaxis(ax, a), o = i * 4, r = K.qmul([pose[o], pose[o + 1], pose[o + 2], pose[o + 3]], q); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3]; }
+  function flyLean() {
+    const l = h.flyLat || 0; if (Math.abs(l) < 1e-3) return; rollBone('spine_1', -0.08 * l); rollBone('spine_2', -0.12 * l); rollBone('spine_3', -0.14 * l); rollBone('neck', 0.1 * l); rollBone('head', 0.16 * l); rollBone('leg_R', 0.1 * l); rollBone('leg_L', 0.1 * l);
+  }
   function arc() {
     const u = h.breach.u, c = Math.sin(Math.PI * (u * 1.2 - 0.1)), top = Math.sin(Math.PI * u), w = 6.283 * 1.15 * airT, wave = (lag, amp) => Math.sin(w - lag) * amp * (0.45 + 0.55 * top);
     bend('spine_1', 0.14 * c + wave(0.6, 0.04)); bend('spine_2', 0.18 * c + wave(0.3, 0.04)); bend('spine_3', 0.16 * c + wave(0, 0.03)); bend('neck', 0.08 * c); bend('head', 0.14 * c);
@@ -435,7 +443,12 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     else if (m === 'surf') {
       surfT = (surfT + dc * (0.75 + 0.75 * smooth(8, 26, h.surf ? h.surf.v : 0))) % (CL.surf_stand ? CL.surf_stand.dur : 2); const c = h.carve || 0, w = Math.abs(c), side = c > 0 ? 'surf_carve_R' : 'surf_carve_L';
       sample('surf_stand', surfT, 1 - w); if (w > 1e-3) sample(side, surfT * (CL[side] ? CL[side].dur / (CL.surf_stand ? CL.surf_stand.dur : 2) : 1), w);
-    } else if (m === 'air' && h.flyPose && CL.fly_hover) { airT += dc; const f = clamp(speed / 13, 0, 1), b = clamp((speed - 22) / 10, 0, 1); sample('fly_hover', airT % CL.fly_hover.dur, 1 - f); sample('fly_forward', airT % CL.fly_forward.dur, f * (1 - b)); sample('fly_boost', airT % CL.fly_boost.dur, f * b); }
+    } else if (m === 'air' && h.flyPose && CL.fly_hover) {       // his four poses by how he's really moving, each weight on a spring of its own, so nothing swaps
+      airT += dc; const f = smooth(3, 18, speed), b = smooth(28, 40, speed), br = clamp(h.flyBrake || 0, 0, 1), W = [(1 - f) * (1 - br), f * (1 - b) * (1 - br), f * b * (1 - br), br];
+      const lt = h.launchT ?? 9, LC = CL.fly_launch, lc = LC && lt < LC.dur ? 1 - smooth(LC.dur * 0.72, LC.dur, lt) : 0;
+      flyW.forEach((w, i) => { flyW[i] = w + (W[i] - w) * (1 - Math.exp(-5 * dc)); sample(FLY_CL[i], airT % CL[FLY_CL[i]].dur, flyW[i] * (1 - lc)); });
+      if (lc > 0) sample('fly_launch', lt, lc);
+    }
     else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
     else if (m === 'air') { airT += dc; sample(has('fall') ? 'fall' : 'idle_tread', airT % (has('fall') ? CL.fall.dur : 3), 1); }
     else if (h.ride && CL.ride_grip) { rideT = (rideT + dc) % CL.ride_grip.dur; sample('ride_grip', rideT, 1); }
@@ -454,6 +467,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     if (m === 'land' && !(shot && CLIP_LEGS.has(shot.name))) for (const i of groupB) { const o = i * 4; for (let k = 0; k < 4; k++) pose[o + k] = held[o + k]; }
     if (sheath.k > 0.002 && sheath.k < 0.998) { const r = Math.sin(Math.PI * sheath.k); bend('arm_R', -1.5 * r); bend('fore_R', -1.15 * r); }      // the hand goes back over the shoulder for it
     if (m === 'air' && h.breach) arc();
+    if (m === 'air' && h.flyPose) flyLean();
     else if (m === 'water' && !shot) { const g = clamp((h.tiltTo ?? h.tilt) - h.tilt, -1.4, 1.4); if (Math.abs(g) > 0.02) leadIn(g); }
 
     // ---- switches: the difference dies away on the quintic
@@ -477,6 +491,9 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const hb = bones.hips, hi = index.hips * 4;
     qY.setFromAxisAngle(AY, yaw + adrift * 0.12 * Math.sin(t0 * 0.23)); qX.setFromAxisAngle(AX, h.tilt - h.bodyPitch * (h.tilt > 0.5 ? 1 : 0.4) + adrift * (0.2 + 0.05 * Math.sin(t0 * 0.31 + 1))); qB.setFromAxisAngle(AY, h.bank + (h.roll || 0) + adrift * 0.06 * Math.sin(t0 * 0.43));
     root.quaternion.copy(qY).multiply(qX).multiply(qB);
+    // in the air on the jets he stands along the thrust (hero.js), turned about that line, pivoting at his hips, with the slow breath of a body held up
+    flyK += ((h.flyPose ? 1 : 0) - flyK) * (1 - Math.exp(-7 * dt));
+    if (flyK > 0.002) { root.quaternion.slerp(h.flyQ, flyK); tv.copy(h.drawPos).addScaledVector(h.flyUp, -STAND); const still = 1 - smooth(1, 7, h.speed); tv.y += still * (0.05 * Math.sin(t0 * 1.7) + 0.028 * Math.sin(t0 * 2.9 + 1)); tv.x += still * 0.03 * Math.sin(t0 * 1.1); tv.z += still * 0.03 * Math.sin(t0 * 0.9 + 2); root.position.lerp(tv, flyK); }
     // the ride's lean and rake (hero.js): the root stands at his feet, so he tips from there and they stay on the water
     if (h.surfLean || h.surfRake) { qL.setFromAxisAngle(AZ, h.surfLean || 0); qR.setFromAxisAngle(AX, h.surfRake || 0); root.quaternion.multiply(qL).multiply(qR); }
     if (!wantClip) {
@@ -507,6 +524,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     for (const i of ACT) { const o = i * 4, b = bones[names[i]]; b.quaternion.set(pose[o], pose[o + 1], pose[o + 2], pose[o + 3]); for (let k = 0; k < 4; k++) { last2[o + k] = last[o + k]; last[o + k] = pose[o + k]; } }
     hb.position.set(poseP[0], poseP[1], poseP[2]); last2P = lastP; lastP = poseP.slice();
     wear(dc);
+    if (flyK > 0.02) aimChain(lookC, lookS, bones.head, faceL, h.flyLook, 1.42, flyK);
     prevDt = dt;
     swing(dt, speed, onGround);
     if (h.ride) { root.updateWorldMatrix(true, false); bones.hand_R.updateWorldMatrix(true, false); bones.hand_L.updateWorldMatrix(true, false); tv.setFromMatrixPosition(bones.hand_R.matrixWorld); tv2.setFromMatrixPosition(bones.hand_L.matrixWorld); h.handsR = tv.clone(); h.handsL = tv2.clone(); gripRel.copy(tv).add(tv2).multiplyScalar(0.5).sub(root.position); }

@@ -39,6 +39,18 @@
    "license": "other",
    "terms": "The FAQ at mocap.cs.cmu.edu/faqs.php, read 1 Nov 2026: \"The motion capture data may be copied, modified, or redistributed without permission.\" It asks that the data be credited, as the line above does",
    "from": "http://mocap.cs.cmu.edu/faqs.php"
+  },
+  {
+   "what": "The player's flight spring and the body's turn in js/hero.js: spring_character_update and simple_spring_damper_exact_quat, written out from the author's published page",
+   "by": "Daniel Holden, Spring-It-On",
+   "license": "MIT",
+   "from": "https://github.com/orangeduck/Spring-It-On"
+  },
+  {
+   "what": "The method of the turbine jet in js/turbine.js: a cone, a colour along it, noise run along it, an alpha from the view angle. Written new; the idea comes from this shader",
+   "by": "Engine flame, godotshaders.com",
+   "license": "CC0",
+   "from": "https://godotshaders.com/shader/engine-flame/"
   }
  ]
 }

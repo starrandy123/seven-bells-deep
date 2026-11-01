@@ -9,13 +9,15 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { FLAG } from './config.js';
 import { BURN } from './burn_glsl.js';
+import { createTurbines } from './turbine.js';
+import { aimChain, faceIn } from './formulas/aim.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (c, t, k, dt) => c + (t - c) * (1 - Math.exp(-k * dt));
 const rand = (a, b) => a + Math.random() * (b - a);
 const Y = new THREE.Vector3(0, 1, 0);
-const GR = 9.81, DRAG = 0.03;       // at 30 m/s the jets lie 70° over, at 12 m/s 24°: the drag is what lays him flat
+const LOOK_S = [0.14, 0.38, 0.48], GR = 9.81, DRAG = 0.03;       // at 30 m/s the jets lie 70° over, at 12 m/s 24°: the drag is what lays him flat
 
 export async function createEmber(G, { foeMaterial, D }) {
   const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 2 : 3, WATERS = Q.water.in_raids ? (phone ? 2 : 3) : 0, time = { value: 0 };
@@ -41,8 +43,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (G.look.addOutline) for (const o of skinned) G.look.addOutline(o, { warm: o === fire });
     const mixer = new THREE.AnimationMixer(model), acts = {};
     for (const c of airClips) { const a = acts[c.name] = mixer.clipAction(c); if (AIR.test(c.name)) a.weight = 8; }
-    const bone = (n) => model.getObjectByName(n);
-    (water ? waterPool : pool).push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R')], [bone('shin_L'), bone('foot_L')]], head: bone('head'), chest: bone('spine_3'), man, fire });
+    const bone = (n) => model.getObjectByName(n); model.updateMatrixWorld(true);
+    (water ? waterPool : pool).push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, look: [bone('spine_3'), bone('neck'), bone('head')], face: faceIn(bone('head').getWorldQuaternion(new THREE.Quaternion())), jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R'), bone('toe_R')], [bone('shin_L'), bone('foot_L'), bone('toe_L')]], head: bone('head'), chest: bone('spine_3'), man, fire });
   }
   for (const s of [...pool, ...waterPool]) s.g.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) { o.skeleton.computeBoneTexture(); G.renderer.initTexture(o.skeleton.boneTexture); } });
 
@@ -50,7 +52,9 @@ export async function createEmber(G, { foeMaterial, D }) {
   let X = null;      // what enemies.js lends: takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn, count
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
   const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
+  const DUST = new THREE.Color(0.74, 0.69, 0.62);
   const waters = [];      // the water elementals in the air. They aren't foes: nothing the Warden aims lands on them, and they aren't counted in a fight
+  const JET = createTurbines(G, phone ? 12 : 18);
   const groundAt = (x, z) => G.world.heightAt(x, -z);
   const floorAt = (x, z) => Math.max(groundAt(x, z), 0);
   const probe = { x: 0, y: 0, z: 0 };
@@ -286,21 +290,24 @@ export async function createEmber(G, { foeMaterial, D }) {
 
   // ------------------------------------------------------------------ drawing: the tilt, the clips by how he's moving, the flame at each palm and sole
   const WEIGHTS = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'], footA = new THREE.Vector3(), footB = new THREE.Vector3();
-  // the flame at each palm and sole: along the limb, and pushed toward the line the jets are driving on
-  function jetsOf(pairs, up, thrust, k, JET, CORE, AIRY, CA) {
-    const cam = G.camera.position;
-    // Randy, 1 Nov: "Make sure the foot thrusters are one": the palms each throw their own; the feet, held together, throw a single jet from between them
+  // the jets: a turbine's at each palm and one under the feet, held together (Randy: "Make sure the foot thrusters are one"). The foot jet is the big one: it holds him up. Each leaves along its limb, leaning to the line of the body. `spool` is the turbine's: it comes up and down over a moment and doesn't follow the throttle (turbine.js)
+  function jetsOf(pairs, up, spool, wet, seed) {
     for (let i = 0; i < 3; i++) {
-      const foot = i === 2, [a, c] = pairs[i]; a.getWorldPosition(v1); c.getWorldPosition(v2);
-      if (foot) { const [a2, c2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); }
-      v3.subVectors(v2, v1).normalize().multiplyScalar(0.72).addScaledVector(up, -0.5).normalize();
-      const L = (foot ? 0.8 : 0.42) * (0.55 + 0.62 * thrust) * k, Wd = (foot ? 0.27 : 0.15) * (0.7 + 0.2 * thrust);
-      v2.addScaledVector(v3, foot ? 0.12 : 0.06);
-      viewX.subVectors(cam, v2).normalize().cross(v3).normalize();
-      const cell = (G.stats.frames + i) % 2 ? 'flame' : 'flame2';
-      G.fx.now(cell, v2.x + v3.x * L, v2.y + v3.y * L, v2.z + v3.z * L, viewX.x * Wd, viewX.y * Wd, viewX.z * Wd, v3.x * -L, v3.y * -L, v3.z * -L, JET, 1, 1.0, AIRY);
-      const L2 = L * 0.52, W2 = Wd * 0.46; G.fx.now(cell, v2.x + v3.x * L2, v2.y + v3.y * L2, v2.z + v3.z * L2, viewX.x * W2, viewX.y * W2, viewX.z * W2, v3.x * -L2, v3.y * -L2, v3.z * -L2, CORE, 1, 1.0, CA);
+      const foot = i === 2, [a, c, t] = pairs[i]; a.getWorldPosition(v1); c.getWorldPosition(v2);
+      if (foot) { const [a2, c2, t2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); t.getWorldPosition(footA); t2.getWorldPosition(footB); footA.add(footB).multiplyScalar(0.5); }
+      v3.subVectors(v2, v1).normalize().multiplyScalar(foot ? 0.6 : 0.3).addScaledVector(up, -1).normalize();
+      if (foot) v2.lerp(footA, 0.45).addScaledVector(v3, 0.07); else v2.addScaledVector(v3, 0.08);
+      const L = (foot ? 3.1 : 1.1) * (0.36 + 0.64 * spool), R = foot ? 0.125 : 0.072;
+      JET.add(v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, L, R, spool, wet, seed + i * 0.37);
+      G.fx.ball(v2, (foot ? 0.17 : 0.09) * (0.8 + 0.5 * spool), wet ? FOAM : HOT, 0.34 + 0.2 * spool, 0.9, 1);
     }
+  }
+  // what the jet does to what's under it: the push spreads out along the surface, a white ring on water and a low dust on land, and the higher he is the less of it arrives. Radius and rate go by his height and the turbine's speed, as a rotor's wash is scripted
+  function washUnder(p, spool, dt, box) {
+    const reach = 3 + 10 * spool, gy = Math.max(groundAt(p.x, p.z), 0), d = p.y - 0.9 - gy; if (d > reach || d < -1 || (box.washT = (box.washT || 0) - dt) > 0) return;
+    const near = 1 - clamp(d / reach, 0, 1), wet = gy <= 0.02, col = wet ? FOAM : DUST; box.washT = 0.045 + 0.07 * (1 - near); v1.set(p.x, gy + 0.12, p.z);
+    for (let i = 0; i < 2; i++) { const a = Math.random() * 6.283, c = Math.cos(a), n = Math.sin(a), r = 0.3 + 1.4 * (1 - near), vel = 5 + 10 * near; v2.set(v1.x + c * r, v1.y, v1.z + n * r); G.fx.sp('smoke', v2, 1, 0.6 + 0.5 * Math.random(), col, { s0: 0.5, s1: 1.8 + 1.8 * near, a: (wet ? 0.34 : 0.36) * (0.35 + 0.65 * near), add: 0, hot: 0, vx: c * vel, vz: n * vel, vy: wet ? 2.2 : 0.7, drag: 1.5, rot: Math.random() * 6.28 }); }
+    if ((box.ringT = (box.ringT || 0) - dt) <= 0) { box.ringT = 0.38; G.fx.ring(v1.clone(), 2.5 + 3.5 * near, 0.6, wet ? 0xe8fbff : 0xd8c8b0, Y); }
   }
   function draw(e, dt) {
     const s = e.slot, g = s.g, sp = e.vel.length(), Fl = Q.flight;
@@ -312,6 +319,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     const W = [(1 - f) * (1 - brake), f * (1 - b) * (1 - brake), f * b * (1 - brake), brake];
     for (let i = 0; i < 4; i++) { const a = s.acts[WEIGHTS[i]]; e.w[i] = damp(e.w[i], W[i], 7, dt); a.setEffectiveWeight(e.w[i] * rest); }
     if (e.frozen <= 0) s.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
+    if (rest > 0 && e.hp > 0 && e.frozen <= 0) { const tg = e.target || G.hero; v1.copy(sp > 6 ? e.vel : v2.subVectors(tg.pos, e.pos)).normalize(); aimChain(s.look, LOOK_S, s.head, s.face, v1, 1.42, e.w[0] * 0.8 + 1 - e.w[0]); }
     e.u.uHeat.value = damp(e.u.uHeat.value, e.heat, 6, dt);
     if (e.hp <= 0 && e.t < 1.4) e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 0.8);
     if (e.state === 'tell' && !fights(e) && !e.friend) G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
@@ -320,8 +328,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     g.updateMatrixWorld(true);
     const cam = G.camera.position, far = e.pos.distanceTo(cam);
     if (lit > 0) {
-      const flick = 0.82 + 0.3 * Math.random(), sputter = e.heat < 0.35 && Math.random() < 0.3 ? 0.3 : 1;
-      jetsOf(s.jets, e.up, e.thrust, flick * sputter * lit, JET, CORE, AIRY, wetBody ? 0.4 : 0.8);
+      const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(e.spool ?? 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
+      jetsOf(s.jets, e.up, e.spool * lit, wetBody ? 1 : 0, e.phase);
       // the crown of fire: it stands straight up off his head and his speed lays it back. The man has none
       if (e.super || e.friend) { s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
       G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY); }
@@ -377,7 +385,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     const own = []; h.model.traverse((o) => { if (o.isMesh) own.push(o); });
     const mat = foeMaterial(manB, { uSwap: { value: 0 } }), burning = foeMaterial(fireB, { ...mat.U, uHeat: { value: 1 }, uEmT: time, uEmS: { value: packed }, uSide: { value: 0 } });
     H2.man = mk(srcM, mat); H2.fire = mk(srcF, burning); H2.own = own; if (G.look.addOutline) { G.look.addOutline(H2.man, {}); G.look.addOutline(H2.fire, { warm: true }); }
-    const B = h.bones; H2.pairs = [[B.fore_R, B.hand_R], [B.fore_L, B.hand_L], [B.shin_R, B.foot_R], [B.shin_L, B.foot_L]];
+    const B = h.bones; H2.pairs = [[B.fore_R, B.hand_R], [B.fore_L, B.hand_L], [B.shin_R, B.foot_R, B.toe_R], [B.shin_L, B.foot_L, B.toe_L]];
     if (h.body && h.body.learn) h.body.learn(gltf.animations);
   }
   function showHero() { const s = H2.sup > 0; for (const o of H2.own) o.visible = !H2.on; if (H2.man) { H2.man.visible = H2.on && !s; H2.fire.visible = H2.on && s; } }
@@ -397,11 +405,11 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
   function heroBurn(dt) {
     if (!H2.on) return; const h = G.hero, B = h.bones; if (H2.sup > 0 && (H2.sup -= dt) <= 0) { H2.cool = Q.super.hero_again_s; showHero(); burst(v1.copy(h.pos), 12, 1); } if (H2.cool > 0) H2.cool -= dt;
-    const sup = H2.sup > 0, burning = h.flyPose; if (!burning && !sup) return;
+    const sup = H2.sup > 0, burning = h.flyPose; if (!burning) { H2.spool = 0; H2.ringT = 0; } if (!burning && !sup) return;
     h.root.updateMatrixWorld(true); B.spine_3.getWorldPosition(v1); B.hips.getWorldPosition(v2); H2.up.subVectors(v1, v2).normalize();
-    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); jetsOf(H2.pairs, H2.up, thrust, flick * (burning ? 1 : 0.5), FIRE, HOT, 0.55, 0.8);
+    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1);
     if (sup) { const cam = G.camera.position; B.head.getWorldPosition(v1); v1.addScaledVector(H2.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(h.vel, -0.5).normalize(); const Lc = 0.42 * flick, Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize(); G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.55); }
-    if (burning) { loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.07 : 0.16; v1.copy(h.pos).addScaledVector(H2.up, -0.9); G.fx.sp('smoke', v1, 0.7, h.speed > 14 ? 1.1 : 0.8, SMOKE, { s0: 0.2, s1: 0.7, a: 0.14, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 }); } }
+    if (burning) { washUnder(h.pos, H2.spool, dt, H2); loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.09 : 0.18; v1.copy(h.pos).addScaledVector(H2.up, -3.2); G.fx.sp('smoke', v1, 0.5, 1, SMOKE, { s0: 0.14, s1: 0.5, a: 0.06, add: 0, hot: 0, vy: 0.5, drag: 0.7, rot: Math.random() * 6.28 }); } }
   }
 
   function step(dt) {
@@ -417,11 +425,11 @@ export async function createEmber(G, { foeMaterial, D }) {
       for (let i = 0; i < 6; i++) { const t = i * 1.047 + G.time * 0.7, cx = x + Math.cos(t) * 3, cz = z + Math.sin(t) * 3, Lk = 0.9 + 0.3 * Math.sin(G.time * 7 + i * 2), W2 = 0.42; v3.set(0, 1, 0); viewX.set(cx - cam.x, 0, cz - cam.z).normalize().cross(v3).normalize(); G.fx.now(i % 2 ? 'flame' : 'flame2', cx, y + Lk, cz, viewX.x * W2, 0, viewX.z * W2, 0, Lk, 0, FIRE, 1, 1, 0.6); }
     }
   }
-  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); if (A().jet) A().jet(loud); loud = 0; }
+  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); JET.flush(G.time); if (A().jet) A().jet(loud); loud = 0; }
 
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
-    warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g)],
+    warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born,
