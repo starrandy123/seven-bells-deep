@@ -4,9 +4,9 @@ const RATE = 1.25;       // he's a hero in a 2 km world: every capture plays thi
 export const GAITS = { walk: { v: 1.29, T: 0.96, L: 1.242, beta: 0.625, on_L: 0.472 }, run: { v: 3.92, T: 0.587, L: 2.30, beta: 0.364, on_L: 0.5 }, sprint: { v: 5.89, T: 0.48, L: 2.83, beta: 0.417, on_L: 0.444 } };
 export const setGaits = (moves) => { for (const k in GAITS) { const g = moves && moves[k] && moves[k].gait; if (g) GAITS[k] = { v: g.v * RATE, T: g.T / RATE, L: g.L, beta: g.beta, on_L: g.on_L }; } };
 /* MATCH: the speed past which a stride can't follow the ground (M6). Past it the feet are carried on with him at what's left over and see less and less of the ground's speed, down to SEEN by 22 m/s; only the cadence keeps rising */
-export const MATCH = 8.8, SEEN = 7;
+export const MATCH = 9.2, SEEN = 7;
 export const seenAt = (v) => { if (v <= MATCH) return v; const t = Math.min(1, (v - MATCH) / (22 - MATCH)); return MATCH + (SEEN - MATCH) * t * t * (3 - 2 * t); };
-const T_SLOWEST = 1.5, T_MATCH = 0.44, T_FASTEST = 0.33, V_FASTEST = 36;      // s, a whole stride: how slow a slow walk's steps go, then how fast they go past the fastest capture
+const T_SLOWEST = 1.5, T_MATCH = 0.46, T_FASTEST = 0.33, V_FASTEST = 36;      // s, a whole stride: how slow a slow walk's steps go, then how fast they go past the fastest capture
 const mix = (a, b, k) => a + (b - a) * k;
 /* v: the speed the gait is blended by, a moment behind his real one so a knock doesn't jump the pose; speed: his real one, which sets the rate */
 export function stride(v, speed, out = {}) {

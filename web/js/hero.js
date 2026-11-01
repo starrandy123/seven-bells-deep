@@ -15,8 +15,9 @@ const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t
 const damp = (cur, tgt, k, dt) => cur + (tgt - cur) * (1 - Math.exp(-k * dt));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 8.7, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
+const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 9.1, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
 // The jump, in the numbers a designer chooses (DESIGN.md §Movement): height and time; gravity and speed follow. One gravity for every jump, so the air always feels the same.
+const WALK_TOP = 2.6, WALK_EASE = 2.4;      // m/s, m/s²: the speed below which he's walking, and how hard a walk starts and stops
 const LAND_SURF_IN = 0.35, LAND_SURF_TOP = 19, LAND_SURF_CRUISE = 14, SLOPE_PULL = 0.62;      // Randy, 1 Nov: Boost on land rides the water: a held sprint this long rolls into it; its top and cruise; how much of gravity along the slope he feels
 const SURF_RIDE = 14, SURF_TOP = 26, SURF_OFF = 6, SURF_STORM = 20, SWELL_STORM = 1.7, SURF_TURN = 2.2, SURF_SWELL = 0.75, SURF_START = 9, SURF_SHALLOW = -1.0;      // the surf: speeds, how fast the stick carves, the swell's height, what it takes to get up on one
 const TIDE_TIERS = [0, 15.5, 20, 25], TIDE_WINDOW = 0.14, TIDE_HOLD = 1.8;      // Tidepulse: the speed of each tier (the first is BOOST), how far from a kick a press still counts, how long a tier lasts unrenewed
@@ -247,7 +248,7 @@ export async function createHero(G) {
 
   // ------------------------------------------------------------------ on his feet
   const mv = { x: 0, y: 0, z: 0 }; let wallCut = false, wallX = 0, wallZ = 0, moveX = 0, moveZ = 1;
-  const speedUp = (v) => (v < 6 ? 11 : v < 9 ? 14 : 22), slowDown = (v) => (v > 14 ? 24 : v > 9 ? 20 : 12);
+  const speedUp = (v) => (v < 2.5 ? 6.5 : v < 6 ? 11 : v < 9.5 ? 14 : 22), slowDown = (v) => (v > 14 ? 24 : v > 9.5 ? 20 : 9);       // a real start and stop: about what the captures do, at 1.25×
   // the turn: a goal swings round to the stick at the rate his speed allows, and the heading follows it critically damped, so a turn eases in, eases out and lands with no overshoot
   const turnF = second({ f: 2.2, z: 1 }); let turnS = follower(0), turnGoal = 0;
   // ------------------------------------------------------------------ the surf: a state of its own. A boost along the surface lifts a swell under him and he's up on it, riding the sea: the stick carves, boost
@@ -303,7 +304,7 @@ export async function createHero(G) {
     if (s.land && h.pos.y - (base + y + STAND * 0.86) > 1.6) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); return; }
     h.pos.y = s.land ? h.pos.y + clamp(base + y + STAND * 0.86 - h.pos.y, -12 * dt, 30 * dt) : base + y + STAND * 0.86; h.swellY = y; h.surfBase = base;
     // the ends. On land: let go of Boost and the water runs out under him, and he runs on. At sea: into the shallows he runs up the beach; pressed down or out of speed he goes under
-    if (s.land) { if (s.v < SURF_OFF) { const v = s.v; endSurf(); h.land = true; h.grounded = true; h.spd = v; h.pos.y = g + STAND; h.landSurfT = 0; G.audio.splash(); } return; }
+    if (s.land) { if (s.v < SURF_OFF) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); h.landSurfT = 0; G.audio.splash(); } return; }      // the water runs out under him and he steps down off it: a moment in the air and the landing's own body, so his legs never have to reach the ground from up on the wave
     if (g > SURF_SHALLOW) { endSurf(); leave(2.5); h.jumps = 1; h.apexY = h.pos.y; G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 5, 0.6, 0xe8fbff); G.audio.splash(); G.quest && G.quest.note('surf_beach'); return; }
     if (u.ud < -0.4 || s.v < SURF_OFF || G.camPitch < -0.6) { endSurf(); leave(-2.5); h.jumps = 1; h.apexY = h.pos.y; G.quest && G.quest.note('surf_dive'); }
   }
@@ -321,7 +322,7 @@ export async function createHero(G) {
     G.audio.splash(); h.splashIn = 0.13; h.splashSize = H / 10; G.quest && G.quest.note('leap');       // the column goes up when he's clear of it
   }
   function jumpNow() {
-    const sprinting = h.surge > 0.4 || h.spd > 7.2, v = sprinting ? V_LEAP : J.v;
+    const sprinting = h.surge > 0.4 || h.spd > 7.4, v = sprinting ? V_LEAP : J.v;
     leave(v); h.jumps = 1; h.jumpHold = true; h.leapHi = sprinting; h.jumpT = 0;
     if (sprinting) { G.fx.ring(h.pos.clone().setY(h.pos.y - STAND + 0.1), 7, 0.55, 0xfff0c8); G.shake(0.25); G.audio.boom(); }
     G.audio.swing();
@@ -359,7 +360,9 @@ export async function createHero(G) {
     turnGoal += clamp(wrap(wishYaw - turnGoal), -wMax * dt, wMax * dt);
     const y0 = turnS.y, y1 = chase(turnF, turnS, nearAngle(y0, turnGoal), dt);
     h.omega = (y1 - y0) / dt; h.heading = wrap(y1); turnGoal = nearAngle(y1, turnGoal);
-    const want = clamp((target - h.spd) * 7, -slowDown(h.spd), speedUp(h.spd));
+    // a walk's start and stop take the time the captures do: the weight shifts first, and two steps bring him to rest. Quicker and the body leaves the planted foot behind
+    const easy = target < WALK_TOP && /^walk_/.test(body.loco || '');
+    const want = clamp((target - h.spd) * 7, easy ? -WALK_EASE : -slowDown(h.spd), easy ? WALK_EASE : speedUp(h.spd));
     h.accel = first(0.05, h.accel, want, dt);
     h.spd = Math.max(0, h.spd + h.accel * dt);
     // from a stand he goes the way the stick says, at once, and his body comes round after it; by a jog he goes the way he faces
