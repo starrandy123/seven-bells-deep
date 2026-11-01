@@ -188,10 +188,11 @@ def write_actions(rig, clips, log):
         tr = rig.animation_data.nla_tracks.new(); tr.name = name; st = tr.strips.new(name, 0, act); tr.mute = False
     log('actions', len(clips))
 
-def export(rig, ob, raw, log):
+def export(rig, ob, raw, log, also=()):
     sc = bpy.context.scene; sc.render.fps = 30; sc.frame_start = 0
     bpy.ops.object.select_all(action='DESELECT')
     rig.select_set(True); ob.select_set(True); bpy.context.view_layer.objects.active = rig
+    for o in also: o.select_set(True)       # a second mesh on the same rig
     bpy.ops.export_scene.gltf(filepath=raw, export_format='GLB', use_selection=True, export_yup=True, export_apply=False, export_image_format='AUTO',
                               export_animations=True, export_animation_mode='ACTIONS', export_force_sampling=True, export_frame_step=1, export_anim_slide_to_zero=False,
                               export_skins=True, export_morph=False, export_attributes=True, export_vertex_color='ACTIVE', export_all_vertex_colors=False, export_materials='EXPORT', export_def_bones=False,

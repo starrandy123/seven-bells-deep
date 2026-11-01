@@ -4,7 +4,7 @@ import { gate } from './lib/h.mjs';
 const { line, note, open, section, finish } = await gate('wall_ember', { budget: 150 });
 const TURNED = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const steps = (page, n, each = '') => page.evaluate(([n, each]) => { const G = window.__game, f = each ? new Function('G', 'i', each) : null; for (let i = 0; i < n; i++) { if (f) f(G, i); G.frame(1 / 60); } }, [n, each]);
-await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9'], async () => {
+await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });
   const start = await page.evaluate(() => { const e = window.__e, h = window.__game.hero; return { d: e.pos.distanceTo(h.pos), inFront: Math.sin(window.__game.camYaw) * (e.pos.x - h.pos.x) + Math.cos(window.__game.camYaw) * (e.pos.z - h.pos.z) > 0, kind: e.kind }; });
@@ -30,6 +30,14 @@ await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9'], async () =
   line('E8', fall.y < y0 - 3 && dbl >= 19.9, `doused he falls, ${y0.toFixed(1)} to ${fall.y.toFixed(1)} m, and a blow does double: 10 does ${dbl.toFixed(0)}`);
   await steps(page, 170); const lit = await page.evaluate(() => { const e = window.__e; return { d: e.doused, st: e.state, heat: e.heat, y: e.pos.y }; }); await steps(page, 120); const y2 = await page.evaluate(() => window.__e.pos.y), bad = errors.filter((x) => !/qa\.js|Failed to load resource/.test(x));
   line('E9', lit.d <= 0 && lit.heat > 0.4 && y2 > 2.5 && bad.length === 0, `he lights again and takes to the air: heat ${lit.heat.toFixed(2)}, ${lit.st}, then ${y2.toFixed(1)} m up; ${bad.length} page errors${bad[0] ? ': ' + bad[0] : ''} (the checks' own qa.js isn't in a build)`);
+  // a man in red until he's pressed: below his line he goes all fire, it's told, and water puts it out and leaves the man
+  const man = await page.evaluate(() => { const e = window.__e, s = e.slot; return { man: s.man.visible, fire: s.fire.visible, sup: e.super, armed: !!s.g.getObjectByName('spear') }; });
+  line('E10', man.man && !man.fire && !man.sup && !man.armed, `he's a man in red, the fire form hidden, no weapon on him: man ${man.man}, fire ${man.fire}`);
+  await page.evaluate(() => { const e = window.__e, G = window.__game; e.hp = e.maxHp * 0.4; e.heat = 1; e.superT = 0; e.doused = 0; e.state = 'circle'; e.t = 9; G.combat.log.length = 0; });
+  let lit2 = null; for (let i = 0; i < 16; i++) { await steps(page, 12, 'window.__e.t = window.__e.state === "circle" ? 9 : window.__e.t;'); lit2 = await page.evaluate(() => { const e = window.__e, L = window.__game.combat.log; return { sup: e.super, fire: e.slot.fire.visible, man: e.slot.man.visible, ig: L.find((x) => x.type === 'ignite'), su: L.find((x) => x.type === 'super') }; }); if (lit2.sup) break; }
+  const told = lit2.su && lit2.ig ? lit2.su.t - lit2.ig.t : 0; line('E11', lit2.sup && lit2.fire && !lit2.man && told >= 0.5, `pressed he goes all fire, told ${told.toFixed(2)} s first (at least 0.5, P8): fire shows, the man doesn't`);
+  const out = await page.evaluate(() => { const G = window.__game, e = window.__e, h = G.hero, a = []; e.heat = 1; for (let i = 0; i < 5; i++) { e.onHit(1, h.pos, 'water', { element: 'water', status: { soak: 1 }, knock: 0, stun: 0, poise: 0 }); a.push(+e.heat.toFixed(2)); if (e.doused > 0) break; } return { a, doused: e.doused, sup: e.super, man: e.slot.man.visible }; });
+  line('E12', out.doused > 0 && !out.sup && out.man, `water puts the fire out and leaves the man, falling: heat ${out.a.join(' > ')}`);
   await close();
 });
 await finish();

@@ -1,4 +1,6 @@
-// The elementals (EPIC V1, V2, V5, V8, V12). The Emberkin: fire elementals who fly on jets at the palms and the soles. No weapon: fists, kicks and fire. The water elementals fight beside the Warden: the same body and the same flight in the sea's own colours, with water and ice.
+// The elementals (EPIC V1, V2, V5, V8, V12, V13). The Emberkin: regular men in red who fly on fire jets at the palms and the soles. No weapon: fists, kicks and fire. Pressed, one goes into his super mode, the all-fire form, and water puts it out.
+// Randy, 1 Nov: "The fire elementals should just be a regular guy with red attire. We can use the all fire design as a super mode". Both forms ride one rig: one mesh shows, the other waits.
+// The water elementals fight beside the Warden: the all-fire body's shape and the same flight in the sea's own colours. Not called into a raid until he asks (combat.json ember.water.in_raids).
 // The rules of a fight stay in enemies.js (tokens, tells, blows, what a hit does); this file holds what's theirs: a body that burns or runs with water, flight that leans into what the jets are doing, bolts that really fly, and what water does to fire.
 // Flight is a thrust and not a slide: the body's axis stands along the push the jets must give, which is gravity, plus what he's asking of his speed, plus the drag of going fast. So he leans into a turn, lies flat at speed and rears back to stop, with no state saying so.
 import * as THREE from 'three';
@@ -51,26 +53,27 @@ export async function createEmber(G, { foeMaterial, D }) {
   const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 3 : 4, WATERS = phone ? 2 : 3, time = { value: 0 };
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync('assets/ember.glb');
-  let shared = null, geo = null; const packed = new THREE.Vector4(0, 0, 0, 1);       // the packer stores positions as whole numbers with a scale on the node: the fire's pattern is in metres
+  let manB = null, fireB = null; const packed = new THREE.Vector4(0, 0, 0, 1);       // the packer stores positions as whole numbers with a scale on the node: the fire's pattern is in metres
   gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((o) => { if (o.isMesh) { if (!shared) { const m = o.matrixWorld.elements; packed.set(m[12], m[13], m[14], Math.hypot(m[0], m[1], m[2])); } shared = shared || o.material; geo = geo || o.geometry; } });
-  for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) { if (shared[k]) shared[k].dispose(); shared[k] = null; }
-  shared.vertexColors = true; shared.roughness = 0.82; shared.metalness = 0; shared.emissive.setRGB(0, 0, 0); shared.color.setRGB(1, 1, 1); shared.envMapIntensity = 0.5;
-  geo.deleteAttribute('uv');
-  G.look.patch(shared, { skinned: true, key: 'ember', uniforms: { uEmT: time, uHeat: { value: 1 }, uEmS: { value: packed }, uSide: { value: 0 } }, ...BURN });
+  gltf.scene.traverse((o) => { if (!o.isMesh) return; if (o.material.name === 'M_emberfire') { fireB = o.material; const m = o.matrixWorld.elements; packed.set(m[12], m[13], m[14], Math.hypot(m[0], m[1], m[2])); o.geometry.deleteAttribute('uv'); } else manB = o.material; });
+  const strip = (m, keep) => { for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) { if (keep.includes(k) || !m[k]) continue; m[k].dispose(); m[k] = null; } m.vertexColors = true; m.metalness = 0; m.emissive.setRGB(0, 0, 0); m.color.setRGB(1, 1, 1); };
+  strip(manB, ['map', 'normalMap']); strip(fireB, []); manB.roughness = 0.68; fireB.roughness = 0.82; fireB.envMapIntensity = 0.5;
+  G.look.patch(manB, { skinned: true, key: 'emberman' });
+  G.look.patch(fireB, { skinned: true, key: 'ember', uniforms: { uEmT: time, uHeat: { value: 1 }, uEmS: { value: packed }, uSide: { value: 0 } }, ...BURN });
   // a blow in the air leaves his legs to the flight: his upper body takes the clip and the jets keep holding him. On the ground, or for a kick, the whole body does
   const UPPER = /^(spine_|neck|head|clav_|arm_|fore_|hand_)/, AIR = /^e_(blast|cross|hook|jab)$/;
   for (const c of gltf.animations) if (AIR.test(c.name)) c.tracks = c.tracks.filter((t) => UPPER.test(t.name));
   const pool = [], waterPool = [];
   for (let i = 0; i < MAX + WATERS; i++) {
     const water = i >= MAX, model = SkeletonUtils.clone(gltf.scene), g = new THREE.Group(); g.add(model); g.visible = false; G.scene.add(g);
-    const mat = foeMaterial(shared, { uHeat: { value: 1 }, uEmT: time, uEmS: { value: packed }, uSide: { value: water ? 1 : 0 } }), skinned = []; if (water) { mat.roughness = 0.16; mat.envMapIntensity = 1.2; }
-    model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = mat; if (o.isSkinnedMesh) skinned.push(o); } });
-    if (G.look.addOutline) for (const o of skinned) G.look.addOutline(o, { warm: true });
+    const mat = foeMaterial(manB), burning = foeMaterial(fireB, { ...mat.U, uHeat: { value: 1 }, uEmT: time, uEmS: { value: packed }, uSide: { value: water ? 1 : 0 } }), skinned = []; mat.U.uHeat = burning.U.uHeat; if (water) { burning.roughness = 0.16; burning.envMapIntensity = 1.2; }
+    let man = null, fire = null;
+    model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; if (o.material.name === 'M_emberfire') { o.material = burning; fire = o; } else { o.material = mat; man = o; } if (o.isSkinnedMesh) skinned.push(o); } });
+    if (G.look.addOutline) for (const o of skinned) G.look.addOutline(o, { warm: o === fire });
     const mixer = new THREE.AnimationMixer(model), acts = {};
     for (const c of gltf.animations) { const a = acts[c.name] = mixer.clipAction(c); if (AIR.test(c.name)) a.weight = 8; }
     const bone = (n) => model.getObjectByName(n);
-    (water ? waterPool : pool).push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R')], [bone('shin_L'), bone('foot_L')]], head: bone('head'), chest: bone('spine_3') });
+    (water ? waterPool : pool).push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R')], [bone('shin_L'), bone('foot_L')]], head: bone('head'), chest: bone('spine_3'), man, fire });
   }
   for (const s of [...pool, ...waterPool]) s.g.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) { o.skeleton.computeBoneTexture(); G.renderer.initTexture(o.skeleton.boneTexture); } });
 
@@ -83,6 +86,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   const floorAt = (x, z) => Math.max(groundAt(x, z), 0);
   const probe = { x: 0, y: 0, z: 0 };
   const fx = () => G.fx, A = () => G.audio;
+  const FIERCE = { ...Q.flight, ring_mps: Q.flight.ring_mps * Q.super.speed, accel: Q.flight.accel * Q.super.speed, boost_mps: Q.flight.boost_mps * Q.super.speed, cruise_mps: Q.flight.cruise_mps * Q.super.speed };
 
   // ------------------------------------------------------------------ flight: ask for a speed, get it through the jets
   function aim(e, w, most, dt) {
@@ -111,9 +115,10 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ one flyer's head: comes in, rings him, picks its moment. Tokens and tells are the same as every foe's
   function brain(e, dt) {
     pick(e, dt);
-    const h = e.foe || G.hero, F = e.def, dist = e.pos.distanceTo(h.pos), Fl = Q.flight;
+    const h = e.foe || G.hero, F = e.def, dist = e.pos.distanceTo(h.pos), Fl = e.super ? FIERCE : Q.flight;
     if (e.side === 'water' && e.free && e.state === 'circle' && (e.idleT = (e.idleT || 0) + dt) > Q.water.stays_s) { e.state = 'leave'; e.t = 2.4; } else if (!e.free) e.idleT = 0;
     e.t -= dt; if (e.state !== 'dead') e.heat = Math.min(1, e.heat + (e.doused > 0 ? 0 : H.regain_per_s) * dt);
+    if (e.side !== 'water' && !e.super && e.state === 'circle' && e.doused <= 0) { e.superT -= dt; if (e.superT <= 0 && e.hp < e.maxHp * Q.super.at_hp) { e.state = 'ignite'; e.t = Q.super.tell_s; X.dropToken(e); X.playClip(e, 'e_hook', 0.12, true); G.combat.log.push({ t: G.time, type: 'ignite', foe: e.kind }); A().tell && A().tell(true); } }
     if (e.doused > 0) { e.doused -= dt; if (e.doused <= 0 && e.hp > 0) relight(e); else { fallStep(e, dt); return; } }
     switch (e.state) {
       case 'swimTo': { // in from the horizon, flat out, and rearing up to stop short of him
@@ -159,6 +164,12 @@ export async function createEmber(G, { foeMaterial, D }) {
         e.vel.multiplyScalar(Math.exp(-8 * dt)); e.ask.set(0, 0, 0); faceHim(e, dt, 4); if (e.t <= 0) { e.state = 'takeoff'; e.t = 0.5; X.dropToken(e); if (e.cur) e.cur.fadeOut(0.2); e.cur = null; A().boom && 0; }
         break;
       }
+      case 'ignite': { // the fire comes up through him: it's told, for as long as any blow is, and then he's all fire
+        const q = clamp(1 - e.t / Q.super.tell_s, 0, 1); want.set(0, 0.8, 0); aim(e, want, Fl.accel, dt); faceHim(e, dt); e.u.uTell.value = q * q * 1.4;
+        if ((e.flareT = (e.flareT || 0) - dt) <= 0) { e.flareT = 0.05; v1.copy(e.pos); v1.x += rand(-0.5, 0.5); v1.y += rand(-0.9, 0.9); v1.z += rand(-0.5, 0.5); G.fx.sp('flame', v1, 0.4 + q * 0.5, 0.42, FIRE, { s0: 0.3, s1: 0.8 + q * 0.5, vy: 3 + q * 3, hot: 1, add: 0.6, a: 0.9 }); }
+        if (e.t <= 0) ignite(e);
+        break;
+      }
       case 'takeoff': want.set(0, Fl.climb_mps, 0); aim(e, want, Fl.accel, dt); faceHim(e, dt); if (e.t <= 0) back(e); break;
       case 'stun': e.vel.multiplyScalar(Math.exp(-3 * dt)); e.ask.multiplyScalar(0.8); if (e.t <= 0) back(e); break;
       case 'leave': want.set(0, -14, 0); aim(e, want, Fl.accel, dt); if (e.pos.y < 0.4 && !e.wetNow) { e.wetNow = true; rise(e.pos); } if (e.t <= 0 || e.pos.y < -1.5) { sink(e); return; } break;
@@ -177,6 +188,12 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (w.hp <= 0) return; w.hp -= n; w.u.uFlash.value = 1; if (w.hp <= 0) { w.state = 'dead'; w.t = 2.2; X.endTell(w); if (w.cur) w.cur.fadeOut(0.1); w.cur = null; X.playClip(w, 'death', 0.1, true); rise(w.pos, 1.4); G.combat.log.push({ t: G.time, type: 'water_down' }); } else { v2.subVectors(w.pos, from).normalize(); w.vel.addScaledVector(v2, 5); }
   }
   function sink(e) { e.slot.busy = false; e.slot.g.visible = false; e.slot.mixer.stopAllAction(); const i = waters.indexOf(e); if (i >= 0) waters.splice(i, 1); rise(e.pos, 0.9); }
+  function form(s, burning) { s.man.visible = !burning; s.fire.visible = burning; }
+  function ignite(e) {
+    e.super = true; form(e.slot, true); e.heat = 1; e.u.uHeat.value = 1; e.u.uTell.value = 0; e.state = 'circle'; e.t = 0.5; if (e.cur) e.cur.fadeOut(0.15); e.cur = null;
+    burst(v1.copy(e.pos), 30, 2.2); fx().shock && fx().shock(v1.copy(e.pos), 7, 'fire'); A().boom(); A().roar && A().roar(); G.combat.log.push({ t: G.time, type: 'super', foe: e.kind }); G.combat.teach('super', 'All fire', 'Faster and harder. Water still puts it out');
+    const h = G.hero, d = h.pos.distanceTo(e.pos); if (d < Q.super.blast_m) { h.vel.addScaledVector(v1.subVectors(h.pos, e.pos).normalize(), 12); G.combat.log.push({ t: G.time, type: 'blast', d }); }
+  }
   function back(e) { X.dropToken(e); X.endTell(e); e.state = 'circle'; e.t = rand(e.def.wait_s[0], e.def.wait_s[1]); if (e.cur) e.cur.fadeOut(0.18); e.cur = null; }
   // which blow: from the air he shoots; a swoop comes when he's near; a Warden in the water is only reached by going in after him; on land he comes down
   function tellOf(e, b) {
@@ -191,7 +208,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     X.beginTell(e, by(r < 0.45 ? 'bolt' : r < 0.75 ? 'strafe' : 'swoop'));
   }
   function strikeBegins(e) {
-    const b = e.blow; if (b.burst) { e.shotsLeft = b.burst; e.gapT = 0; if (b.pass_mps) { e.passDir = (e.passDir || new THREE.Vector3()).subVectors((e.foe || G.hero).pos, e.pos); e.passDir.y = 0; e.passDir.normalize(); } }
+    const b = e.blow; if (b.burst) { e.shotsLeft = b.burst + (e.super ? 1 : 0); e.gapT = 0; if (b.pass_mps) { e.passDir = (e.passDir || new THREE.Vector3()).subVectors((e.foe || G.hero).pos, e.pos); e.passDir.y = 0; e.passDir.normalize(); } }
     if (!b.burst && !b.land && b.clip === 'e_kick') A().swing();
   }
   function touchDown(e, b) {
@@ -234,7 +251,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ fire: a bolt flies, leaves its trail, and meets something
   function bolt(e, b) {
     const s = shots.find((x) => !x.on); if (!s) return; const h = e.foe || G.hero, side = e.nextHand = (e.nextHand || 0) ^ 1, hand = e.slot.jets[side][1];
-    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage; s.t = 3.2; s.trailT = 0; s.blow = b.id;
+    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage * (e.super ? Q.super.damage : 1); s.t = 3.2; s.trailT = 0; s.blow = b.id;
     v1.copy(h.pos); if (h === G.hero) v1.y = Math.max(h.pos.y + 0.3, 0.3); const l = s.p.distanceTo(v1) / b.speed_mps; v1.addScaledVector(h.vel, l * b.lead); s.v.subVectors(v1, s.p).normalize().multiplyScalar(b.speed_mps); s.side = e.side;
     fx().sparks(s.p, 6, e.side === 'water' ? 0xbdf7ff : 0xffa040, 5); A().fwoosh && A().fwoosh(); G.combat.log.push({ t: G.time, type: 'bolt', foe: e.kind, blow: b.id });
   }
@@ -285,11 +302,11 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ water against fire (V5): what a hit of water does. Each is one line of combat.json `ember.heat`
   function struck(e, info) {
     const wet = info.element === 'water' || (info.status && info.status.soak), cold = info.element === 'ice' || (info.status && info.status.chill);
-    if (!wet && !cold) return; e.heat = Math.max(0, e.heat - (wet ? H.water : H.ice)); v2.copy(e.pos); v2.y += 0.4; steam(v2, wet ? 5 : 3, 0.9); A().hiss && A().hiss(0.5); G.combat.log.push({ t: G.time, type: 'quench', foe: e.kind, heat: +e.heat.toFixed(2) });
+    if (!wet && !cold) return; e.heat = Math.max(0, e.heat - (wet ? H.water : H.ice) * (e.super ? Q.super.water_k : 1)); v2.copy(e.pos); v2.y += 0.4; steam(v2, wet ? 5 : 3, 0.9); A().hiss && A().hiss(0.5); G.combat.log.push({ t: G.time, type: 'quench', foe: e.kind, heat: +e.heat.toFixed(2) });
     if (e.heat <= 0.01) douse(e);
   }
   function douse(e) {
-    if (e.doused > 0 || e.hp <= 0) return; e.doused = H.doused_s; X.dropToken(e); X.endTell(e); e.state = 'stun'; e.t = H.doused_s; e.heat = 0; steam(e.pos, 10, 1.6); A().hiss && A().hiss(1); X.playClip(e, 'fall', 0.2, false);
+    if (e.doused > 0 || e.hp <= 0) return; e.doused = H.doused_s; X.dropToken(e); X.endTell(e); if (e.super) { e.super = false; form(e.slot, false); e.superT = Q.super.again_s; G.combat.log.push({ t: G.time, type: 'put_out', foe: e.kind }); } e.u.uTell.value = 0; e.state = 'stun'; e.t = H.doused_s; e.heat = 0; steam(e.pos, 10, 1.6); A().hiss && A().hiss(1); X.playClip(e, 'fall', 0.2, false);
     G.combat.teach('doused', 'Doused', 'Water puts them out. Strike now'); G.combat.log.push({ t: G.time, type: 'doused', foe: e.kind }); e.ask.set(0, 0, 0);
   }
   function relight(e) {
@@ -329,11 +346,11 @@ export async function createEmber(G, { foeMaterial, D }) {
         G.fx.now(cell, v2.x + v3.x * L, v2.y + v3.y * L, v2.z + v3.z * L, viewX.x * Wd, viewX.y * Wd, viewX.z * Wd, v3.x * -L, v3.y * -L, v3.z * -L, JET, 1, 1.0, AIRY);
         const L2 = L * 0.52, W2 = Wd * 0.46; G.fx.now(cell, v2.x + v3.x * L2, v2.y + v3.y * L2, v2.z + v3.z * L2, viewX.x * W2, viewX.y * W2, viewX.z * W2, v3.x * -L2, v3.y * -L2, v3.z * -L2, CORE, 1, 1.0, wetBody ? 0.4 : 0.8);
       }
-      // the crown of fire: it stands straight up off his head and his speed lays it back
-      s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
-      G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY);
+      // the crown of fire: it stands straight up off his head and his speed lays it back. The man has none
+      if (e.super || wetBody) { s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
+      G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY); }
       // seen from far off he's a light, and the sprite holds its size on the screen so a phone reads him at 40 m
-      if (far > 12) { const halo = Math.min(far * 0.05, 12); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, JET, clamp((far - 12) / 60, 0.08, 0.55), 0.05, 0.4); G.fx.ball(v1, halo * 0.32, CORE, clamp((far - 12) / 30, 0.1, 0.9), 0.5, 0.5); }
+      if (far > 12) { const halo = Math.min(far * 0.05, 12) * (e.super || wetBody ? 1 : 0.62); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, JET, clamp((far - 12) / 60, 0.08, 0.55), 0.05, 0.4); G.fx.ball(v1, halo * 0.32, CORE, clamp((far - 12) / 30, 0.1, 0.9), 0.5, 0.5); }
       if ((e.smokeT = (e.smokeT || 0) - dt) <= 0) {
         e.smokeT = sp > 14 ? 0.07 : 0.16; v1.copy(e.pos).addScaledVector(e.up, -0.9); const k = 0.45 + 0.5 * Math.min(1, sp / 30);
         G.fx.sp('smoke', v1, k, sp > 14 ? 1.1 : 0.8, wetBody ? FOAM : SMOKE, { s0: 0.26 * k, s1: 0.9 * k, a: wetBody ? 0.12 : 0.15, add: 0, hot: 0, vy: wetBody ? -0.4 : 0.9, drag: 0.7, rot: Math.random() * 6.28 });
@@ -383,13 +400,13 @@ export async function createEmber(G, { foeMaterial, D }) {
   function frame(dt) { time.value = G.time; for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); if (A().jet) A().jet(loud); loud = 0; }
 
   return {
-    pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, waters, raids: R, shots, MAX,
+    pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX,
     warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g)],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born,
   };
-  function born(e) { e.side = e.side || 'fire'; e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
+  function born(e) { e.side = e.side || 'fire'; e.super = false; e.superT = 0; form(e.slot, e.side === 'water'); e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
     const a = e.slot.acts; for (const n of WEIGHTS) { a[n].reset(); a[n].setEffectiveWeight(n === 'fly_hover' ? 1 : 0); a[n].play(); }
   }
 }

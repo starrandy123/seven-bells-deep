@@ -1,19 +1,20 @@
 # The Emberkin, on a real body (Microsoft Rocketbox Military_Male_02, MIT). Blender 5.2 headless, seeded. Same bones as the Warden, so the game's fighter code holds it; its own moves (moves_ember.py).
-# No image textures: the skin is lumped into slag here and the fire burns in the game's own shader (web/js/ember.js), so a body of its own costs the phone no texture memory.
+# Randy, 1 Nov: "The fire elementals should just be a regular guy with red attire. We can use the all fire design as a super mode". So two meshes ride one rig and one set of clips: the man, painted (paint_ember.py),
+# and the same body gone to slag, with no images: its fire burns in the game's own shader (web/js/ember.js).
 #   GLTFPACK_CLI=<path> $BL -b --factory-startup --python build_ember.py --
 import bpy, json, math, os, random, sys, time
 import numpy as np
 from mathutils import kdtree
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import guard; guard.start(os.path.join(HERE, 'out', 'trace_ember.log'))
-import base, gear, moves, common, moves_ember, dress_ember
+import base, gear, moves, common, moves_ember, dress_ember, paint_ember
 T0 = time.time()
 def log(*a): print('[%5.1f]' % (time.time() - T0), *a, flush=True)
 SEED = moves.SEED + 7; random.seed(SEED); np.random.seed(SEED)
 OUT = os.path.join(HERE, 'out'); ASSETS = os.environ.get('MOVE_ASSETS') or os.path.abspath(os.path.join(HERE, '..', '..', 'web', 'assets'))
 SRC = os.path.join(HERE, 'base_rocketbox', 'Military_Male_02')
 d = base.load(os.path.join(SRC, 'Export', 'Military_Male_02.fbx'), closeR=0.34, closeL=0.34, height=1.94)
-co = d['co']; world = d['world']; BONES = common.bone_list(); BI = {b: i for i, b in enumerate(BONES)}
+co = d['co']; man_co = co.copy(); world = d['world']; BONES = common.bone_list(); BI = {b: i for i, b in enumerate(BONES)}
 W = base.weights_matrix(d['groups'], BONES)
 log('body', co.shape, 'tris', len(d['loop_start']), 'height', d['height'], d['mat_names'])
 J = base.fit_joints(world); gR, tR = base.grip_of(world, 'R'); gL, tL = base.grip_of(world, 'L')
@@ -68,7 +69,29 @@ def pixel(path, rgb):
     open(path, 'wb').write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b''))
 files = {}
 for k, c in (('albedo', (255, 255, 255)), ('normal', (128, 128, 255)), ('mr', (0, 200, 0)), ('emissive', (0, 0, 0))): files[k] = os.path.join(OUT, 'ember_%s.png' % k); pixel(files[k], c)
-rig, ob = common.assemble('ember', 'M_ember', co, d, W, BONES, g, J, gR, tR, EXTRA, files, log)
+rig2, ob = common.assemble('ember_fire', 'M_emberfire', co, d, W, BONES, g, J, gR, tR, EXTRA, files, log)
+# the man: his own skin, no gear
+TD = os.environ.get('EMBER_TEXTURES') or os.path.join(SRC, 'Textures')
+paint, layout = paint_ember.paint(d, OUT, TD, log); man_files = dict(files, albedo=paint['albedo'], normal=paint['normal'])
+d_man = dict(d); d_man['co'] = man_co
+# his soldier's cap goes: its faces are the camouflage up on the head, so what's left is the man's own hair. No vertex moves, only the faces go
+import tex as _t
+hd_img = _t.load(os.path.join(TD, 'sm024_head_color_acu.tga'), 128); head_i = next(i for i, n in enumerate(d['mat_names']) if 'head' in n.lower()); ls, lt, cvs, uvs, mats = d['loop_start'], d['loop_total'], d['corner_v'], d['uv'], d['mat']; keep = []
+for p in range(len(ls)):
+    s_, n_ = int(ls[p]), int(lt[p]); z = float(man_co[cvs[s_:s_ + n_]][:, 2].mean()); drop = False
+    if mats[p] == head_i and z > 1.70:
+        u_, v_ = uvs[s_:s_ + n_].mean(0); x_, y_ = min(127, max(0, int(u_ * 128))), min(127, max(0, int(v_ * 128))); c_ = hd_img[y_, x_]; drop = float(c_.max() - c_.min()) < 0.13
+    keep.append(not drop)
+keep = np.array(keep); log('the cap', int((~keep).sum()), 'faces')
+kept_c = np.concatenate([np.arange(int(ls[p]), int(ls[p]) + int(lt[p])) for p in np.nonzero(keep)[0]])
+d_man.update(loop_start=np.concatenate(([0], np.cumsum(lt[keep])[:-1])).astype(ls.dtype), loop_total=lt[keep], corner_v=cvs[kept_c], uv=uvs[kept_c], mat=mats[keep])
+rig, man = common.assemble('ember', 'M_ember', man_co, d_man, W, BONES, gear.Gear(random.Random(SEED)), J, gR, tR, EXTRA, man_files, log, layout=layout)
+# trousers darker than the jacket, boots near black: by vertex colour, over the painted cloth. The arms and the head keep what the paint gave them
+ca = man.data.color_attributes['Col']; col = np.zeros(len(man.data.loops) * 4, dtype=np.float32); ca.data.foreach_get('color', col); col = col.reshape(-1, 4); cvm = d_man['corner_v']
+legs = wv('leg_R', 'leg_L', 'shin_R', 'shin_L')[cvm]; feet = wv('foot_R', 'foot_L', 'toe_R', 'toe_L')[cvm]; k = 1.0 - 0.42 * np.clip(legs * 1.4, 0, 1) - 0.0; col[:, :3] *= k[:, None]; col[:, :3] = col[:, :3] * (1 - np.clip(feet[:, None] * 2, 0, 1)) + (col[:, :3] * np.array((0.26, 0.22, 0.2))) * np.clip(feet[:, None] * 2, 0, 1)
+ca.data.foreach_set('color', col.ravel())
+# one rig for both
+ob.parent = rig; ob.modifiers['rig'].object = rig; bpy.data.objects.remove(rig2, do_unlink=True)
 
 # the heat of the skin: the body's r mask. Round the heart first, then the hands, the feet and the head; it's what the shader burns by. Written after assembly, since the body's corners carry zeros there
 me = ob.data; ma = me.attributes['_MASK']; cv = d['corner_v']; n_body = len(cv); msk = np.zeros(len(me.loops) * 4, dtype=np.float32); ma.data.foreach_get('color', msk); msk = msk.reshape(-1, 4)
@@ -81,7 +104,7 @@ log('heat', float(msk[:n_body, 0].min()), float(msk[:n_body, 0].max()))
 sk, clips = moves_ember.bake(skeleton); log('clips', {k: c['n'] for k, c in clips.items()})
 common.write_actions(rig, clips, log)
 json.dump(moves_ember.meta(clips), open(os.path.join(OUT, 'ember_clips.json'), 'w'), indent=1)
-raw = os.path.join(OUT, 'ember_raw.glb'); common.export(rig, ob, raw, log)
+raw = os.path.join(OUT, 'ember_raw.glb'); common.export(rig, ob, raw, log, also=(man,))
 common.pack(raw, os.path.join(ASSETS, 'ember.glb'), log)
 log('size', os.path.getsize(os.path.join(ASSETS, 'ember.glb')))
 log('done')

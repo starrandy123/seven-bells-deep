@@ -1054,7 +1054,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     if (mesh.isSkinnedMesh) { o = new THREE.SkinnedMesh(mesh.geometry, m); o.bind(mesh.skeleton, mesh.bindMatrix); o.bindMode = mesh.bindMode; } else o = new THREE.Mesh(mesh.geometry, m);
     o.frustumCulled = false; o.name = (mesh.name || 'mesh') + '_ink'; o.renderOrder = 17; o.visible = false;
     o.position.copy(mesh.position); o.quaternion.copy(mesh.quaternion); o.scale.copy(mesh.scale);
-    mesh.parent.add(o); outlines.push(o);
+    o.userData.of = mesh; mesh.parent.add(o); outlines.push(o);
     return o;
   }
   let inkBg = 0; const INK_BG = .125;
@@ -1070,7 +1070,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     inkBg = bg; U.ocInkBg.value += ((bg < INK_BG ? 1 : 0) - U.ocInkBg.value) * .35;
     for (const o of outlines) {
       const a = o.parent.matrixWorld.elements; e.set(a[12], a[13], a[14]);
-      o.visible = U.ocPaint.value > .01 || P * H * .5 / Math.max(e.distanceTo(cp), .1) * INK_TALL < INK_NONE;
+      o.visible = o.userData.of.visible && (U.ocPaint.value > .01 || P * H * .5 / Math.max(e.distanceTo(cp), .1) * INK_TALL < INK_NONE);
     }
   }
 
