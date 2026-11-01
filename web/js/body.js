@@ -431,7 +431,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     if (shot) { shot.t += dc * (shot.rate ?? 1); sample(shot.name, shot.t, 1); }
     else if (m === 'land') { /* the pose above */ }
     else if (m === 'surf') {
-      surfT = (surfT + dc) % (CL.surf_stand ? CL.surf_stand.dur : 2); const c = h.carve || 0, w = Math.abs(c), side = c > 0 ? 'surf_carve_R' : 'surf_carve_L';
+      surfT = (surfT + dc * (0.75 + 0.75 * smooth(8, 26, h.surf ? h.surf.v : 0))) % (CL.surf_stand ? CL.surf_stand.dur : 2); const c = h.carve || 0, w = Math.abs(c), side = c > 0 ? 'surf_carve_R' : 'surf_carve_L';
       sample('surf_stand', surfT, 1 - w); if (w > 1e-3) sample(side, surfT * (CL[side] ? CL[side].dur / (CL.surf_stand ? CL.surf_stand.dur : 2) : 1), w);
     } else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
     else if (m === 'air') { airT += dc; sample(has('fall') ? 'fall' : 'idle_tread', airT % (has('fall') ? CL.fall.dur : 3), 1); }
@@ -474,6 +474,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const hb = bones.hips, hi = index.hips * 4;
     qY.setFromAxisAngle(AY, yaw + adrift * 0.12 * Math.sin(t0 * 0.23)); qX.setFromAxisAngle(AX, h.tilt - h.bodyPitch * (h.tilt > 0.5 ? 1 : 0.4) + adrift * (0.2 + 0.05 * Math.sin(t0 * 0.31 + 1))); qB.setFromAxisAngle(AY, h.bank + (h.roll || 0) + adrift * 0.06 * Math.sin(t0 * 0.43));
     root.quaternion.copy(qY).multiply(qX).multiply(qB);
+    // the ride's lean and rake (hero.js): the root stands at his feet, so he tips from there and they stay on the water
+    if (h.surfLean || h.surfRake) { qL.setFromAxisAngle(AZ, h.surfLean || 0); qR.setFromAxisAngle(AX, h.surfRake || 0); root.quaternion.multiply(qL).multiply(qR); }
     if (!wantClip) {
       stepLegs(dt, speed);
       hb.position.set(poseP[0], poseP[1], poseP[2]); hb.quaternion.set(pose[hi], pose[hi + 1], pose[hi + 2], pose[hi + 3]); hb.updateWorldMatrix(true, false);
@@ -506,7 +508,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     swing(dt, speed, onGround);
     if (h.ride) { root.updateWorldMatrix(true, false); bones.hand_R.updateWorldMatrix(true, false); bones.hand_L.updateWorldMatrix(true, false); tv.setFromMatrixPosition(bones.hand_R.matrixWorld); tv2.setFromMatrixPosition(bones.hand_L.matrixWorld); h.handsR = tv.clone(); h.handsL = tv2.clone(); gripRel.copy(tv).add(tv2).multiplyScalar(0.5).sub(root.position); }
   }
-  const qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qB = new THREE.Quaternion(), AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0);
+  const qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qB = new THREE.Quaternion(), qL = new THREE.Quaternion(), qR = new THREE.Quaternion(), AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 
   // the feet come down from the air: each lands where it is, on the ground under it
   function landFeet() {

@@ -20,6 +20,7 @@ const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 9.1,
 const LAND_SWELL = 0.13, LAND_RIDE_SWELL = 0.42;      // m: what's left of the water under him at the end of a land ride, where he stands, at STAND; and how high the water carries him on land at speed (the sea's swell, 0.75 m, stood him on a stilt once the water under him was made narrow)
 const WALK_TOP = 2.6, WALK_EASE = 2.4;      // m/s, m/s²: the speed below which he's walking, and how hard a walk starts and stops
 const LAND_SURF_IN = 0.35, LAND_SURF_TOP = 19, LAND_SURF_CRUISE = 14, SLOPE_PULL = 0.62;      // Randy, 1 Nov: Boost on land rides the water: a held sprint this long rolls into it; its top and cruise; how much of gravity along the slope he feels
+const SURF_LEAN = 0.47, SURF_LEAN_SHARE = 0.4;      // radians, the most the ride tips him from the feet (the pose's own lean goes on top of it); the share of a turn's pull he lies into
 const SURF_RIDE = 14, SURF_TOP = 26, SURF_OFF = 6, SURF_STORM = 20, SWELL_STORM = 1.7, SURF_TURN = 2.2, SURF_SWELL = 0.75, SURF_START = 9, SURF_SHALLOW = -1.0;      // the surf: speeds, how fast the stick carves, the swell's height, what it takes to get up on one
 const TIDE_TIERS = [0, 15.5, 20, 25], TIDE_WINDOW = 0.14, TIDE_HOLD = 1.8;      // Tidepulse: the speed of each tier (the first is BOOST), how far from a kick a press still counts, how long a tier lasts unrenewed
 const EDGE_ZONE = 46, EDGE_BACK = 9, EDGE_PUSH = 44;        // the sea at the map's edge: metres over which it acts, the band where it shoves back, its grip on him
@@ -255,19 +256,21 @@ export async function createHero(G) {
   // ------------------------------------------------------------------ the surf: a state of its own. A boost along the surface lifts a swell under him and he's up on it, riding the sea: the stick carves, boost
   // sets the speed, jump launches him off, and it ends in a dive or on a beach
   const carveF = second({ f: 1.6, z: 1 }), swellF = second({ f: 1.1, z: 1 }); let carveS = follower(0), swellS = follower(0);
+  // the lean, on a spring that goes a little past and comes back: a rider is thrown into a turn, he doesn't slide into it
+  const leanF = second({ f: 1.7, z: 0.6 }), rakeF = second({ f: 1.5, z: 0.8 }); let leanS = follower(0), rakeS = follower(0);
   const waveY = (x, z) => (G.sky && G.sky.waveAt ? G.sky.waveAt(x, z) : 0);
   function startSurf() {
-    const v = Math.hypot(h.vel.x, h.vel.z); h.state = 'surf'; h.surf = { v: Math.min(v, SURF_TOP), t: 0 }; h.heading = Math.atan2(h.vel.x, h.vel.z); h.vel.y = 0; carveS = follower(0); swellS = follower(0); h.surgeLock = true;
+    const v = Math.hypot(h.vel.x, h.vel.z); h.state = 'surf'; h.surf = { v: Math.min(v, SURF_TOP), t: 0 }; h.heading = Math.atan2(h.vel.x, h.vel.z); h.vel.y = 0; carveS = follower(0); swellS = follower(0); leanS = follower(h.surfLean || 0); rakeS = follower(h.surfRake || 0); h.surgeLock = true;
     G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 6, 0.7, 0xe8fbff); G.quest && G.quest.note('surf');
   }
   function endSurf() { h.state = 'swim'; h.surf = null; h.carve = 0; h.surgeLock = false; }
   // Boost on land: he calls the water up under his feet and rides it (Randy, 1 Nov: "for the boost in land, we need the water animation and movement surf")
   function startLandSurf() {
-    h.state = 'surf'; h.surf = { v: Math.max(h.spd, LAND_SURF_CRUISE * 0.75), t: 0, land: true }; h.land = false; h.grounded = false; h.vel.y = 0; carveS = follower(0); swellS = follower(0);
+    h.state = 'surf'; h.surf = { v: Math.max(h.spd, LAND_SURF_CRUISE * 0.75), t: 0, land: true }; h.land = false; h.grounded = false; h.vel.y = 0; carveS = follower(0); swellS = follower(0); leanS = follower(h.surfLean || 0); rakeS = follower(h.surfRake || 0);
     G.fx.ring(h.pos.clone().setY(h.pos.y - STAND + 0.05), 4, 0.6, 0xe8fbff); G.audio.splash(); if (G.quest) G.quest.note('land_surf');
   }
   function stepSurf(u, dt) {
-    const s = h.surf; s.t += dt;
+    const s = h.surf, v0 = s.v; let slope = 0; s.t += dt;
     if (h.jumpBuf > 0) { const was = s.v; h.jumpBuf = 0; endSurf(); breach(was); return; }
     const sy = Math.sin(G.camYaw), cy = Math.cos(G.camYaw), wx = sy * Math.max(u.my, 0) + right.x * u.mx, wz = cy * Math.max(u.my, 0) + right.z * u.mx, mag = Math.hypot(wx, wz), off = mag > 0.1 ? wrap(Math.atan2(wx, wz) - h.heading) : 0;
     const carve = chase(carveF, carveS, clamp(-off / 0.8, -1, 1) * Math.min(mag, 1), dt); h.carve = carve;
@@ -277,15 +280,22 @@ export async function createHero(G) {
     s.v = Math.min(onLand ? LAND_SURF_TOP + 6 : SURF_TOP, s.v + clamp(target - s.v, -11 * dt, (onLand ? 7 : 10) * dt));
     if (!onLand) {     // at sea the water's own slope pulls the ride (down a face, faster); on a breaker's face the wave carries him shoreward with it
       const sn = Math.sin(h.heading), cn = Math.cos(h.heading), w0 = waveY(h.pos.x, h.pos.z), sl = (waveY(h.pos.x + sn * 1.5, h.pos.z + cn * 1.5) - w0) / 1.5;
+      slope = sl;
       s.v = Math.max(0, s.v - 9.81 * 0.85 * sl * dt);
       const bk = G.sky && G.sky.breakAt ? G.sky.breakAt(h.pos.x, h.pos.z) : null;
       if (bk && bk.face > 0.02) { s.cx = bk.cx * bk.face; s.cz = bk.cz * bk.face; s.onFace = bk.face; s.v = Math.min(SURF_TOP + 6, s.v + 4 * bk.face * dt); } else { s.cx = s.cz = 0; s.onFace = 0; }
     }
     if (onLand) {      // the slope pulls along the ride: faster downhill, slower up
       const sn = Math.sin(h.heading), cn = Math.cos(h.heading), g0 = terrain(h.pos.x, h.pos.z), sl = (terrain(h.pos.x + sn * 1.2, h.pos.z + cn * 1.2) - g0) / 1.2;
+      slope = sl;
       s.v = Math.max(0, s.v - 9.81 * SLOPE_PULL * (sl / Math.sqrt(1 + sl * sl)) * dt);
       if (sl > TAN_WALL) { s.v = 0; }
     }
+    // THE LEAN (Randy, 1 Nov: "The glide looks stiff and it doesn't lean dynamically when riding"). A rider tips into a turn from the feet, as far as its pull asks, the faster and the tighter the
+    // further; ridden straight he's still balancing. The nose goes up a slope and down a face, forward as he gathers speed and back as he loses it. body.js turns him about his feet
+    const balance = (Math.sin(s.t * 1.25) * 0.035 + Math.sin(s.t * 2.3 + 1.1) * 0.02) * clamp(s.v / SURF_RIDE, 0, 1);
+    h.surfLean = chase(leanF, leanS, clamp(Math.atan2(-s.v * h.omega * SURF_LEAN_SHARE, 9.81), -SURF_LEAN, SURF_LEAN) + balance, dt);
+    h.surfRake = chase(rakeF, rakeS, clamp(-Math.atan(slope) * 0.8 + clamp((s.v - v0) / Math.max(dt, 1e-3) * 0.018, -0.16, 0.16), -0.5, 0.5), dt);
     h.vel.set(Math.sin(h.heading) * s.v + (onLand ? 0 : s.cx || 0), 0, Math.cos(h.heading) * s.v + (onLand ? 0 : s.cz || 0));      // (the wave's carry goes through the same collisions)
     // something in the way: the ride glances off it along the way it was pushed, keeping most of its speed; only a hit near head-on costs it (seen in the game: a
     // rock at the shore stopped a 19 m/s ride dead)
@@ -585,6 +595,7 @@ export async function createHero(G) {
         h.pitchT = damp(h.pitchT, h.air && !h.breach ? clamp(Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), -0.35, 0.35) : Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), h.breach ? 10 : 6, dt);
       } else { h.heading = wrap(h.heading + wrap(G.camYaw - h.heading) * (1 - Math.exp(-2.4 * dt))); h.bank = damp(h.bank, 0, 4, dt); h.pitchT = damp(h.pitchT, 0, 3, dt); }
     } else { h.bank = damp(h.bank, 0, 8, dt); }
+    if (h.state !== 'surf') { h.surfLean = damp(h.surfLean || 0, 0, 7, dt); h.surfRake = damp(h.surfRake || 0, 0, 7, dt); }      // off the ride he comes back upright, never in one frame
     const tiltGoal = h.climb ? 1.3 : h.breach ? 1.46 : h.land || h.air || h.state === 'surf' ? 0 : h.state === 'swim' ? smooth(1.6, 5, h.speed) * 1.42 + h.surge * 0.1 : (h.tiltGoal ?? 0.18);
     h.tiltTo = tiltGoal; h.tilt = damp(h.tilt, tiltGoal, h.state === 'attack' || h.breach ? 12 : 5, dt);
     stepSfx += h.speed * dt;
@@ -682,7 +693,7 @@ export async function createHero(G) {
     probe.x = camP.x; probe.y = -camP.z; probe.z = camP.y;
     if (G.world.collide(probe, CAM_R)) { camP.set(probe.x, probe.z, -probe.y); for (let i = 0; i < 3 && G.world.collide(probe, CAM_R); i++) { camP.lerp(tv3.set(ox, oy, oz), 0.5); probe.x = camP.x; probe.y = -camP.z; probe.z = camP.y; } if (G.world.collide(probe, CAM_R)) camP.set(probe.x, probe.z, -probe.y); }      // a gap too tight to clear: in toward the pivot, which is clear
     cam.position.copy(camP);
-    const roll = chase(C.roll, S.roll, -h.bank * 0.12, dt);
+    const roll = chase(C.roll, S.roll, -h.bank * 0.12 - (h.surfLean || 0) * 0.1, dt);
     cam.up.set(Math.sin(roll), Math.cos(roll), 0).normalize();
     // he never leaves the frame, whatever a lock or a swing asks: the look turns back until his chest is inside this share of the frame's half height or half width
     let tx = piv.x + lk.x + Math.sin(G.camYaw) * 1.4, ty = piv.y + lk.y + Math.sin(G.camPitch) * 1.4, tz = piv.z + lk.z + Math.cos(G.camYaw) * 1.4;
