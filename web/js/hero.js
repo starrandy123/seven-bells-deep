@@ -17,6 +17,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 8.7, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
 // The jump, in the numbers a designer chooses (DESIGN.md §Movement): height and time; gravity and speed follow. One gravity for every jump, so the air always feels the same.
+const LAND_SURF_IN = 0.35, LAND_SURF_TOP = 19, LAND_SURF_CRUISE = 14, SLOPE_PULL = 0.62;      // Randy, 1 Nov: Boost on land rides the water: a held sprint this long rolls into it; its top and cruise; how much of gravity along the slope he feels
 const SURF_RIDE = 14, SURF_TOP = 26, SURF_OFF = 6, SURF_STORM = 20, SWELL_STORM = 1.7, SURF_TURN = 2.2, SURF_SWELL = 0.75, SURF_START = 9, SURF_SHALLOW = -1.0;      // the surf: speeds, how fast the stick carves, the swell's height, what it takes to get up on one
 const TIDE_TIERS = [0, 15.5, 20, 25], TIDE_WINDOW = 0.14, TIDE_HOLD = 1.8;      // Tidepulse: the speed of each tier (the first is BOOST), how far from a kick a press still counts, how long a tier lasts unrenewed
 const EDGE_ZONE = 46, EDGE_BACK = 9, EDGE_PUSH = 44;        // the sea at the map's edge: metres over which it acts, the band where it shoves back, its grip on him
@@ -256,18 +257,38 @@ export async function createHero(G) {
     G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 6, 0.7, 0xe8fbff); G.quest && G.quest.note('surf');
   }
   function endSurf() { h.state = 'swim'; h.surf = null; h.carve = 0; h.surgeLock = false; }
+  // Boost on land: he calls the water up under his feet and rides it (Randy, 1 Nov: "for the boost in land, we need the water animation and movement surf")
+  function startLandSurf() {
+    h.state = 'surf'; h.surf = { v: Math.max(h.spd, LAND_SURF_CRUISE * 0.75), t: 0, land: true }; h.land = false; h.grounded = false; h.vel.y = 0; carveS = follower(0); swellS = follower(0);
+    G.fx.ring(h.pos.clone().setY(h.pos.y - STAND + 0.05), 4, 0.6, 0xe8fbff); G.audio.splash(); if (G.quest) G.quest.note('land_surf');
+  }
   function stepSurf(u, dt) {
     const s = h.surf; s.t += dt;
     if (h.jumpBuf > 0) { const was = s.v; h.jumpBuf = 0; endSurf(); breach(was); return; }
     const sy = Math.sin(G.camYaw), cy = Math.cos(G.camYaw), wx = sy * Math.max(u.my, 0) + right.x * u.mx, wz = cy * Math.max(u.my, 0) + right.z * u.mx, mag = Math.hypot(wx, wz), off = mag > 0.1 ? wrap(Math.atan2(wx, wz) - h.heading) : 0;
     const carve = chase(carveF, carveS, clamp(-off / 0.8, -1, 1) * Math.min(mag, 1), dt); h.carve = carve;
     h.omega = -carve * SURF_TURN * (1 - 0.4 * clamp((s.v - SURF_RIDE) / (SURF_TOP - SURF_RIDE), 0, 1)); h.heading = wrap(h.heading + h.omega * dt);
-    const storm = G.sky && G.sky.weather === 'storm', target = u.my < -0.4 ? SURF_OFF - 2 : u.boost ? SURF_TOP : storm ? SURF_STORM : SURF_RIDE; s.v = Math.min(SURF_TOP, s.v + clamp(target - s.v, -11 * dt, 10 * dt));
+    const storm = G.sky && G.sky.weather === 'storm', onLand = !!s.land;
+    const target = u.my < -0.4 ? SURF_OFF - 2 : onLand ? (u.boost ? LAND_SURF_TOP : SURF_OFF - 3) : u.boost ? SURF_TOP : storm ? SURF_STORM : SURF_RIDE;
+    s.v = Math.min(onLand ? LAND_SURF_TOP + 6 : SURF_TOP, s.v + clamp(target - s.v, -11 * dt, (onLand ? 7 : 10) * dt));
+    if (onLand) {      // the slope pulls along the ride: faster downhill, slower up
+      const sn = Math.sin(h.heading), cn = Math.cos(h.heading), g0 = terrain(h.pos.x, h.pos.z), sl = (terrain(h.pos.x + sn * 1.2, h.pos.z + cn * 1.2) - g0) / 1.2;
+      s.v = Math.max(0, s.v - 9.81 * SLOPE_PULL * (sl / Math.sqrt(1 + sl * sl)) * dt);
+      if (sl > TAN_WALL) { s.v = 0; }
+    }
     h.vel.set(Math.sin(h.heading) * s.v, 0, Math.cos(h.heading) * s.v);
     const px = h.pos.x, pz = h.pos.z; if (slide(h.vel.x * dt, 0, h.vel.z * dt, 0.62, true)) { const real = Math.hypot(h.pos.x - px, h.pos.z - pz) / Math.max(dt, 1e-4); if (real < s.v) s.v = real; }
-    const y = chase(swellF, swellS, SURF_SWELL * (storm ? SWELL_STORM : 1) * clamp((s.v - SURF_OFF + 1) / 3, 0, 1), dt); h.pos.y = waveY(h.pos.x, h.pos.z) + y + STAND * 0.86; h.swellY = y;
-    // the ends. A ride never stops anywhere else: into the shallows and he runs up the beach, pressed down or out of speed and he goes under
+    const y = chase(swellF, swellS, SURF_SWELL * (storm && !onLand ? SWELL_STORM : 1) * clamp((s.v - SURF_OFF + 1) / 3, 0, 1), dt);
     const g = groundAt(h.pos.x, h.pos.z);
+    // the shore both ways: a land ride runs on out over the sea, a sea ride runs on up the beach while Boost is held
+    if (onLand && g < SURF_SHALLOW) s.land = false;
+    else if (!onLand && g > SURF_SHALLOW && u.boost) s.land = true;
+    const base = s.land ? Math.max(g, waveY(h.pos.x, h.pos.z)) : waveY(h.pos.x, h.pos.z);
+    // off an edge on land: he flies off it, still on his water
+    if (s.land && h.pos.y - (base + y + STAND * 0.86) > 1.6) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); return; }
+    h.pos.y = s.land ? h.pos.y + clamp(base + y + STAND * 0.86 - h.pos.y, -12 * dt, 30 * dt) : base + y + STAND * 0.86; h.swellY = y; h.surfBase = base;
+    // the ends. On land: let go of Boost and the water runs out under him, and he runs on. At sea: into the shallows he runs up the beach; pressed down or out of speed he goes under
+    if (s.land) { if (s.v < SURF_OFF) { const v = s.v; endSurf(); h.land = true; h.grounded = true; h.spd = v; h.pos.y = g + STAND; h.landSurfT = 0; G.audio.splash(); } return; }
     if (g > SURF_SHALLOW) { endSurf(); leave(2.5); h.jumps = 1; h.apexY = h.pos.y; G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 5, 0.6, 0xe8fbff); G.audio.splash(); G.quest && G.quest.note('surf_beach'); return; }
     if (u.ud < -0.4 || s.v < SURF_OFF || G.camPitch < -0.6) { endSurf(); leave(-2.5); h.jumps = 1; h.apexY = h.pos.y; G.quest && G.quest.note('surf_dive'); }
   }
@@ -306,6 +327,8 @@ export async function createHero(G) {
     const g0 = groundAt(h.pos.x, h.pos.z), depth = Math.max(0, -g0), wade = 1 - 0.42 * smooth(0, 0.3, depth), sn = Math.sin(h.heading), cn = Math.cos(h.heading);
     // the ground ahead: he slows up a hill, and what's too steep he doesn't climb
     const ahead = (groundAt(h.pos.x + sn * 0.7, h.pos.z + cn * 0.7) - g0) / 0.7, hill = 1 - 0.3 * smooth(0.15, TAN_CLIMB, ahead) - 0.3 * smooth(TAN_CLIMB, TAN_WALL, ahead) + 0.12 * smooth(0.1, 0.6, -ahead);
+    h.landSurfT = boosting && h.spd > LAND_SPRINT - 1.2 && !h.jumpPrep ? (h.landSurfT || 0) + dt : 0;
+    if (h.landSurfT > LAND_SURF_IN && depth < 0.3) { h.landSurfT = 0; startLandSurf(); return; }
     const top = h.surge > 0.4 ? LAND_SUPER : boosting ? LAND_SPRINT : LAND_RUN;      // h.surge is the sea's: it fades on land (below), so it only carries a run out of the water
     let target = top * amt * wade * hill; h.stick = amt; h.landGoal = target;
     const wishYaw = amt > 0.04 ? Math.atan2(wx, wz) : h.heading, err = wrap(wishYaw - h.heading);

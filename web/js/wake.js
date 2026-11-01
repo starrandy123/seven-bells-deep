@@ -18,9 +18,44 @@ export function createWake(G, h, mesh) {
 
   // ---------------------------------------------------------------- the swell under a surf and its spray: one soft mound of water, a disc raised by a gaussian, moved with him
   const swG = new THREE.CircleGeometry(1, 28, 0, Math.PI * 2); { const q = swG.attributes.position; for (let i = 0; i < q.count; i++) { const x = q.getX(i), y = q.getY(i), r = Math.hypot(x, y); q.setXYZ(i, x, Math.exp(-r * r * 3.2) - 0.04, -y); } swG.computeVertexNormals(); }
-  const swM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTop: { value: new THREE.Color(0.82, 0.97, 0.98) }, uLow: { value: new THREE.Color(0.1, 0.5, 0.56) }, uA: { value: 0 } },
-    vertexShader: 'varying float vH; varying vec2 vP; void main() { vH = position.y; vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform vec3 uTop, uLow; uniform float uA; varying float vH; varying vec2 vP; void main() { float r = length(vP); float a = smoothstep(1.0, 0.72, r) * uA; gl_FragColor = vec4(mix(uLow, uTop, smoothstep(0.1, 0.9, vH)), a * 0.72); }' });
+  // Randy, 1 Nov: "we need the water animation and movement surf to be actually better". The mound is water now: a moving surface, see-through at its edge,
+  // the sky in it, and a white crest along its front where it shoves forward. Local +z is the way he rides (the mesh turns with his heading).
+  const WATER_FS = `uniform vec3 uTop, uLow; uniform float uA, uT; varying float vH; varying vec2 vP;
+    float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+    void main() {
+      float r = length(vP);
+      float n = vn(vP * 5.0 + vec2(0.0, uT * 3.2)) * 0.6 + vn(vP * 11.0 - vec2(uT * 1.7, uT * 4.1)) * 0.4;
+      float crest = smoothstep(0.35, 0.85, vP.y) * smoothstep(1.0, 0.55, r) * smoothstep(0.45, 0.7, n + 0.25 * vP.y);
+      float sheen = pow(smoothstep(0.15, 0.95, vH), 1.6) * (0.55 + 0.45 * n);
+      vec3 c = mix(uLow, uTop, sheen);
+      c = mix(c, vec3(0.96, 0.99, 1.0), crest);
+      float a = smoothstep(1.0, 0.62 + 0.12 * n, r) * uA * mix(0.55, 0.95, max(sheen, crest));
+      gl_FragColor = vec4(c, a);
+    }`;
+  const swM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTop: { value: new THREE.Color(0.82, 0.97, 0.98) }, uLow: { value: new THREE.Color(0.06, 0.36, 0.44) }, uA: { value: 0 }, uT: { value: 0 } },
+    vertexShader: 'varying float vH; varying vec2 vP; void main() { vH = position.y; vP = vec2(position.x, position.z); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: WATER_FS });
+  // the trail: a ribbon of water left on the ground or the sea behind a ride, narrowing and churning to foam as it fades
+  const TRAIL = 48, trP = new Float32Array(TRAIL * 2 * 3), trA = new Float32Array(TRAIL * 2 * 2), trI = [];
+  for (let i = 0; i < TRAIL - 1; i++) { const a = i * 2; trI.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  const trG = new THREE.BufferGeometry(); trG.setAttribute('position', new THREE.BufferAttribute(trP, 3).setUsage(THREE.DynamicDrawUsage)); trG.setAttribute('aA', new THREE.BufferAttribute(trA, 2).setUsage(THREE.DynamicDrawUsage)); trG.setIndex(trI);
+  const trM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uT: { value: 0 } },
+    vertexShader: 'attribute vec2 aA; varying vec2 vA; varying vec3 vW; void main() { vA = aA; vW = position; gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uT; varying vec2 vA; varying vec3 vW;
+      float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+      void main() {
+        float age = vA.x, side = abs(vA.y);                                          // age 0..1 down the ribbon, side 0 centre .. 1 edge
+        float n = vn(vW.xz * 1.6 + uT * 0.8) * 0.6 + vn(vW.xz * 4.0 - uT * 1.3) * 0.4;
+        float foam = smoothstep(0.35, 0.75, n + age * 0.45 + side * 0.25);
+        vec3 c = mix(vec3(0.10, 0.42, 0.50), vec3(0.95, 0.99, 1.0), foam);
+        float a = (1.0 - smoothstep(0.55 + 0.3 * n, 1.0, side)) * (1.0 - smoothstep(0.35, 1.0, age)) * mix(0.45, 0.85, foam);
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(c, a);
+      }` });
+  const trail = new THREE.Mesh(trG, trM); trail.frustumCulled = false; trail.renderOrder = 2; G.scene.add(trail);
+  const trPts = []; let trT = 0; const TRAIL_LIFE = 1.4;
   const swell = new THREE.Mesh(swG, swM); swell.frustumCulled = false; swell.renderOrder = 2; swell.visible = true; G.scene.add(swell);
   let sprayT = 0, ringT = 0; const FOAM = new THREE.Color(0.94, 0.99, 1), SAND = new THREE.Color(0.86, 0.8, 0.66);
 
@@ -54,7 +89,18 @@ export function createWake(G, h, mesh) {
   function update(dt) {
     if (warm > 0 && --warm === 0) { dust.visible = anyDust; swell.visible = false; for (const g of ghosts) g.g.visible = false; }
     const surfing = h.state === 'surf' && h.surf;
-    if (!warm) { const y = surfing ? h.swellY || 0 : 0; swell.visible = surfing || swM.uniforms.uA.value > 0.02; swM.uniforms.uA.value += ((surfing ? 1 : 0) - swM.uniforms.uA.value) * (1 - Math.exp(-6 * dt)); if (swell.visible) { swell.position.set(h.pos.x, 0.02 + (G.sky && G.sky.waveAt ? G.sky.waveAt(h.pos.x, h.pos.z) : 0), h.pos.z); swell.scale.set(5.5 + h.surf?.v * 0.1 || 5.5, Math.max(y, 0.05), 5.5 + h.surf?.v * 0.1 || 5.5); swell.rotation.y = h.heading; } }
+    swM.uniforms.uT.value += dt; trM.uniforms.uT.value += dt;
+    // the trail: a point every 50 ms behind his feet while he rides, each fading over TRAIL_LIFE
+    trT -= dt; if (surfing && trT <= 0) { trT = 0.05; trPts.unshift({ x: h.pos.x - Math.sin(h.heading) * 0.9, y: (h.surfBase ?? 0) + 0.06, z: h.pos.z - Math.cos(h.heading) * 0.9, sx: Math.cos(h.heading), sz: -Math.sin(h.heading), t: 0 }); if (trPts.length > TRAIL) trPts.pop(); }
+    for (const q of trPts) q.t += dt; while (trPts.length && trPts[trPts.length - 1].t > TRAIL_LIFE) trPts.pop();
+    trail.visible = trPts.length > 1;
+    if (trail.visible) {
+      for (let i = 0; i < TRAIL; i++) { const q = trPts[Math.min(i, trPts.length - 1)], age = q.t / TRAIL_LIFE, w = (0.9 + 0.5 * Math.min(1, (h.surf?.v || 10) / 20)) * (1 - 0.5 * age), o = i * 6;
+        trP[o] = q.x - q.sx * w; trP[o + 1] = q.y; trP[o + 2] = q.z - q.sz * w; trP[o + 3] = q.x + q.sx * w; trP[o + 4] = q.y; trP[o + 5] = q.z + q.sz * w;
+        trA[i * 4] = i < trPts.length ? age : 1; trA[i * 4 + 1] = -1; trA[i * 4 + 2] = i < trPts.length ? age : 1; trA[i * 4 + 3] = 1; }
+      trG.attributes.position.needsUpdate = true; trG.attributes.aA.needsUpdate = true;
+    }
+    if (!warm) { const y = surfing ? h.swellY || 0 : 0; swell.visible = surfing || swM.uniforms.uA.value > 0.02; swM.uniforms.uA.value += ((surfing ? 1 : 0) - swM.uniforms.uA.value) * (1 - Math.exp(-6 * dt)); if (swell.visible) { swell.position.set(h.pos.x, 0.02 + (h.surfBase ?? (G.sky && G.sky.waveAt ? G.sky.waveAt(h.pos.x, h.pos.z) : 0)), h.pos.z); swell.scale.set(5.5 + h.surf?.v * 0.1 || 5.5, Math.max(y, 0.05), 5.5 + h.surf?.v * 0.1 || 5.5); swell.rotation.y = h.heading; } }
     foamT = Math.max(0, foamT - dt); mat.uniforms.uCol.value.copy(surfing || foamT > 0 || (!h.land && !h.air) ? FOAM : SAND);
     if (surfing) {            // the ride throws a white wake off both sides of him, and rings run out behind on the water
       sprayT -= dt; ringT -= dt; const sn = Math.sin(h.heading), cs = Math.cos(h.heading), y0 = h.pos.y - 0.74, v = h.surf.v;
