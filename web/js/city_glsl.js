@@ -210,10 +210,11 @@ export const CITY_POST = /* glsl */`{
   float ocS1 = (1.0 - smoothstep(-.06, .22, ocNdl)), ocS2 = (1.0 - smoothstep(-.52, -.18, ocNdl));
   outgoingLight *= 1.0 - .36*ocHf*clamp(ocLnGrid(ocT1)*ocS1 + ocLnGrid(ocT2)*ocS2, 0.0, 1.0)*(1.0 - ocWinM);
   // under the water the sun's colours are gone a few metres down, and a street of coral, sandstone and jade reads as one blue: a soft light of its own keeps each building its colour through the haze
+  // the stone's hue is pushed first and the water's loss given back after: done the other way round the red given back (55 times over at 90 m) took every other colour with it, the walls went and the lit windows hung in the blue
   { float ocUnder = 1.0 - smoothstep(-6.0, -1.0, vOcP.y), ocD = min(length(vOcP - cameraPosition), 90.0);
-    outgoingLight += diffuseColor.rgb*vec3(.70, .66, .60)*ocUnder*(.72 + .28*max(ocNdl, 0.0))*(1.0 - .75*ocWinM);
-    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.72), ocUnder);
-    float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .42*ocUnder*(1.0 - ocWinM)), vec3(0.0)); }      // and the haze greys what's left: the stone keeps its hue
+    outgoingLight += diffuseColor.rgb*vec3(.70, .66, .60)*ocUnder*(1.0 - .42*(1.0 - smoothstep(-150.0, -70.0, vOcP.y)))*(.72 + .28*max(ocNdl, 0.0))*(1.0 - .75*ocWinM);
+    float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .42*ocUnder*(1.0 - ocWinM)), vec3(0.0));
+    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.72), ocUnder); }
   outgoingLight = mix(outgoingLight, vec3(.010, .020, .028), clamp(ocInkM, 0.0, 1.0));
 }`;
 

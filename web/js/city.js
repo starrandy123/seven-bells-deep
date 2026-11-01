@@ -33,7 +33,7 @@ const CLEARS = { sea: ['wall_bay', 'wall_broken', 'wall_windows', 'wall_windows_
 // a land house's plaster, each house its own (the Mediterranean range: cream, ochre, white, rose, pale blue, straw)
 // a sea city's stone, each building its own: cream marble, honey sandstone, coral rose, jade, slate blue, ivory
 const SEA_STONE = [[1.1, 1.1, 1.06], [1.34, 0.96, 0.36], [1.3, 0.6, 0.54], [0.42, 1.16, 0.74], [0.5, 0.74, 1.4], [1.3, 1.24, 0.96], [1.04, 0.64, 1.16], [0.92, 0.6, 0.42]];      // and a violet, and a dark terracotta
-const PLASTER = [[1.0, 0.97, 0.9], [1.0, 0.86, 0.62], [1.06, 1.06, 1.04], [1.0, 0.8, 0.74], [0.82, 0.92, 1.02], [0.98, 0.9, 0.72]];
+const PLASTER = [[1.0, 0.97, 0.9], [1.04, 0.78, 0.42], [1.06, 1.06, 1.04], [1.0, 0.62, 0.5], [0.66, 0.8, 1.0], [0.98, 0.9, 0.72], [0.72, 0.88, 0.66], [1.02, 0.7, 0.74]];
 
 // ------------------------------------------------------------------------------------------------ a tiny seeded random
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = Math.imul(s ^ (s >>> 15), 1 | s) + 0x6d2b79f5 | 0, ((s ^ (s >>> 14)) >>> 0) / 4294967296)); }
@@ -327,6 +327,8 @@ export function planCities(data, heightAt, opts = {}) {
     const inst = {}, put = (type, x, y, z, yaw, sx, sy, sz, tint) => { if (sea && A[type] && z + A[type].H * sy > surface) return false; (inst[type] ||= []).push([x, y, z, yaw, sx, sy, sz, tint || def.tint]); return true; };
     const W = (u, v) => [cx0 + u * ca - v * sa, cy0 + u * sa + v * ca];
     const nearKeep = (x, y, r) => keepPoi.some((q) => Math.hypot(q.x - x, q.y - y) < q.r + r);
+    // a town's houses are dealt from a deck: the harbour has a dozen lots, and a roll of the dice left two of its five types out altogether
+    const deck = [], deal = () => { if (!deck.length) { deck.push('house2', 'house2', 'house3', 'house3', 'houseWing', 'houseWing', 'houseWing', 'loggia', 'loggia', 'towerHouse', 'towerHouse'); for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)), k = deck[i]; deck[i] = deck[j]; deck[j] = k; } } return deck.pop(); };
     let plaza = null;
     for (let gi = -half; gi <= half; gi++) for (let gj = -half; gj <= half; gj++) {
       const lu = gi * B, lv = gj * B, [bx, by] = W(lu, lv), dC = Math.hypot(lu, lv);
@@ -391,7 +393,7 @@ export function planCities(data, heightAt, opts = {}) {
           if (s < 0.6) continue;
           put(t, x, y, z, yaw + (t === 'dome' || t.startsWith('spire') ? rand() * 0.3 : t === 'hall' ? (rand() < 0.5 ? Math.PI / 2 : 0) : 0), s * wide, s * tall, s * wide, [def.tint[0] * tone * stone[0], def.tint[1] * tone * stone[1], def.tint[2] * tone * stone[2]]);
         } else {
-          const t = r0 < 0.36 ? 'house2' : r0 < 0.6 ? 'house3' : r0 < 0.76 ? 'houseWing' : r0 < 0.9 ? 'loggia' : 'towerHouse', s = Math.min(1.1, foot / A[t].W);
+          const t = deal(), s = Math.min(1.1, foot / A[t].W);
           if (s < 0.7) continue;
           if (a === 0 && rand() < 0.3) yaw = def.angle - Math.PI / 2; else if (a === 1 && rand() < 0.3) yaw = def.angle + Math.PI / 2;      // a corner house to its cross street
           put(t, x, y, z, yaw, s, s * (0.92 + rand() * 0.16), s, PLASTER[Math.floor(rand() * PLASTER.length)]);

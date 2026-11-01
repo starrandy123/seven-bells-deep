@@ -173,6 +173,7 @@ export function createCombat(G, h, api) {
     if (u.cast) { u.cast = false; buf.push('cast', now); }
     // Jump held on the water raises the spout. A tap stays a leap: nothing here happens until it's been held a moment
     jumpIsHeld = !!u.jumpHeld; const onSea = !h.land && !h.dead && h.pos.y < 6 && G.world.heightAt(h.pos.x, -h.pos.z) < -1.5;
+    if (onSea && !spoutTold && (seaT += dt) > 12) { spoutTold = true; teach('spout_open', 'Tornado', 'Hold Jump on the water: it lifts you up'); }      // it has no button of its own, so it's said once
     if (!jumpIsHeld) spoutHold = 0; else if (onSea && spoutHold >= 0) { spoutHold += dt; if (spoutHold >= D.spout.hold_s) { spoutHold = -1; if (P && !P.spout.on) buf.push('spout', now); } }
     if (P) P.spout.stick = [stickX, stickY];
     // the leap's splash, going out and coming in, is the sheet: wake.js keeps its foam on the sea, with less of its cloud. Tied here because wake.js sets the hook after this file loads
@@ -420,6 +421,7 @@ export function createCombat(G, h, api) {
   };
 
   // each interaction is taught once per save: the list rides in G.settings, which the save already carries
+  let seaT = 0, spoutTold = false;
   function teach(id, name, how) {
     const T = G.settings ? (G.settings.taught = G.settings.taught || {}) : taught; if (T[id]) return; T[id] = 1; log('taught', { id }); G.ui.toast(name, how, 3.2);
   }

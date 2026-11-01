@@ -12,7 +12,7 @@ export function createAudio() {
   }
 
   function start() {
-    if (ctx) { if (ctx.state !== 'running') ctx.resume(); return; }   // suspended, or iOS's interrupted after a call
+    if (ctx) { if (ctx.state !== 'running') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } return; }   // suspended, or iOS's interrupted after a call. Refused on a page that's closing (the last touch as he leaves lands here, and WebKit answers 'AudioDestinationNode is not initialized'): that's no fault of the game's
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();

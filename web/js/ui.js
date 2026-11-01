@@ -9,6 +9,9 @@ const $ = (id) => document.getElementById(id);
 export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 1, difficulty: 'normal', toggleBoost: false };
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
+// what this build changed, for the line he sees on opening it
+const NEWS = 'Hold Jump on the water: tornado. Hotbar always on. New cities, surf stance, crawl';
+
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
   const held = {};
@@ -153,7 +156,10 @@ export function createUI(G) {
     return b;
   };
   const bDash = slot('bDash', 'dash'), bSpin = slot('bSpin', 'spin'), bWave = slot('bWave', 'wave'), bP4 = slot('bP4', 'p4'), bCast = slot('bCast', 'cast'), bCall = slot('bCall', 'call');
-  for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast, bRide, bJump]) x.classList.remove('show');
+  for (const x of [bRide, bJump]) x.classList.remove('show');
+  // his hotbar is always on the screen, as an MMO's is: a slot not learned yet stands dimmed, and a tap says which bell teaches it (combat.js, locked_tip). Randy, 1 Nov: "I don't see the tornado and hud shit": at the first reef every slot was still hidden
+  const dimSlots = () => { for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast]) x.classList.add('show', 'locked'); };
+  dimSlots();
   bJump.addEventListener('pointerdown', () => { held.jumpB = true; });          // how long it's held sets the jump's height
   for (const ev of ['pointerup', 'pointercancel']) bJump.addEventListener(ev, () => { held.jumpB = false; });
   const buttonOf = { dash: bDash, spin: bSpin, wave: bWave, p4: bP4, call: bCall, cast: bCast, atk: bAtk, parry: bParry, boost: bBoost, jump: bJump, stance: bStance, ice: bStance };
@@ -217,7 +223,11 @@ export function createUI(G) {
     refreshTitle();
     if (G.quest) G.quest.titleShot();
     setTimeout(() => screens.map.warm(), 1200);
-    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); };
+    // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
+    const build = +window.__MOSAIC_SIM_CODE_VERSION || 0;
+    if (build) for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + build;
+    const tellBuild = () => { if (!build) return; let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(build)); } catch (_) { /* no store: it's said each time */ } if (seen !== String(build)) toast('Build ' + build + ' is in', NEWS, 7); };
+    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); };
     $('dive').addEventListener('click', go);
     let sure = false;
     $('newGame').addEventListener('click', () => {
@@ -280,14 +290,14 @@ export function createUI(G) {
     const el = $('timer'); el.querySelector('small').textContent = label || ''; el.querySelector('span').textContent = up ? sec.toFixed(1) : String(Math.ceil(sec));
   }
   function objective(msg) { $('obj').textContent = msg; $('obj').style.display = msg ? '' : 'none'; }
-  function unlock(power) { const b = buttonOf[power]; if (b) b.classList.add('show'); declareControls(); }
-  function lockPowers() { for (const x of [bDash, bSpin, bWave, bP4, bStance, bCall, bCast]) x.classList.remove('show'); declareControls(); }
+  function unlock(power) { const b = buttonOf[power]; if (b) { b.classList.add('show'); b.classList.remove('locked'); } declareControls(); }
+  function lockPowers() { dimSlots(); declareControls(); }
   // combat calls this on every swap and whenever a power opens: four slots of { id, name, open }, and slots.ice once Ice is open
   function setStance(stance, slots) {
     document.body.dataset.stance = stance;
     const short = (n) => (n === 'Ice Path' ? n : n.split(' ').pop().replace('Maelstrom', 'Mael\u00adstrom'));      // the button says the last word: Lance, Breath, Wave
-    [bDash, bSpin, bWave, bP4].forEach((b, i) => { b.textContent = short(slots[i].name); b.setAttribute('aria-label', slots[i].name); b.classList.toggle('show', !!slots[i].open); });
-    bStance.textContent = stance === 'ice' ? 'Ice' : 'Water'; bStance.classList.toggle('show', !!slots.ice);
+    [bDash, bSpin, bWave, bP4].forEach((b, i) => { b.textContent = short(slots[i].name); b.setAttribute('aria-label', slots[i].name); b.classList.toggle('locked', !slots[i].open); });
+    bStance.textContent = stance === 'ice' ? 'Ice' : 'Water'; bStance.classList.toggle('locked', !slots.ice);
     declareControls();
   }
   function hurt(a) { $('hurt').style.opacity = a; }
