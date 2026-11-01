@@ -1,0 +1,190 @@
+{
+  "_doc": "Every blow and power as data. Frames are 60 Hz sim frames from the move's first frame. `startup` frames of wind-up, then `active` frames that can hit, `total` to the end. `cancel` is the first frame each class of input may start: dodge, parry, strike, power, free (the stick walks out of it). A class missing from `cancel` never interrupts this move. `clip_t` is [clip time at frame 0, at the first active frame, at the last frame]: the move's frames rule the clip. Numbers are measured from the reference where DESIGN.md says so and ours otherwise.",
+  "fps": 60,
+  "input": {
+    "buffer_f": 12, "drift_mps": 4.5,
+    "chain_gap_f": 24,
+    "after_dodge_f": 30,
+    "after_parry_f": 48,
+    "after_perfect_f": 60,
+    "hurt_cancel_f": 12,
+    "dodge_gap_f": 18,
+    "dodge_fight_s": 4,
+    "boost_tap_s": 0.2
+  },
+  "turn": { "rate_deg_s": 720, "ease": 18 },
+  "tide": { "strike_gain": 4, "parry_gain": 18, "perfect_gain": 24 },
+  "cleave": 0.5,
+  "stances": {
+    "water": { "name": "Water", "glow": [0.18, 0.86, 1.0], "slots": ["riptide", "maelstrom", "wave", "geyser"], "status": { "soak": 1 }, "reach_add": 0.7, "damage_mul": 1.0 },
+    "ice": { "name": "Ice", "glow": [0.78, 0.93, 1.0], "slots": ["lance", "glacier", "breath", "icepath"], "status": { "chill": 1 }, "reach_add": 0.0, "damage_mul": 1.15 }
+  },
+  "unlock": { "_doc": "what opens each power: a key of h.powers, or true. Ice opens in Rimehold: quest.js sets h.powers.ice", "whip": true, "riptide": "dash", "maelstrom": "spin", "wave": "wave", "geyser": "spin", "ice": "ice", "lance": "ice", "glacier": "ice", "breath": "ice", "icepath": "ice", "guard": "ice", "call": "call", "shoalsong": "dash", "breach": "call", "cast": "spin", "spout": true },
+  "locked_tip": { "riptide": "Ring the Reef Bell to learn Riptide", "maelstrom": "Ring the Kelp Bell to learn Maelstrom", "wave": "Ring the Deep Bell to learn Tidal Wave", "geyser": "Ring the Kelp Bell to learn Geyser", "call": "See out The Long Dark to hear the Call of the Deep", "shoalsong": "Ring the Reef Bell to learn the Shoalsong", "cast": "Ring the Kelp Bell to learn the Homeward Cast", "ice": "The cold has not answered you yet" },
+  "moves": {
+    "strike1": { "name": "Thrust", "kind": "strike", "clip": "atk1", "clip_t": [0.0, 0.167, 0.75], "startup": 10, "active": 4, "total": 36, "cancel": { "dodge": 0, "parry": 0, "power": 15, "strike": 24, "free": 26 }, "chain": "strike2", "reach": 3.0, "arc_deg": 80, "lunge_m": 9, "carry": 0.75, "brake": 6, "damage": 16, "impact": "light", "knock": 6, "stun_s": 0.45, "poise": 10 },
+    "strike2": { "name": "Sweep", "kind": "strike", "clip": "atk2", "clip_t": [0.03, 0.233, 0.8], "startup": 10, "active": 5, "total": 38, "cancel": { "dodge": 0, "parry": 0, "power": 16, "strike": 24, "free": 28 }, "chain": "strike3", "reach": 3.2, "arc_deg": 150, "lunge_m": 9, "carry": 0.75, "brake": 6, "damage": 20, "impact": "medium", "knock": 7, "stun_s": 0.5, "poise": 14 },
+    "strike3": { "name": "Overhead", "kind": "strike", "clip": "atk3", "clip_t": [0.07, 0.3, 1.0], "startup": 14, "active": 6, "total": 46, "cancel": { "dodge": 0, "parry": 0, "power": 24, "strike": 30, "free": 32 }, "chain": "strike1", "reach": 3.6, "arc_deg": 200, "lunge_m": 10, "carry": 0.8, "brake": 5, "damage": 36, "impact": "heavy", "knock": 12, "stun_s": 1.1, "poise": 30, "shatters": true },
+
+    "launcher": { "name": "Rising Tide", "kind": "strike", "motion": "rise", "clip": "launcher", "clip_t": [0.016, 0.133, 0.53], "startup": 7, "active": 5, "total": 34, "cancel": { "dodge": 0, "parry": 0, "power": 16, "strike": 20, "free": 26 }, "chain": "air1", "reach": 3.4, "arc_deg": 140, "lunge_m": 7, "carry": 0.9, "brake": 4, "damage": 22, "impact": "medium", "knock": 2, "launch": 11, "stun_s": 1.5, "poise": 20, "rise_mps": 8 },
+    "air1": { "name": "Aerial Cut", "kind": "strike", "motion": "air", "clip": "air1", "clip_t": [0.016, 0.133, 0.43], "startup": 7, "active": 4, "total": 26, "cancel": { "dodge": 0, "parry": 0, "power": 12, "strike": 18, "free": 22 }, "chain": "air2", "reach": 3.4, "arc_deg": 150, "lunge_m": 6, "carry": 0.6, "brake": 6, "damage": 14, "impact": "light", "knock": 1, "hover": 2.4, "stun_s": 1.0, "poise": 8 },
+    "air2": { "name": "Aerial Sweep", "kind": "strike", "motion": "air", "clip": "air2", "clip_t": [0.016, 0.133, 0.43], "startup": 7, "active": 5, "total": 28, "cancel": { "dodge": 0, "parry": 0, "power": 13, "strike": 18, "free": 24 }, "chain": "plunge", "reach": 3.4, "arc_deg": 180, "lunge_m": 6, "carry": 0.6, "brake": 6, "damage": 18, "impact": "medium", "knock": 2, "hover": 2.4, "stun_s": 1.0, "poise": 10 },
+    "plunge": { "name": "Plunge", "kind": "strike", "motion": "plunge", "clip": "plunge", "clip_t": [0.2, 0.3, 0.3], "startup": 6, "active": 60, "total": 66, "cancel": { "dodge": 12 }, "reach": 2.4, "arc_deg": 360, "lunge_m": 0, "carry": 0.3, "drop_mps": 30, "damage": 44, "impact": "heavy", "knock": 12, "stun_s": 1.2, "poise": 34, "aoe_m": 8, "shatters": true },
+    "plunge_land": { "name": "Plunge landing", "kind": "strike", "motion": "hold", "clip": "plunge_land", "clip_t": [0.0, 0.03, 0.37], "startup": 1, "active": 1, "total": 22, "cancel": { "dodge": 0, "parry": 0, "power": 6, "strike": 8, "free": 8 }, "reach": 0, "arc_deg": 0, "lunge_m": 0, "carry": 0.1, "brake": 9, "damage": 0, "impact": "light" },
+
+    "riposte": { "name": "Riposte", "kind": "strike", "clip": "riposte", "clip_t": [0.0, 0.03, 0.5], "startup": 5, "active": 4, "total": 30, "cancel": { "dodge": 0, "parry": 0, "power": 12, "strike": 18, "free": 20 }, "chain": "strike2", "reach": 3.6, "arc_deg": 140, "lunge_m": 8, "carry": 0.8, "brake": 6, "damage": 42, "impact": "heavy", "knock": 11, "stun_s": 1.2, "poise": 34, "shatters": true },
+    "counter": { "name": "Undertow", "kind": "strike", "clip": "atk3", "clip_t": [0.2, 0.3, 1.0], "startup": 6, "active": 6, "total": 38, "cancel": { "dodge": 6, "parry": 6, "power": 18, "strike": 24, "free": 26 }, "iframes": [0, 14], "chain": "strike1", "reach": 4.2, "arc_deg": 240, "lunge_m": 12, "carry": 0.9, "brake": 5, "damage": 60, "impact": "finisher", "knock": 14, "stun_s": 1.4, "poise": 50, "shatters": true },
+    "finisher": { "name": "Finisher", "kind": "strike", "clip": "finisher_water", "clip_ice": "finisher_ice", "clip_t": [0.0, 0.1, 0.77], "startup": 8, "active": 8, "total": 40, "cancel": { "dodge": 20, "parry": 20, "power": 24, "strike": 26, "free": 28 }, "iframes": [0, 20], "reach": 4.4, "arc_deg": 360, "lunge_m": 8, "carry": 0.5, "brake": 7, "damage": 110, "impact": "finisher", "knock": 14, "stun_s": 1.4, "poise": 99, "shatters": true },
+
+    "dodge": { "name": "Dodge", "kind": "dodge", "motion": "dodge", "clip": "dodge_water", "clip_land": "dodge_land", "clip_t": [0.0, 0.0, 0.43], "startup": 0, "active": 0, "total": 20, "iframes": [1, 16], "perfect_f": 12, "speed_mps": 21, "cancel": { "strike": 14, "power": 14, "parry": 14, "dodge": 18, "free": 16 } },
+    "parry": { "name": "Parry", "kind": "parry", "motion": "hold", "clip": "parry", "clip_t": [0.0, 0.12, 0.73], "startup": 2, "active": 0, "total": 36, "guard": [2, 30], "carry": 0.4, "brake": 5, "cancel": { "dodge": 8, "power": 30, "strike": 30, "free": 30 } },
+    "guard": { "name": "Frost Guard", "kind": "parry", "motion": "hold", "clip": "parry", "clip_t": [0.0, 0.12, 0.73], "startup": 2, "active": 0, "total": 36, "guard": [2, 30], "carry": 0.4, "brake": 5, "cost_on_success": 10, "freezes": true, "cancel": { "dodge": 8, "power": 30, "strike": 30, "free": 30 } },
+
+    "whip": { "name": "Water Whip", "kind": "power", "motion": "hold", "element": "water", "clip": "whip", "clip_t": [0.0, 0.12, 0.53], "startup": 7, "active": 8, "total": 32, "carry": 0.8, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 16, "strike": 16, "free": 20 }, "cost": 8, "cooldown": 0.9, "range_m": 16, "damage": 10, "impact": "light", "pull_mps": 20, "status": { "soak": 1 } },
+    "riptide": { "name": "Riptide", "kind": "power", "motion": "dash", "element": "water", "clip": "atk_dash", "clip_land": "atk_dash_land", "clip_t": [0.08, 0.167, 0.95], "startup": 5, "active": 20, "total": 40, "cancel": { "dodge": 6, "parry": 6, "power": 26, "strike": 26, "free": 28 }, "cost": 15, "cooldown": 2.6, "dash_mps": 34, "reach": 3.0, "arc_deg": 220, "damage": 30, "impact": "heavy", "knock": 12, "stun_s": 1.0, "poise": 26, "status": { "soak": 1 } },
+    "maelstrom": { "name": "Maelstrom", "kind": "power", "motion": "hold", "element": "water", "clip": "atk_spin", "clip_t": [0.066, 0.2, 1.13], "startup": 8, "active": 48, "total": 66, "carry": 0.5, "brake": 3, "rehit_f": 16, "cancel": { "dodge": 8, "parry": 8, "power": 56, "strike": 56, "free": 58 }, "cost": 30, "cooldown": 6, "radius_m": 9, "reach": 6.4, "arc_deg": 360, "damage": 13, "impact": "medium", "knock": 2, "stun_s": 0.9, "poise": 10, "pull": true, "status": { "soak": 1 } },
+    "wave": { "name": "Tidal Wave", "kind": "power", "motion": "hold", "element": "water", "clip": "cast_wave", "clip_t": [0.1, 0.52, 1.2], "startup": 18, "active": 4, "total": 46, "carry": 0.7, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 24, "strike": 24, "free": 28 }, "cost": 40, "cooldown": 7, "range_m": 38, "width_m": 7, "speed_mps": 34, "damage": 46, "impact": "heavy", "knock": 16, "stun_s": 1.2, "poise": 30, "status": {} },
+    "geyser": { "name": "Geyser", "kind": "power", "motion": "hold", "element": "water", "clip": "geyser", "clip_t": [0.0, 0.2, 0.63], "startup": 12, "active": 4, "total": 38, "carry": 0.7, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 20, "strike": 20, "free": 24 }, "cost": 24, "cooldown": 5, "range_m": 14, "radius_m": 3.6, "tell_s": 0.3, "last_s": 1.1, "damage": 26, "impact": "medium", "launch": 14, "stun_s": 1.6, "poise": 24, "status": { "soak": 1 } },
+
+    "lance": { "name": "Frost Lance", "kind": "power", "motion": "hold", "element": "ice", "clip": "lance_throw", "clip_t": [0.0, 0.17, 0.57], "startup": 10, "active": 4, "total": 34, "carry": 0.7, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 18, "strike": 18, "free": 22 }, "cost": 16, "cooldown": 1.8, "range_m": 42, "speed_mps": 46, "damage": 22, "impact": "medium", "stun_s": 0.6, "poise": 16, "status": { "chill": 3 } },
+    "glacier": { "name": "Glacier", "kind": "power", "motion": "hold", "element": "ice", "clip": "glacier_stomp", "clip_t": [0.0, 0.23, 0.73], "startup": 14, "active": 4, "total": 44, "carry": 0.6, "brake": 5, "cancel": { "dodge": 0, "parry": 0, "power": 24, "strike": 24, "free": 28 }, "cost": 26, "cooldown": 5, "range_m": 20, "spikes": 10, "radius_m": 2.6, "damage": 28, "impact": "heavy", "launch": 7, "stun_s": 1.0, "poise": 26, "status": { "chill": 2 } },
+    "breath": { "name": "Winter's Breath", "kind": "power", "motion": "hold", "element": "ice", "clip": "breath_cone", "clip_t": [0.0, 0.13, 1.2], "startup": 8, "active": 54, "total": 72, "carry": 0.7, "brake": 3, "rehit_f": 14, "cancel": { "dodge": 8, "parry": 8, "power": 30, "strike": 30, "free": 62 }, "cost": 24, "cooldown": 5, "range_m": 11, "cone_deg": 70, "damage": 7, "impact": "light", "stun_s": 0.3, "poise": 4, "slow": 0.45, "status": { "chill": 1 } },
+    "icepath": { "name": "Ice Path", "kind": "power", "motion": "free", "element": "ice", "clip": null, "startup": 0, "active": 0, "total": 1, "cancel": { "dodge": 0, "parry": 0, "power": 0, "strike": 0, "free": 0 }, "cost": 20, "cooldown": 9, "hold_s": 8, "lay_s": 4 },
+    "shoalsong": { "name": "Shoalsong", "kind": "power", "motion": "free", "element": "water", "clip": null, "startup": 0, "active": 0, "total": 1, "cancel": { "dodge": 0, "parry": 0, "power": 0, "strike": 0, "free": 0 }, "cost": 12, "cooldown": 6 },
+    "spout": { "name": "Waterspout", "kind": "power", "motion": "free", "element": "water", "clip": null, "startup": 0, "active": 0, "total": 1, "cancel": { "dodge": 0, "parry": 0, "power": 0, "strike": 0, "free": 0 }, "cost": 15, "cooldown": 4 },
+    "breach": { "name": "Whale's Breach", "kind": "power", "motion": "hold", "element": "water", "clip": "cast_wave", "clip_t": [0.1, 0.52, 1.2], "startup": 16, "active": 4, "total": 46, "carry": 0.7, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 26, "strike": 26, "free": 30 }, "cost": 90, "cooldown": 40, "damage": 150, "impact": "finisher", "knock": 10, "launch": 16, "stun_s": 2, "poise": 90, "status": { "soak": 1 } },
+    "cast": { "name": "Homeward Cast", "kind": "power", "motion": "hold", "element": "water", "clip": "lance_throw", "clip_t": [0.0, 0.17, 0.57], "startup": 10, "active": 1, "total": 32, "carry": 0.8, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 14, "strike": 14, "free": 18 }, "cost": 6, "cooldown": 0.5, "range_m": 34, "speed_mps": 48, "hang_s": 7, "back_mps": 46, "back_min_s": 0.3, "back_max_s": 1.25, "back_stops": 3, "bend_m": 16, "swing_m": 7, "damage": 26, "back_damage": 34, "impact": "medium", "knock": 4, "stun_s": 0.6, "poise": 16 },
+    "call": { "name": "Call of the Deep", "kind": "power", "motion": "hold", "element": "water", "clip": "cast_wave", "clip_t": [0.1, 0.52, 1.2], "startup": 16, "active": 4, "total": 46, "carry": 0.7, "brake": 4, "cancel": { "dodge": 0, "parry": 0, "power": 26, "strike": 26, "free": 30 }, "cost": 70, "cooldown": 22 }
+  },
+  "impacts": {
+    "_doc": "what a contact does. hitstop_f: the bodies hold, the frame never does (60 Hz frames; the reference holds at most 1 of its frames for a light blow and 2-3 for a heavy one, 0.03-0.10 s). Sizes are whole widths in metres at the target, capped so a burst never covers over 10% of the screen.",
+    "light": { "hitstop_f": 1.8, "shake": 0.2, "punch": 0.16, "core_m": 1.7, "spike_m": 2.6, "beam_m": 0, "ring_m": 0, "sparks": 12, "beads": 8, "shards": 3, "light_m": 6, "heavy_sound": false },
+    "medium": { "hitstop_f": 3, "shake": 0.3, "punch": 0.24, "core_m": 2.1, "spike_m": 3.2, "beam_m": 3.4, "ring_m": 0, "sparks": 18, "beads": 12, "shards": 5, "light_m": 8, "heavy_sound": false },
+    "heavy": { "hitstop_f": 5, "shake": 0.5, "punch": 0.42, "core_m": 2.8, "spike_m": 4.4, "beam_m": 5.0, "ring_m": 4.5, "sparks": 28, "beads": 18, "shards": 7, "light_m": 11, "heavy_sound": true },
+    "finisher": { "hitstop_f": 6, "shake": 0.75, "punch": 0.62, "core_m": 4.0, "spike_m": 6.2, "beam_m": 8.0, "ring_m": 7.5, "sparks": 40, "beads": 26, "shards": 12, "light_m": 16, "heavy_sound": true }
+  },
+  "difficulty": {
+    "_doc": "G.settings.difficulty. tell scales how long a blow shows, and never takes one under the 0.5 s of P8. damage is what lands on him, foe_hp how much they take.",
+    "easy": { "damage": 0.7, "tell": 1.2, "foe_hp": 0.85, "tokens": 1 },
+    "normal": { "damage": 1, "tell": 1, "foe_hp": 1, "tokens": 2 },
+    "hard": { "damage": 1.3, "tell": 0.92, "foe_hp": 1.5, "tokens": 2, "captains": true }
+  },
+  "upgrades": {
+    "_doc": "what each level does, read by combat.js and powers.js. The names of the levels are in upgrades.json (missions).",
+    "health": [25, 50, 80], "tide": [25, 50, 50], "tide_refill_s": 3,
+    "riptide": { "damage": 1.25, "dash": 1.2, "rehit_f": 10 }, "maelstrom": { "radius": 1.25, "stun": 1.4, "throw_mps": 10 },
+    "wave": { "width": 1.2, "range": 1.25 }, "whip": { "range": 1.2, "pull": 1.4 }, "geyser": { "launch": 1.3, "cost": 0.7, "again_s": 0.55 },
+    "lance": { "frozen": 1.4, "pierce": 1, "burst_m": 3.2 }, "glacier": { "spikes": 3, "tall": 1.3, "stay_s": 4.5 }, "breath": { "cone": 1.25, "slow": 0.3, "chill": 2 },
+    "icepath": { "hold_s": 3, "radius": 1.4 }, "shoalsong": { "ring": 1.3, "lead": 1.5, "more": 4 }, "cast": { "back": 1.4, "range": 1.4, "stops": 5 }, "guard": { "window_f": 6, "frozen": 1.4 }
+  },
+  "spout": {
+    "_doc": "the water tornado. Jump held hold_s on the water raises it round him; it carries him apex_m over the sea in rise_s; he leaps off when he lets go, or after top_s. The stick walks it across the sea. Foes inside pull_m are drawn in and round, inside grab_m spun up it and thrown.",
+    "hold_s": 0.2, "apex_m": 26, "rise_s": 1.3, "top_s": 1.1, "radius_m": 4.2, "sway_m": 4, "spin_rad": 11, "drift_mps": 7, "cam_arm": 26, "cam_drop": 8.5, "cam_low": 24, "cam_pitch": 0.03, "leap_mps": 14, "leap_up_mps": 7, "fall_s": 1.3,
+    "pull_m": 20, "grab_m": 6.5, "draw": 7, "swirl": 5, "spun_s": 1.9, "spun_up_m": 13, "spun_rad": 7, "spun_damage": 12, "throw_mps": 22, "throw_damage": 45
+  },
+  "shoal": {
+    "_doc": "Shoalsong (P13). Gulls keep him company on land, where no sea creature can (P13c). Holding Call spreads the ring: a tap reaches ring_tap_m, held it goes on to ring_m. What it touches follows him lead_s. jobs (P13b): a school shields, rays light the dark, turtles lift him, sharks hunt what he marks, the whale breaks armour. always answer: the rest answer once Minnow's book has logged them (P13d). tiers (P13e), the hold's top: the pack, then the breach, which needs the whale logged.",
+    "tiers": ["shoalsong", "call", "breach"], "tier_s": [0, 0.7, 1.5],
+    "always": ["fish_a", "fish_b", "fish_c", "gull"],
+    "jobs": { "fish_a": "shield", "fish_b": "shield", "fish_c": "shield", "manta": "light", "turtle": "lift", "reef_shark": "hunt", "hammerhead": "hunt", "gull": "watch" },
+    "orbit": { "shield": 1.2, "light": 12, "lift": 8.5, "hunt": 12, "watch": 9 },
+    "book": { "manta": "Rays answer the song now, and light the dark", "turtle": "Turtles answer the song now, and lift you out of a blow", "reef_shark": "Sharks answer the song now, and hunt what you strike", "hammerhead": "Hammerheads answer the song now, and hunt what you strike", "whale": "Hold Call to the end: the whale answers" },
+    "ring_tap_m": 26, "ring_m": 44, "ring_mps": 63, "lead_s": 20, "max_led": 8, "rush_mps": 20, "home_mps": 14, "school_r": 2, "fetch_m": 70, "watch_y": 11,
+    "shield_schools": 1, "shield_m": 14, "shield_every_s": 6, "swarm_m": 22, "swarm_slow": 0.55,
+    "dark_y": -30, "light_near_m": 22, "light_m": 26, "light_every_s": 0.8,
+    "lift_near_m": 20, "lift_mps": 9, "lift_s": 0.7, "lift_rush_mps": 40, "lift_every_s": 5, "lift_stun": 0.2,
+    "hunt_m": 30, "hunt_mps": 15, "bite_m": 4.5, "hunt_every_s": 1.5, "hunt_damage": 16,
+    "breach": { "tell_s": 1.1, "grav": 26, "depth_m": 26, "top_y": -18, "apex_m": 11, "clear_m": 16, "side_mps": 8, "sink_s": 0.7, "radius_m": 9.5, "open_s": 6 }
+  },
+  "bosses": {
+    "_doc": "every boss has three phases by health, tells at least 0.5 s, and the same tell/contact log the walls read.",
+    "leviathan": { "name": "The Leviathan", "intro_s": 6.6, "hint": "Parry its bite, then strike the head", "arena": true, "hp": 3400, "bite": 24, "spit": 13, "orb": 16733640, "summon": "reaver", "summon_tip": "Reavers answer its call", "roar": 16744408 },
+    "wyrm": { "name": "The Frost Wyrm", "intro_s": 6.6, "hint": "Water hurts it most. Parry its bite", "hp": 3000, "bite": 22, "spit": 12, "orb": 13627135, "summon": "frost_wight", "summon_tip": "The cold stands up", "roar": 13627135, "tint": [0.62, 0.86, 1.25], "takes": { "water": 1.3, "ice": 0.5 } },
+    "kraken": { "name": "The Kraken", "intro_s": 6.6, "hint": "Freeze a tentacle, then sever it", "hp": 900, "arms": 5, "arm_hp": 300, "frozen_mul": 3, "slam": 20, "tell_s": 1.0, "down_s": 2.4, "every_s": [1.8, 3.0], "radius_m": 3.4, "reach_m": 15 },
+    "colossus": { "name": "The Cinder Colossus", "intro_s": 6.6, "hint": "Cap its vents with ice, then strike the core", "stand_m": 22, "hp": 1150, "vents": 3, "armour_mul": 0.1, "slam": 14, "vent_burn": 5, "tell_s": 1.1, "every_s": [2.6, 3.8], "radius_m": 4.6, "reach_m": 14, "open_s": 9, "vent_s": 2.2, "cap_hold_s": 7 }
+  },
+  "status": {
+    "soaked_s": 8,
+    "chill_to_freeze": 3,
+    "chill_decay_s": 5,
+    "frozen_s": 3.5,
+    "stagger_s": 2.6,
+    "swap_s": 1.2
+  },
+  "interactions": {
+    "shatter": { "name": "Shatter", "tip": "Soaked, then frozen: one blow breaks them", "damage_mul": 3.0 },
+    "smash": { "name": "Smash", "tip": "A heavy blow breaks what is frozen", "damage_mul": 2.0 },
+    "flash_freeze": { "name": "Flash Freeze", "tip": "Frost leaps between the soaked", "radius_m": 7 },
+    "capped": { "name": "Capped", "tip": "Ice stops a geyser, until it bursts", "burst_s": 1.2, "shards": 16, "damage": 30 },
+    "frozen_sea": { "name": "Frozen Sea", "tip": "Ice on the sea holds for eight seconds", "hold_s": 8 },
+    "ice_missile": { "name": "Ice Missile", "tip": "Riptide sends the frozen flying", "speed_mps": 26, "damage": 40 }
+  },
+  "land": {
+    "_doc": "the fights on the ground: soldiers only, sea kinds stay out. at is a poi or land id, dx, dy move it onto ground that's open from where he arrives. Read by enemies.js, walled in walls_land.mjs",
+    "fights": [
+      { "id": "land_harbour_raid", "at": "sunward_harbour", "dx": -24, "dy": -7, "r": 26, "mix": ["reaver", "reaver", "archer", "captain"] },
+      { "id": "land_sunward_beach", "at": "sunward_south", "dy": 20, "r": 26, "mix": ["reaver", "captain", "reaver"] },
+      { "id": "land_sunward_light", "at": "sunward_lighthouse", "dx": -14, "dy": -8, "r": 24, "mix": ["reaver", "archer", "duelist"] },
+      { "id": "land_crown_cove", "at": "crown_cove", "dx": 16, "dy": 18, "r": 26, "mix": ["reaver", "archer", "reaver"] },
+      { "id": "land_crown_temple", "at": "crown_temple", "r": 24, "mix": ["captain", "archer", "duelist", "reaver"] },
+      { "id": "land_frost_fort", "at": "frost_fort", "dy": 32, "r": 28, "mix": ["frost_wight", "archer", "captain", "frost_wight"] },
+      { "id": "land_cinder_rim", "at": "cindermere", "dx": -112, "dy": -108, "r": 24, "mix": ["magma_husk", "archer", "magma_husk"] }
+    ]
+  },
+  "foeplay": {
+    "_doc": "how a soldier fills his wait, and how he takes a blow. every_s: how often he does something; feint, cut: the shares (the rest step back). flinch: how far he leans from a hit, light, medium, heavy, in radians, always away from where it came from. arc: a blow of arc_knock or more on the ground throws him up arc_up_mps; he flies till he lands",
+    "every_s": [0.7, 1.5], "feint": 0.4, "cut": 0.35, "feint_s": 0.32, "in_mps": 7, "back_mps": 6, "cut_mps": 7,
+    "flinch": [0.3, 0.45, 0.68], "arc_knock": 12, "arc_up_mps": 9.5, "arc_s": 1.2, "finish_s": 0.8, "finish_k": 0.28
+  },
+  "rosters": {
+    "_doc": "who stands where (P6). An encounter's reaver and shark slots are filled in turn from the place's lists: the bell it is tied to, else the nearest hold within near_m, else open. reef_m round the spawn is the reef. The story opens each list a kind per bell, so a new player meets Reavers and sharks, and the cast arrives one counter at a time. An encounter with its own mix keeps it.",
+    "near_m": 320, "reef_m": 300,
+    "reef": { "soldier": ["reaver"], "fish": ["shark"] },
+    "open": { "soldier": ["reaver", "archer"], "fish": ["shark", "hammerhead"] },
+    "kelp": { "soldier": ["reaver", "captain", "archer"], "fish": ["shark", "moray"] },
+    "deep": { "soldier": ["reaver", "siren", "captain"], "fish": ["anglerfish", "moray"] },
+    "gilded": { "soldier": ["captain", "archer", "duelist"], "fish": ["hammerhead", "shark"] },
+    "rime": { "soldier": ["frost_wight", "siren", "duelist"], "fish": ["thornback", "shark"] },
+    "cinder": { "soldier": ["magma_husk", "archer", "giant_crab"], "fish": ["thornback", "hammerhead"] },
+    "thalor": { "soldier": ["reaver", "captain", "archer", "duelist"], "fish": ["shark", "moray"] },
+    "meridon": { "soldier": ["reaver", "archer", "captain", "siren"], "fish": ["hammerhead", "shark"] },
+    "vesper": { "soldier": ["reaver", "siren", "duelist"], "fish": ["anglerfish", "moray"] },
+    "cindermere": { "soldier": ["magma_husk", "archer", "giant_crab"], "fish": ["thornback", "hammerhead"] },
+    "rimehold": { "soldier": ["frost_wight", "siren", "captain"], "fish": ["thornback", "shark"] },
+    "wrackreach": { "soldier": ["reaver", "giant_crab", "archer", "captain"], "fish": ["hammerhead", "moray"] }
+  },
+  "foes": {
+    "_doc": "Every enemy blow: tell_s is how long it shows before it can land, strike_s how long it can land, recover_s how long the foe is open afterwards. P8 holds every tell to at least 0.5 s. unblockable blows must be dodged. parry_cue_s is how long before contact the Parry button calls.",
+    "reaver": { "name": "Reaver", "counter": "any blow; parry for a full opening", "body": "reaver", "brain": "soldier", "hp": 240, "r": 0.8, "poise": 110, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [0.7, 1.8], "blows": [
+      { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 9 },
+      { "id": "chop", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 11 } ] },
+    "captain": { "short": "A shield: parry the bash, or freeze him", "name": "Reaver Captain", "counter": "shield: parry the bash or freeze him for a long opening; it is down while he recovers from a swing", "body": "reaver", "brain": "soldier", "scale": 1.18, "shield": true, "hp": 480, "r": 0.95, "poise": 180, "speed_mps": 6.5, "hold_m": 4.6, "wait_s": [0.8, 1.8], "guard_arc_deg": 150, "guard_break_s": 3.2, "blows": [
+      { "id": "bash", "clip": "tell_slash", "clip_t": [0.38, 1.13, 1.4], "tell_s": 0.75, "strike_s": 0.18, "recover_s": 0.8, "reach_m": 3.6, "lunge_mps": 8, "damage": 14 },
+      { "id": "overhead", "clip": "tell_chop", "clip_t": [0.0, 0.85, 1.4], "tell_s": 1.0, "strike_s": 0.2, "recover_s": 1.0, "reach_m": 3.8, "lunge_mps": 9, "damage": 20, "unblockable": true } ] },
+    "archer": { "short": "Dodge sideways, or parry the harpoon back", "name": "Reaver Archer", "counter": "dodge sideways; a parry sends the harpoon back; the whip pulls him in", "body": "reaver", "brain": "archer", "scale": 0.96, "harpoon": true, "hp": 160, "r": 0.75, "poise": 70, "speed_mps": 8, "hold_m": 17, "wait_s": [1.8, 3.2], "blows": [
+      { "id": "harpoon", "clip": "throw", "clip_t": [0.0, 0.133, 0.53], "tell_s": 0.95, "strike_s": 0.1, "recover_s": 0.7, "reach_m": 42, "speed_mps": 30, "damage": 10 } ] },
+    "shark": { "name": "Shark", "counter": "dodge through the lunge, strike as it turns", "body": "shark", "brain": "fish", "hp": 150, "r": 1.4, "poise": 80, "speed_mps": 7, "ring_m": 8.5, "wait_s": [1.0, 3.0], "blows": [
+      { "id": "lunge", "tell_s": 0.72, "strike_s": 0.95, "recover_s": 1.8, "reach_m": 2.6, "speed_mps": 22, "damage": 11 } ] },
+    "moray": { "short": "Dodge the snap, then strike", "name": "Moray", "counter": "hidden until he is close: dodge the snap, then strike while it hangs out of its hole; the whip drags it into the open", "body": "moray", "brain": "lurker", "hp": 200, "r": 0.9, "poise": 80, "speed_mps": 9, "wake_m": 9, "wait_s": [1.4, 2.6], "blows": [
+      { "id": "snap", "tell_s": 0.6, "strike_s": 0.45, "recover_s": 1.7, "reach_m": 3.4, "speed_mps": 18, "damage": 14 } ] },
+    "anglerfish": { "short": "A blow from range stuns it", "name": "Anglerfish", "counter": "its lure shows in the dark: a blow from range stuns it, and it is slow to turn", "body": "anglerfish", "brain": "fish", "lure": true, "scale": 2.4, "hp": 280, "r": 1.3, "poise": 90, "speed_mps": 3.6, "ring_m": 7, "wait_s": [1.6, 3.0], "blows": [
+      { "id": "gulp", "tell_s": 0.9, "strike_s": 0.7, "recover_s": 1.6, "reach_m": 3.6, "speed_mps": 14, "damage": 18 } ] },
+    "giant_crab": { "short": "Heavy blows crack it. Frozen, it shatters", "name": "Giant Crab", "counter": "armour: heavy blows crack it, a frozen crab shatters it; until then blows barely mark it", "body": "giant_crab", "brain": "soldier", "walker": "bed", "scale": 1.1, "hp": 420, "armour": 120, "armour_mul": 0.15, "r": 1.7, "poise": 200, "speed_mps": 3.2, "hold_m": 4.2, "wait_s": [1.2, 2.4], "blows": [
+      { "id": "pincer", "tell_s": 0.8, "strike_s": 0.2, "recover_s": 0.9, "reach_m": 4.2, "lunge_mps": 4, "damage": 14 },
+      { "id": "slam", "tell_s": 1.05, "strike_s": 0.22, "recover_s": 1.2, "reach_m": 4.8, "lunge_mps": 1, "damage": 20, "unblockable": true } ] },
+    "siren": { "short": "Any hit breaks her song", "name": "Siren", "counter": "her song draws him in: any hit breaks it, and the whip reaches her first", "body": "reaver", "brain": "siren", "fragile": true, "scale": 0.92, "tint": [0.35, 0.95, 0.85], "hp": 170, "r": 0.75, "poise": 60, "speed_mps": 6, "hold_m": 13, "wait_s": [2.2, 3.4], "blows": [
+      { "id": "charm", "clip": "atk2", "clip_t": [0.0, 0.23, 0.72], "tell_s": 1.1, "strike_s": 1.6, "recover_s": 0.8, "reach_m": 22, "pull_mps2": 30, "damage": 0 } ] },
+    "frost_wight": { "short": "The cold can't touch it: soak it", "name": "Frost Wight", "counter": "the cold can't touch it; soak it and it takes half again as much", "body": "reaver", "brain": "soldier", "tint": [0.62, 0.86, 1.15], "immune": "chill", "soaked_mul": 1.5, "hp": 300, "r": 0.8, "poise": 120, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [0.7, 1.7], "blows": [
+      { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 11, "status_on_hero": "chill" } ] },
+    "magma_husk": { "short": "Soak it to crack the crust", "name": "Magma Husk", "counter": "dry, it shrugs off blows: soak it to crack the crust, then strike", "body": "reaver", "brain": "soldier", "tint": [1.25, 0.42, 0.14], "needs_soak": 0.35, "hp": 320, "r": 0.85, "poise": 130, "speed_mps": 6.8, "hold_m": 4.8, "wait_s": [1.1, 2.4], "blows": [
+      { "id": "chop", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 13 } ] },
+    "duelist": { "name": "Duelist", "short": "Two blows, then stop: parry his answer", "counter": "two blows and he's set: the next he turns aside and answers. Stop when he glows, parry the answer, and he's wide open. One of his swings hangs before it falls", "body": "reaver", "brain": "soldier", "scale": 1.04, "tint": [0.8, 0.9, 1.25], "hp": 300, "r": 0.8, "poise": 150, "speed_mps": 8, "hold_m": 4.2, "wait_s": [0.6, 1.5],
+      "riposte": { "after_hits": 2, "window_s": 1.6, "stance_s": 1.3, "blow": { "id": "answer", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.5, "strike_s": 0.14, "recover_s": 0.7, "reach_m": 3.6, "lunge_mps": 9, "damage": 13 } },
+      "blows": [ { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 10 }, { "id": "feint", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "feint_s": 0.42, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 12 } ] },
+    "thornback": { "name": "Thornback", "short": "Spines up: hold off, or reach it from afar", "counter": "spines up, a blow at arm's length comes back on you: wait for them to lie flat, or reach it from afar", "body": "barracuda", "brain": "fish", "scale": 3.2, "tint": [1.2, 0.86, 0.72], "hp": 210, "r": 1.2, "poise": 95, "speed_mps": 8, "ring_m": 8, "wait_s": [1.1, 2.6],
+      "spined": { "up_s": 2.4, "flat_s": 2.6, "thorn": 7 },
+      "blows": [ { "id": "dart", "tell_s": 0.7, "strike_s": 0.8, "recover_s": 1.5, "reach_m": 3.2, "speed_mps": 22, "damage": 11 } ] },
+    "hammerhead": { "short": "Dodge the pair, then strike a flank", "name": "Hammerhead", "body": "hammerhead", "brain": "fish", "scale": 1.15, "pairs": true, "counter": "two at once: dodge the pair, then strike a flank (× 1.5 while it recovers)", "hp": 320, "r": 1.7, "poise": 130, "speed_mps": 7.5, "ring_m": 13, "wait_s": [1.4, 2.8], "flank_mul": 1.5, "blows": [
+      { "id": "charge", "tell_s": 0.85, "strike_s": 1.1, "recover_s": 1.6, "reach_m": 3.6, "speed_mps": 27, "damage": 16 } ] }
+  }
+}

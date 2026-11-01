@@ -165,7 +165,7 @@ def hand_turn(sk, side, f, t, fixed=False):
 # the swing that keeps the turn in range, the nearest to the elbow the pose asked for.
 TWIST_OK = 58.0
 SWIVELS = (0, 25, -25, 50, -50, 75, -75, 100, -100, 125, -125, 150, -150)
-ROLLS = (0.0, 40.0, -40.0, 80.0, -80.0)
+ROLLS = (0.0, 40.0, -40.0, 80.0, -80.0, 120.0, -120.0)
 def wrist_turn(sk, side, G2, Gh2):
     q = qmul(qconj(G2), Gh2); axis = unit(sk.off['hand_' + side]); v = (q[1], q[2], q[3]); p = dot(v, axis)
     a = 2 * math.degrees(math.atan2(p, q[0])); return (a + 180.0) % 360.0 - 180.0
@@ -1168,6 +1168,35 @@ def cap_rest(sk, m, clip, n, fade):
             if qdot(tracks[b][i - 1], tracks[b][i]) < 0: tracks[b][i] = tuple(-x for x in tracks[b][i])
     offs.append(offs[0]); return {'n': n, 'q': tracks, 'off': offs}
 
+# swimming: CMU subjects 125 and 126, lying on a stool, read by eye and by how the arms and legs move together. 125_06 a front crawl, 126_06 a butterfly. The body comes up to stand in his own space: the game lays him down
+CAP_SWIM = {}
+def cap_swim(sk, take, start, n, fade=10):
+    import mocap_cmu
+    S = mocap_cmu.trial(sk, take)[start:start + n + fade]
+    def line(q):
+        """Feet to head, and which way his chest faces, in the file."""
+        P = {'hips': (0.0, 0.0, 0.0)}; G = {'hips': q['hips']}
+        for b in ORDER:
+            if b in ('root', 'hips'): continue
+            pa = PARENT[b]; P[b] = add(P[pa], qrot(G[pa], sk.off[b])); G[b] = qmul(G[pa], q.get(b, QI))
+        return sub(P['head'], mul(add(P['foot_R'], P['foot_L']), 0.5)), qrot(G['spine_3'], (0.0, -1.0, 0.0))
+    a = [0.0, 0.0, 0.0]; b = [0.0, 0.0, 0.0]
+    for q in S[:n]:
+        u, f = line(q); a = [a[k] + u[k] for k in range(3)]; b = [b[k] + f[k] for k in range(3)]
+    up = unit(tuple(a)); w = 1.0 + up[2]; c = cross(up, (0.0, 0.0, 1.0)); l = math.sqrt(w * w + dot(c, c)) or 1.0; lift_ = (w / l, c[0] / l, c[1] / l, c[2] / l)
+    f = qrot(lift_, unit(tuple(b))); fix = qmul(qaxis((0.0, 0.0, 1.0), -math.degrees(math.atan2(f[0], -f[1]))), lift_)
+    tracks = {b: [] for b in KEYED}
+    for k in range(n):
+        Q = S[k]
+        if k < fade:
+            t = k / float(fade); t = t * t * (3 - 2 * t); Q1 = S[k + n]; Q = {b: qslerp(tuple(-x for x in Q1[b]) if qdot(Q1[b], Q[b]) < 0 else Q1[b], Q[b], t) for b in KEYED}
+        for b in KEYED: tracks[b].append(qmul(fix, Q[b]) if b == 'hips' else Q[b])
+    for b in KEYED:
+        tracks[b].append(tracks[b][0])
+        for i in range(1, n + 1):
+            if qdot(tracks[b][i - 1], tracks[b][i]) < 0: tracks[b][i] = tuple(-x for x in tracks[b][i])
+    return {'n': n, 'q': tracks, 'off': [(0.0, 0.0, 0.0)] * (n + 1), 'loop': True, 'miss': 0.0}
+
 # a start and a stop, each with which frames each foot is down, read by eye from the feet in the files
 CAP_ONCE = {'run_start': ('m_run_start', {'R': [(0, 8), (14, 20)], 'L': [(0, 16)]}), 'run_stop': ('m_run_stop', {'R': [(0, 3), (14, 39)], 'L': [(6, 13), (24, 39)]}),
             'walk_start': ('m_walk_start', {'R': [(0, 9), (17, 30)], 'L': [(0, 25)]}), 'walk_stop': ('m_walk_stop', {'R': [(0, 8), (21, 61)], 'L': [(7, 23), (31, 61)]})}
@@ -1218,6 +1247,8 @@ def bake(data, names=None):
         if not names and cap and name in CAP: c = cap_cycle(sk, cap, CAP[name]); c['loop'] = True; c['miss'] = 0.0; out[name] = c; continue
         if not names and cap and name in CAP_REST: c = cap_rest(sk, cap, CAP_REST[name][0], CAP_REST[name][1], CAP_REST[name][2]); c['loop'] = True; c['miss'] = 0.0; out[name] = c; continue
         c = bake_proc(sk, (lambda ph, f=e[0], free=(not names and name in FREE_HANDS): (no_shaft(f(sk, ph)) if free else f(sk, ph))), e[1]); c['loop'] = True; c['miss'] = IK_MISS[0]; out[name] = c
+    if not names:
+        for name, (take, start, n) in CAP_SWIM.items(): out[name] = cap_swim(sk, take, start, n)
     if not names and cap:
         for name, (clip, win) in CAP_ONCE.items():
             out[name] = cap_once(sk, cap, clip, win, False); out[name + '_m'] = cap_once(sk, cap, clip, win, True)

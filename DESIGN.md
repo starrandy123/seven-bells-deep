@@ -152,39 +152,41 @@ Every number here is (ours) unless a source is named: chosen and tuned against c
 
 ## How he's built
 
-`hero.js` moves the body through the world at 60 Hz. `body.js` draws it once a display frame, in this order: clips sampled (no AnimationMixer: it only writes a bone when the blended value changes, so anything layered on a held pose would pile up) → inertialization → lean → stride → pinned feet → two-bone IK → mantle. On land the legs are never a clip's, apart from the shots in `CLIP_LEGS`. Clips give the trunk, head and arms, phase-locked to the stride. Everything that moves him goes through collide and slide (`world.sweep`, after Fauerby), so a step at any speed meets every solid on the way.
+`hero.js` moves the body through the world at 60 Hz. `body.js` draws it once a display frame, in this order: clips sampled (no AnimationMixer: it only writes a bone when the blended value changes, so anything layered on a held pose would pile up) → inertialization → lean → a foot that's down held on the real ground → a correction on the clip's own leg → mantle. On land the whole body is the capture's, legs included, and the clip runs at the rate that matches his speed. A foot that's down stays where it came down and the leg bends only as far as that takes; over the end of a stance it's given back to the clip, so nothing is left for the leg to catch up with in the air. Everything that moves him goes through collide and slide (`world.sweep`, after Fauerby), so a step at any speed meets every solid on the way.
 
-## The stride (`formulas/gait.js`): `TABLE`, kind (ours), checked against the published figures below
+## The stride (`formulas/gait.js`): real strides, read back from the capture's feet
 
-| v m/s | T s (whole stride) | ahead m | behind m | swing lift m | width m |
-|---|---|---|---|---|---|
-| 0 | 1.30 | 0.20 | 0.20 | 0.08 | 0.095 |
-| 1.4 | 1.05 | 0.32 | 0.40 | 0.09 | 0.090 |
-| 3 | 0.76 | 0.24 | 0.42 | 0.16 | 0.075 |
-| 4.2 | 0.68 | 0.20 | 0.42 | 0.20 | 0.066 |
-| 7 | 0.60 | 0.14 | 0.40 | 0.22 | 0.060 |
-| 10 | 0.52 | 0.08 | 0.34 | 0.24 | 0.052 |
-| 13 | 0.46 | 0.08 | 0.32 | 0.24 | 0.048 |
-| 20 | 0.40 | 0.07 | 0.26 | 0.24 | 0.046 |
-| 36 | 0.33 | 0.06 | 0.20 | 0.22 | 0.044 |
+The Rocketbox files have the hips nailed to one spot, so `Pipeline/hero/mocap_fit.py` reads where the body really went from the feet that were down: the length of the stride, the speed it was run at, and the rise, sway and surge of the hips, on his own legs (0.409 + 0.407 m). Each gait's numbers go into `moves.json` as `gait`.
 
-Published checks: the fastest measured human rate is 4.32 steps/s at 12.34 m/s [Mackala13], and 13 m/s here is 4.35; faster runners get there through longer flight, not quicker legs [Weyand00], which is why the table lengthens the stride, keeps contact short and M1b holds cadence at 5 steps/s up to sprint. Past sprint the rate climbs to 6.06 at 36 m/s (M6a). Duty follows: a foot is down while the ground it stands on crosses `ahead + behind`, so `beta = contact / (v · T)`, capped at 0.64 (derived). His leg is 0.82 m hip to ankle and his hip stands 0.81 over the ankle, so standing he's already nearly straight (measured from the mesh). Contact and lift were set in a model of the leg, knee, thigh and ankle rates sampled at 60 Hz across the table, then read on the drawn bones by M3. What the model showed: a foot landing far ahead of the hips is what spins the knee, because the leg shortens fastest at the far end of its arc, near straight (physics). So past a jog the foot lands nearly under him and contact shortens; the knee's peak at 13 m/s fell from 1,423 to 617°/s when `ahead` went from 0.20 to 0.08.
+| Gait | Clip | T s as run | Stride m | v m/s as run | At `RATE` 1.25: T, v | Share on the ground |
+|---|---|---|---|---|---|---|
+| walk | `m_walk_neutral_01` | 1.20 | 1.24 | 1.04 | 0.96 s, 1.29 m/s | 0.63 |
+| run | `m_run_neutral_01` | 0.73 | 2.30 | 3.14 | 0.59 s, 3.92 m/s | 0.36 |
+| sprint | `m_run_fast_01` | 0.60 | 2.83 | 4.71 | 0.48 s, 5.89 m/s | 0.42 |
+
+Between two gaits the stride is the blend of theirs and T = stride / speed, so a foot going back under him goes at his speed.
 
 | Name | Value | Kind | Why |
 |---|---|---|---|
-| `MATCH`, `SEEN` | 13.2, 10 m/s | (ours) | past `MATCH` a stride can't follow the ground and stay under 1,500°/s (derived: a foot sweeping at 13 m/s is about 1,000°/s at the hip with no knee at all). From there the feet are carried on with him and see less of the ground's speed, down to `SEEN` by 22 m/s; only the cadence keeps rising, and blur, dust and afterimages take over (M6b) |
-| `MOST` | 2 m | (ours) | a swing's tangent: a cubic in the world is a foot that leaves and lands at ground speed, and it trails 0.096 × v × swing time behind the hips. Held at 2 m it never trails past a leg's reach, and the knee's peak falls by a third |
-| `MAX_DROP` | 0.26 m | (ours) | how far the hips go down to reach a planted foot; past that the foot comes up instead |
-| rise exponent | 2 + 0.5 × early | (ours) | the swing's height peaks a little early in a run, where the heel comes up behind him |
+| `RATE` | 1.25 | (ours), the lead's call | he's a hero in a 2 km world: every capture plays this much faster than it was run, stride for stride |
+| `T_SLOWEST` | 1.5 s | (ours) | below the walk the steps stop slowing and the stride shortens instead (`S.k`) |
+| `T_MATCH`, `T_FASTEST` | 0.46 s at `MATCH`, 0.33 s at 36 m/s | (ours) | past the fastest clip the cadence rises slowly: M1b's 5 steps a second up to sprint (capture's steps aren't even, so a stride of 0.46 s is 4.9 at its quicker step), M6a's 6 at 36 m/s |
+| `S.bt`, `warp` | the clip's share × (clip's ground speed / his) | derived | past the fastest clip a foot's time on the ground shortens as a real sprinter's does [Weyand00]; each leg runs the stance at the ground's speed and takes the rest for its swing |
+| `MATCH`, `SEEN` | 9.2, 7 m/s | (ours) | past `MATCH` a stride can't follow the ground. The feet are carried on with him and stop being held at all by `MATCH` + 2 m/s: the legs are the clip's, and blur, dust and afterimages take over (M6b) |
+| `MAX_DROP` | 0.26 m | (ours) | how far the hips go down to reach a planted foot, on a slope; a foot pushing off never pulls him down |
+| stance release | last 40 % of the stance, at most 2.2 cm a 60 Hz frame | (ours), under M1's 3 cm | what the hold has taken up goes back to the clip before the foot leaves |
+| soft reach | the last 3.3 % of a leg | (ours) | a knee coming out of straight turns fastest of all, so nothing asks for the very end of it |
+
+A real start and a real stop (`run_start`, `run_stop`, `walk_start`, `walk_stop`, and each off the other foot, `_m`) play at `RATE`, with the frames each foot is down read by eye from the files. Out of a fight only: in a fight footwork stays on the stride.
 
 ## Speeds and forces
 
 | Name | Value | Kind | Why |
 |---|---|---|---|
 | `CRUISE`, `BOOST`, `SUPER` | 7.5, 15.5, 48 m/s | (ours) | swim speeds, kept from the game before this round |
-| `LAND_RUN`, `LAND_SPRINT`, `LAND_SUPER` | 7, 13, 36 m/s | (ours) | run, sprint, super on land, kept from the game before this round; 13 sits just over the fastest measured human, 12.34 m/s [Mackala13] |
-| Speed up | 26 m/s² below 7, 15 to 13, 22 above | (ours) | 0 to run in about 0.35 s; the sprint builds; super is a release |
-| Slow down | 30 m/s² below 8, 20 to 14, 24 above | (ours) | he plants and stops, and a stop from 36 takes about 1.5 s, never a few frames |
+| `LAND_RUN`, `LAND_SPRINT`, `LAND_SUPER` | 5.9, 9.1, 36 m/s | the first two from the clips | the fastest capture at `RATE`, and what a stride holds with its stance shortened; super kept from the game before |
+| Speed up | 6.5 m/s² below 2.5, 11 to 6, 14 to 9.5, 22 above | read from the captures, at `RATE` | a real start leans and gathers before it goes; super is a release |
+| Slow down | 9 m/s² below 9.5, 20 to 14, 24 above | read from `m_run_stop`, at `RATE` | he stops the way the capture stops: about 1.9 m from a run |
 | Turn | at most 24 / v rad/s, 11 at walking | (ours) | a lateral 24 m/s², about 2.4 g, a hero's carve. A goal swings to the stick at that rate and the heading follows it critically damped, so a turn lands with no overshoot (M4f) |
 | Pivot | stick over 120° from his heading above 2.6 m/s | (ours), M4c's 120° | |
 | `TAN_CLIMB` | tan 42° | (ours) | steepest walkable, inside A7's 35-45°, read both along his way and as the bank's own steepness, so a steep face can't be climbed slantwise |
@@ -276,9 +278,9 @@ Keys are poses at times, solved by IK; between them Catmull-Rom on the joints' t
 | `atk_dash_land` | `atk_dash`'s beats, upright | (ours) | riptide on land: the water clip's flat body over planted legs whipped the knees |
 | carries | stand, walk, run, sprint: shaft up, tipped ahead, tipped back, streaming back | (ours) | each within 118° of the next at every joint, so a blend never spins the fist. A quaternion blend across nearly 180° is what spun it |
 | `stands`, `takeoff` | 0.52, 0.07 s | (ours) | the frames the rules hand over on |
-| `WALK`, `RUN`, `SPRINT` | the clips' own gait: speed, duty, foot places | (ours) | used only on the Reaver's `run` and in the trunk's phase; on land the Warden's legs come from `TABLE` |
+| `WALK`, `RUN`, `SPRINT` | the clips' own gait: speed, duty, foot places | (ours) | the Reaver's `run` only; the Warden's come from the capture |
 | `GAMEPLAY` | forward carry and cancel after each blow | (ours) | older clips; `web/data/combat.json` rules these now |
-| hip height in the gait clips | -0.045, -0.075, -0.115 m | (ours) | lower with speed: a body going faster is carried lower |
+| hip height in the gait clips | read back from the feet: -0.03, -0.04, -0.11 m on average | the capture's | |
 | combat's clips | times from `reference/fluidity_ref_action_rpg.mp4` [RefClip], through `CLIP_REQUESTS.md` | measured by combat | wind-up 0.17-0.23 s, contact as requested, read back into `moves.json` as `contact` and `hit` from each clip's real point |
 | windows | hit from the point's speed over 55 % of its peak | (ours), read off each body's own clips | |
 

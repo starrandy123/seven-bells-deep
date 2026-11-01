@@ -31,6 +31,9 @@ const S = {
   flowland: { at: 'flat', steps: [ { s: 1.6, set: { my: 1 }, name: 'run' }, { s: 0.8, set: { my: 1, atk: true }, name: 'strike' }, { s: 0.9, set: { my: 1, dash: true }, name: 'dash' }, { s: 1.6, set: { my: 0 }, name: 'stop' } ] },
   cmp: { at: 'long', cam: 'near', label: 'in the game', steps: [ { s: 0.9, set: { my: 0.22 }, name: 'a' }, { s: 2.4, set: { my: 0.22 }, name: 'walk' }, { s: 0.8, set: { my: 0.66 }, name: 'b' }, { s: 2.4, set: { my: 0.66 }, name: 'jog' }, { s: 0.8, set: { my: 1 }, name: 'c' }, { s: 2.4, set: { my: 1 }, name: 'run' } ] },
   cmpraw: { at: 'long', cam: 'near', raw: 1, label: 'the raw capture on his body', steps: [ { s: 0.9, set: { my: 0.22 }, name: 'a' }, { s: 2.4, set: { my: 0.22 }, name: 'walk' }, { s: 0.8, set: { my: 0.66 }, name: 'b' }, { s: 2.4, set: { my: 0.66 }, name: 'jog' }, { s: 0.8, set: { my: 1 }, name: 'c' }, { s: 2.4, set: { my: 1 }, name: 'run' } ] },
+  startstop: { at: 'long', cam: 'near', steps: [ { s: 1.2, set: { my: 0 }, name: 'idle' }, { s: 2.0, set: { my: 1 }, name: 'start' }, { s: 1.8, set: { my: 0 }, name: 'stop' }, { s: 1.6, set: { my: 0.22 }, name: 'walk' }, { s: 2.2, set: { my: 0 }, name: 'stop2' } ] },
+  startstopback: { at: 'long', cam: 'back', steps: [ { s: 1.2, set: { my: 0 }, name: 'idle' }, { s: 2.0, set: { my: 1 }, name: 'start' }, { s: 1.8, set: { my: 0 }, name: 'stop' } ] },
+  sprintnear: { at: 'long', cam: 'near', steps: [ { s: 1.4, set: { my: 1 }, name: 'run' }, { s: 0.7, set: { my: 1, boost: true }, name: 'sprint' }, { s: 1.0, set: { my: 1, boost: false }, name: 'back' } ] },
   shore: { at: 'shore', steps: [ { s: 7.0, set: { my: 1 }, name: 'wade_out' }, { s: 1.0, set: { my: 0 }, name: 'stop' } ] },
 };
 
