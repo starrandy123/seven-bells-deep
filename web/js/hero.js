@@ -139,19 +139,21 @@ export async function createHero(G) {
   // ------------------------------------------------------------------ waterfalls he swims up (Randy, 1 Nov: "I need to also be able to swim up waterfalls")
   // Each fall is a column of water down its rock: the sheet walks out from the lip until it's clear of the ground at that height, exactly as world.js draws it, so the
   // water he swims in is the water he sees. Rows every metre down, each with the sheet's centre (game coordinates) and the way out from the rock.
+  // The column runs on down into the fall's pool (rivers.js digs it; world.js pours the sheet on under its surface), so he can start up from in the water.
   const FALLS = (G.world.data.waterfalls || []).map((f) => {
-    const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), H = f.z0 - f.z1, rows = Math.max(2, Math.ceil(H)); let o = 0; const row = [];
+    const bot = f.pool !== undefined ? Math.min(f.z1, f.pool - 0.25) : f.z1;
+    const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), H = f.z0 - bot, rows = Math.max(2, Math.ceil(H)); let o = 0; const row = [];
     for (let i = 0; i <= rows; i++) {
       const z = f.z0 - (H * i) / rows;
       for (; o < 60; o += 0.2) { const ly = -o; if (G.world.heightAt(f.x - ly * sn, f.y + ly * c) < z - 0.35) break; }
-      const ly = -(o + 0.35); row.push({ y: z, x: f.x - ly * sn, z: -(f.y + ly * c), hw: f.hwAt ? f.hwAt(i / rows) : f.w * 0.5 });      // the sheet's own width at this height (world.js)
+      const ly = -(o + 0.35); row.push({ y: z, x: f.x - ly * sn, z: -(f.y + ly * c), hw: f.hwAt ? f.hwAt(((f.z0 - z) / (f.z0 - f.z1))) : f.w * 0.5 });      // the sheet's own width at this height (world.js)
     }
     // out of the rock (game x, z): the sheet faces down its own local -y; along it: its local x
-    return { f, row, hw: f.w * 0.5, out: { x: sn, z: c }, side: { x: c, z: -sn }, top: f.z0, bot: f.z1 };
+    return { f, row, hw: f.w * 0.5, out: { x: sn, z: c }, side: { x: c, z: -sn }, top: f.z0, bot };
   });
-  // where a point sits on a fall: its height's row, how far across the sheet and how far out from it
+  // where a point sits on a fall: its height's row, how far across the sheet and how far out from it (standing in its pool counts: the foot of the column)
   function onFall(F, x, y, z) {
-    if (y < F.bot - 0.6 || y > F.top + 0.4) return null;
+    if (y < F.bot - 1.8 || y > F.top + 0.4) return null;
     const t = clamp((F.top - y) / (F.top - F.bot), 0, 1) * (F.row.length - 1), i = Math.min(F.row.length - 2, Math.floor(t)), u = t - i, a = F.row[i], b = F.row[i + 1];
     const cx = a.x + (b.x - a.x) * u, cz = a.z + (b.z - a.z) * u, dx = x - cx, dz = z - cz;
     return { cx, cz, hw: a.hw + (b.hw - a.hw) * u, across: dx * F.side.x + dz * F.side.z, outward: dx * F.out.x + dz * F.out.z };
@@ -296,7 +298,7 @@ export async function createHero(G) {
     // the shore both ways: a land ride runs on out over the sea, a sea ride runs on up the beach while Boost is held
     if (onLand && g < SURF_SHALLOW) s.land = false;
     else if (!onLand && g > SURF_SHALLOW && u.boost) s.land = true;
-    const base = s.land ? Math.max(g, waveY(h.pos.x, h.pos.z)) : waveY(h.pos.x, h.pos.z);
+    const base = s.land ? Math.max(g, waveY(h.pos.x, h.pos.z), riverY(h.pos.x, h.pos.z)) : waveY(h.pos.x, h.pos.z);      // over a river the ride runs on its water
     // off an edge on land: he flies off it, still on his water
     if (s.land && h.pos.y - (base + y + STAND * 0.86) > 1.6) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); return; }
     h.pos.y = s.land ? h.pos.y + clamp(base + y + STAND * 0.86 - h.pos.y, -12 * dt, 30 * dt) : base + y + STAND * 0.86; h.swellY = y; h.surfBase = base;
@@ -324,6 +326,9 @@ export async function createHero(G) {
     if (sprinting) { G.fx.ring(h.pos.clone().setY(h.pos.y - STAND + 0.1), 7, 0.55, 0xfff0c8); G.shake(0.25); G.audio.boom(); }
     G.audio.swing();
   }
+  // a river or a fall's pool under a game point (world.js waterAt reads Blender x, y): its surface and the way it runs, or null
+  const riverAt = (x, z) => (G.world.waterAt ? G.world.waterAt(x, -z) : null);
+  const riverY = (x, z) => { const w = riverAt(x, z); return w ? w.W : -Infinity; };
   function stepGround(u, dt, boosting) {
     const sy = Math.sin(G.camYaw), cy = Math.cos(G.camYaw); let wx = sy * u.my + right.x * u.mx, wz = cy * u.my + right.z * u.mx, amt = Math.min(1, Math.hypot(wx, wz));
     // a solid in the way: the part of the stick that pushes into it is lost and the rest runs along it, so he turns along a wall, or stands against one, and never stutters at it
@@ -337,7 +342,8 @@ export async function createHero(G) {
     const flat0 = Math.hypot(h.vel.x, h.vel.z);
     if (Math.abs(flat0 - h.spd) > 0.01 || (flat0 > 0.5 && (h.vel.x * moveX + h.vel.z * moveZ) / flat0 < 0.9)) { h.spd = flat0; if (flat0 > 0.5 && !(wallCut && h.pos.x === wallX && h.pos.z === wallZ)) h.heading = Math.atan2(h.vel.x, h.vel.z); }
     wallCut = false;
-    const g0 = groundAt(h.pos.x, h.pos.z), depth = Math.max(0, -g0), wade = 1 - 0.42 * smooth(0, 0.3, depth), sn = Math.sin(h.heading), cn = Math.cos(h.heading);
+    const g0 = groundAt(h.pos.x, h.pos.z), rw = riverAt(h.pos.x, h.pos.z), depth = Math.max(0, -g0, rw ? rw.W - g0 : 0), wade = 1 - 0.42 * smooth(0, 0.3, depth), sn = Math.sin(h.heading), cn = Math.cos(h.heading);
+    h.riverDepth = rw ? Math.max(0, rw.W - g0) : 0;
     // the ground ahead: he slows up a hill, and what's too steep he doesn't climb
     const ahead = (groundAt(h.pos.x + sn * 0.7, h.pos.z + cn * 0.7) - g0) / 0.7, hill = 1 - 0.3 * smooth(0.15, TAN_CLIMB, ahead) - 0.3 * smooth(TAN_CLIMB, TAN_WALL, ahead) + 0.12 * smooth(0.1, 0.6, -ahead);
     h.landSurfT = boosting && h.spd > LAND_SPRINT - 1.2 && !h.jumpPrep ? (h.landSurfT || 0) + dt : 0;
@@ -360,6 +366,8 @@ export async function createHero(G) {
     const moveYaw = h.heading + wrap(wishYaw - h.heading) * (1 - smooth(0.6, 3, h.spd)); moveX = Math.sin(moveYaw); moveZ = Math.cos(moveYaw);
     h.vel.set(moveX * h.spd, 0, moveZ * h.spd);
     moveOnGround(dt);
+    // a river's current leans on a wader: a drift down its course, more the deeper he stands (his own speed and facing are left alone)
+    if (rw && h.riverDepth > 0.25 && h.land && !h.air) { const k = rw.v * 0.32 * smooth(0.25, 0.9, h.riverDepth) * dt; slide(rw.vx * k, 0, -rw.vy * k, 0.42, true); }
     // the jump: a press, or one buffered a moment before he landed, or just after he ran off an edge
     if (h.jumpBuf > 0 && !h.jumpPrep && h.land && !h.air) { h.jumpBuf = 0; h.jumpPrep = JUMP_PREP; body.play(has('jump', 'leap'), 0.05, true); }
     if (h.jumpPrep) { h.jumpPrep -= dt; if (h.jumpPrep <= 0) { h.jumpPrep = 0; jumpNow(); } }

@@ -109,9 +109,24 @@ function frame(dt) {
   G.quest.draw(G.time);
   look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.life.update(dt, hero.pos); G.sky.update(dt, camera); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
   G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);
+  if (G.audio.freshwater && G.world.rivers) freshSound(hero.pos);
   G.ui.update(dt);
   look.render();
   G.stats.frames++;
+}
+
+// the fresh water's sound (audio.freshwater): a fall's roar from how near its foot is, a stream's chatter from how near its course is (more where it runs white).
+// Read four times a second: the river's samples are a few hundred.
+let freshT = 0, roar = 0, babble = 0;
+function freshSound(p) {
+  if ((freshT -= 1 / 60) <= 0) {
+    freshT = 0.25; const x = p.x, y = -p.z, P = G.world.rivers; roar = 0; babble = 0;
+    const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+    for (const pl of P.pools) roar = Math.max(roar, 1 - sm(8, 75, Math.hypot(x - pl.ft.x, y - pl.ft.y, (p.y - pl.W) * 0.5)));
+    for (const rv of P.rivers) for (let i = 0; i <= rv.N; i += 2) { const d = Math.hypot(x - rv.X[i], y - rv.Y[i]); if (d < 32) babble = Math.max(babble, (1 - sm(3, 30, d)) * (0.45 + 0.55 * rv.TURB[i])); }
+    if (p.y < -0.5) { roar *= 0.3; babble *= 0.2; }                  // under the sea, the land's water is far away
+  }
+  G.audio.freshwater(babble, roar);
 }
 
 boot().catch((e) => { console.error(e); const s = document.querySelector('#load small'); if (s) s.textContent = 'Something broke: ' + e.message; });

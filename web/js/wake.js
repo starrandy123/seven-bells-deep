@@ -46,20 +46,31 @@ export function createWake(G, h, mesh) {
   const NOISE = `float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }`;
   const RVS = 'attribute vec3 aA; varying vec3 vA; varying vec3 vW; void main() { vA = aA; vW = position; gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0); }';
-  const trM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uT: { value: 0 } }, vertexShader: RVS,
-    fragmentShader: `uniform float uT; varying vec3 vA; varying vec3 vW; ${NOISE}
+  // the stream's water (seen in the game, 1 Nov: at a second old it read as a white band, not water): clear running water, the sky in it at a glance and
+  // the sun glinting off its ripples, which run back along it; white only where it breaks: its fresh head, its two lips, a streak here and there.
+  // Lit and toned with the rest of the scene.
+  const LU = G.look && G.look.uniforms ? G.look.uniforms : null, v3 = (x, y, z) => ({ value: new THREE.Vector3(x, y, z) });
+  const trM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, vertexShader: RVS,
+    uniforms: { uT: { value: 0 }, uSun: LU ? LU.ocSunA : v3(0.4, 0.8, 0.3), uSkyZ: LU ? LU.ocSkyZ : v3(0.3, 0.5, 0.8), uSkyH: LU ? LU.ocSkyH : v3(0.7, 0.8, 0.9), uSunCol: LU ? LU.ocSunCol : v3(3, 2.8, 2.4) },
+    fragmentShader: `uniform float uT; uniform vec3 uSun, uSkyZ, uSkyH, uSunCol; varying vec3 vA; varying vec3 vW; ${NOISE}
       void main() {
         float age = vA.x, side = abs(vA.y), along = vA.z;                           // age 0..1, side 0 centre .. 1 edge, metres along the stream from its head
-        float s1 = vn(vec2(vA.y * 2.2, along * 0.55 - uT * 2.6)), s2 = vn(vec2(vA.y * 5.0 + 3.0, along * 1.4 - uT * 4.2)), s3 = vn(vW.xz * 3.0 + uT * 0.6);
-        float stream = s1 * 0.55 + s2 * 0.3 + s3 * 0.15;
-        float deep = 1.0 - smoothstep(0.0, 0.85, side);
-        vec3 water = mix(vec3(0.16, 0.50, 0.56), vec3(0.04, 0.27, 0.34), deep);
-        vec3 c = mix(water, vec3(0.70, 0.92, 0.96), smoothstep(0.55, 0.85, stream) * 0.55);      // the sky caught in the moving surface
-        float foam = smoothstep(0.42, 0.78, stream + side * 0.38 + (1.0 - smoothstep(0.0, 0.12, age)) * 0.5 + age * 0.25);
-        c = mix(c, vec3(0.95, 0.99, 1.0), foam * 0.85);
-        float a = (1.0 - smoothstep(0.6 + 0.25 * s3, 1.0, side)) * (1.0 - smoothstep(0.55, 1.0, age)) * mix(0.62, 0.95, max(deep * 0.7, foam));
+        float s1 = vn(vec2(vA.y * 1.6, along * 0.42 - uT * 3.1)), s2 = vn(vec2(vA.y * 3.7 + 3.0, along * 1.1 - uT * 4.6)), s3 = vn(vW.xz * 2.2 + uT * 0.7);
+        vec2 g = vec2(s1 - 0.5, s2 - 0.5) * 0.55 + (s3 - 0.5) * 0.25;
+        vec3 n = normalize(vec3(g.x, 1.0, g.y)), V = normalize(cameraPosition - vW);
+        float F = 0.02 + 0.98 * pow(1.0 - max(dot(V, n), 0.0), 5.0);
+        float deep = 1.0 - smoothstep(0.0, 0.9, side);
+        vec3 c = mix(mix(vec3(0.10, 0.30, 0.32), vec3(0.03, 0.17, 0.22), deep), mix(uSkyH, uSkyZ, 0.5), F * 0.9);
+        c += uSunCol * pow(max(dot(n, normalize(uSun + V)), 0.0), 140.0) * 1.4;
+        float lip = smoothstep(0.72, 0.98, side + (s2 - 0.5) * 0.3), head = 1.0 - smoothstep(0.0, 0.06, age);
+        float streak = smoothstep(0.70, 0.86, s1 * 0.6 + s2 * 0.4) * (1.0 - smoothstep(0.1, 0.5, age)) * 0.6;
+        float foam = clamp(max(max(lip * 0.8, head), streak), 0.0, 1.0);
+        c = mix(c, vec3(0.92, 0.97, 0.98), foam * 0.8);
+        float a = (1.0 - smoothstep(0.62 + 0.25 * s3, 1.0, side)) * (1.0 - smoothstep(0.45, 1.0, age)) * mix(0.38, 0.85, max(max(deep * 0.75, F), foam));
         if (a < 0.01) discard;
         gl_FragColor = vec4(c, a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
       }` });
   const wtM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { uT: { value: 0 } }, vertexShader: RVS,
     fragmentShader: `uniform float uT; varying vec3 vA; varying vec3 vW; ${NOISE}
@@ -71,7 +82,7 @@ export function createWake(G, h, mesh) {
       }` });
   const wet = new THREE.Mesh(wtG, wtM); wet.frustumCulled = false; wet.renderOrder = 1; G.scene.add(wet);
   const trail = new THREE.Mesh(trG, trM); trail.frustumCulled = false; trail.renderOrder = 2; G.scene.add(trail);
-  const trPts = []; let trT = 0; const TRAIL_LIFE = 5.0, TRAIL_W = 1.15;
+  const trPts = []; let trT = 0, lastStamp = null; const TRAIL_LIFE = 6.0, TRAIL_W = 1.15;
   const swell = new THREE.Mesh(swG, swM); swell.frustumCulled = false; swell.renderOrder = 2; swell.visible = true; G.scene.add(swell);
   let sprayT = 0, ringT = 0; const FOAM = new THREE.Color(0.94, 0.99, 1), SAND = new THREE.Color(0.86, 0.8, 0.66);
 
@@ -93,10 +104,10 @@ export function createWake(G, h, mesh) {
   h.onPlant = (l, ground) => {
     const sp = Math.hypot(h.vel.x, h.vel.z);
     if (h.land && sp > 9 && ground[1] > -0.1) for (let i = 0; i < 2; i++) puff(ground[0] + (Math.random() - 0.5) * 0.3, ground[1] + 0.16, ground[2] + (Math.random() - 0.5) * 0.3, 0.5 + sp * 0.02, 0.45 + sp * 0.012);
-    const depth = -h.groundAt(ground[0], ground[2]);
+    const gnd = h.groundAt(ground[0], ground[2]), rw = G.world.waterAt ? G.world.waterAt(ground[0], -ground[2]) : null, lvl = rw && rw.W > gnd ? rw.W : 0, depth = lvl - gnd;      // the sea, or a river's own surface
     if (h.land && depth > 0.12 && sp > 0.8) {          // each step in water throws a ring on the surface and drops up to the knees
-      spot.set(ground[0], 0.03, ground[2]); G.fx.ring(spot, 0.5 + sp * 0.16, 0.34, 0xe8fbff);
-      spot.y = Math.min(0.5, depth * 0.5 + 0.1); G.fx.sparks(spot, Math.min(9, 3 + (sp * 1.2 | 0)), 0xe8fbff, 2 + sp * 0.4);
+      spot.set(ground[0], lvl + 0.03, ground[2]); G.fx.ring(spot, 0.5 + sp * 0.16, 0.34, 0xe8fbff);
+      spot.y = lvl + Math.min(0.5, depth * 0.5 + 0.1); G.fx.sparks(spot, Math.min(9, 3 + (sp * 1.2 | 0)), 0xe8fbff, 2 + sp * 0.4);
       if ((kick++ & 1) === 0 && sp > 3) G.audio.bubble();
     }
   };
@@ -114,7 +125,11 @@ export function createWake(G, h, mesh) {
       const lx = x - cs * w, lz = z + sn * w, rx = x + cs * w, rz = z - sn * w, onSea = !h.surf.land;
       const sea = (px, pz) => (G.sky && G.sky.waveAt ? G.sky.waveAt(px, pz) : 0), at = (px, pz) => (onSea ? sea(px, pz) : Math.max(h.groundAt(px, pz), sea(px, pz)));
       trPts.unshift({ lx, lz, ly: at(lx, lz) + 0.07, rx, rz, ry: at(rx, rz) + 0.07, x, z, cx: cs, cz: -sn, w, t: 0 }); if (trPts.length > TRAIL) trPts.pop();
+      // what it leaves (Randy, 1 Nov: "The land surf should leave some water too"): the ground it ran over stays soaked, with water standing in it (wetmap.js)
+      if (G.world.wet && !onSea && lastStamp && h.groundAt(x, z) > 0.02) G.world.wet.stamp(lastStamp.x, lastStamp.z, x, z, w * 1.35, 0.95, 1);
+      lastStamp = { x, z };
     }
+    if (!surfing) lastStamp = null;
     for (const q of trPts) q.t += dt; while (trPts.length && trPts[trPts.length - 1].t > TRAIL_LIFE) trPts.pop();
     trail.visible = wet.visible = trPts.length > 1;
     if (trail.visible) {

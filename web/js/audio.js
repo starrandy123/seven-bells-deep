@@ -180,5 +180,18 @@ export function createAudio() {
   function setMood(m) { if (m !== mood) { mood = m; musicTimer = 0; } }
   function suspend(on) { if (!ctx) return; const p = on ? ctx.suspend() : ctx.resume(); if (p && p.catch) p.catch(() => {}); }
 
-  return { start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
+  // fresh water near him (rivers.js): a fall's roar, low and full, and a stream's chatter over it; each 0-1, set every frame from how near they are
+  let fw = null;
+  function freshwater(babble, roar) {
+    if (!ctx || (!fw && babble + roar < 0.01)) return;
+    if (!fw) {
+      const n = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), n2 = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g2 = ctx.createGain();
+      n.buffer = noiseBuf; n.loop = true; lp.type = 'lowpass'; lp.frequency.value = 760; g.gain.value = 0;
+      n2.buffer = noiseBuf; n2.loop = true; n2.playbackRate.value = 1.9; bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 0.8; g2.gain.value = 0;
+      n.connect(lp); lp.connect(g); g.connect(sfx); n2.connect(bp); bp.connect(g2); g2.connect(sfx); n.start(); n2.start(0, 1.3);
+      fw = { g, g2 };
+    }
+    const t = ctx.currentTime; fw.g.gain.setTargetAtTime(roar * 0.62 + babble * 0.07, t, 0.35); fw.g2.gain.setTargetAtTime(babble * 0.55 + roar * 0.35, t, 0.35);
+  }
+  return { start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, freshwater, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
 }
