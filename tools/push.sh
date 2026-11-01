@@ -2,7 +2,7 @@
 # Snapshot part2's web/, check it, leave build.zip ready. PART2_OUT=<your scratchpad> bash tools/push.sh <tag> <port>
 # Then: begin_bundle_upload with game_id and size, curl PUT the zip, finish_bundle_upload, playtest_game, node runner.mjs playtest <url> --no-window from ~/Documents under heavy.sh, get_playtest
 S=${PART2_OUT:?set PART2_OUT to your scratchpad}; tag=$1; port=$2; O=$S/up_$tag; rm -rf $O; mkdir -p $O
-cd ~/Documents/UnrealProjects/DrownedCity_part2 || exit 1
+cd "$(dirname "$0")/.." || exit 1
 for f in web/js/*.js web/js/*/*.js; do node --check "$f" 2>&1 | head -2; done
 for f in web/data/*.json web/assets/*.json; do python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$f" || echo BAD $f; done
 rsync -a --exclude dev --exclude dev.html --exclude look_test.html --exclude .DS_Store web/ $O/web/ && (cd $O/web && zip -q -r -X ../build.zip . -x '.DS_Store')

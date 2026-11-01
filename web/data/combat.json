@@ -195,7 +195,7 @@
   "ember": {
     "_doc": "the Emberkin (EPIC V2, V5). flight: speeds in m/s, accel in m/s2, heights in metres; turn_rad how fast the body swings to the jets' line. heat: 1 is burning; a hit of water takes `water`, of ice `ice`; the sea takes sea_per_s; at 0 it's doused: its jets die for doused_s, it falls, blows do doused_mul, and it relights at `relight`. raid: how a flyer comes in, in seconds and metres",
     "flight": { "boost_mps": 46, "cruise_mps": 30, "ring_mps": 12, "climb_mps": 11, "accel": 38, "brake_m": 70, "ring_m": 13.5, "hover_m": 5.5, "over_m": 4.5, "turn_rad": 7, "water_drag": 2.4, "fall_g": 17, "dive_m": 9 },
-    "heat": { "water": 0.34, "ice": 0.2, "sea_per_s": 0.5, "regain_per_s": 0.05, "doused_s": 3.6, "doused_mul": 2, "relight": 0.6 },
-    "raid": { "first_s": 24, "again_s": 45, "from_m": 300, "high_m": 80, "deepest_m": 30 }
+    "heat": { "water": 0.4, "ice": 0.2, "sea_per_s": 0.5, "regain_per_s": 0.05, "doused_s": 3.6, "doused_mul": 2, "relight": 0.6 },
+    "raid": { "first_s": 8, "new_player_s": 30, "again_s": 40, "from_m": 300, "high_m": 24, "deepest_m": 30 }
   }
 }

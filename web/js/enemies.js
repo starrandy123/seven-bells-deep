@@ -236,7 +236,7 @@ export async function createEnemies(G) {
     // the last of them: the moment leans out and the lens goes in
     if (e.enc && e.enc.list && e.enc.list.length && !e.enc.list.some((q) => q !== e && q.hp > 0 && !q.hidden)) { const Q = D.foeplay; G.slowT = Q.finish_s; G.slowK = Q.finish_k; G.fx.pushIn(e.pos, Q.finish_s * 1.5); G.combat.log.push({ t: G.time, type: 'finish', foe: e.kind }); G.audio.boom(); }
     if (!e.fishy && !broken) playClip(e, 'death', 0.08, true);
-    if (e.def.flyer) ember.died(e, broken);
+    if (e.def.flyer) { ember.died(e, broken); if (broken) e.slot.g.visible = false; e.frozen = 0; e.stagger = 0; return; }
     if (broken) e.slot.g.visible = false; else { G.fx.dissolve && G.fx.dissolve(e.pos, e.def.body); G.fx.bubbles(e.pos, 18, 1.4); }
     e.frozen = 0; e.stagger = 0; e.vel.multiplyScalar(0.4);
   }

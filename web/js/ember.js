@@ -70,7 +70,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   const shots = []; for (let i = 0; i < (phone ? 6 : 9); i++) shots.push({ on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, from: null, dmg: 0, back: false, cued: false, trailT: 0 });
   let X = null;      // what enemies.js lends: takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn, count
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
-  const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.10, 0.09, 0.09), STEAM = new THREE.Color(0.82, 0.86, 0.9);
+  const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9);
   const groundAt = (x, z) => G.world.heightAt(x, -z);
   const floorAt = (x, z) => Math.max(groundAt(x, z), 0);
   const probe = { x: 0, y: 0, z: 0 };
@@ -97,7 +97,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     switch (e.state) {
       case 'swimTo': { // in from the horizon, flat out, and rearing up to stop short of him
         faceGoing(e, dt); const b = v1.subVectors(h.pos, e.pos); b.y = 0; const flat = b.length() || 1, s = flat > Fl.brake_m ? Fl.boost_mps : Fl.cruise_mps;
-        goto(e, h.pos.x, heightFor(e), h.pos.z, s, Fl.accel, dt);
+        goto(e, h.pos.x, heightFor(e) + clamp((flat - 40) * 0.05, 0, 9), h.pos.z, s, Fl.accel, dt);      // low enough all the way in to stay above the horizon in a phone's frame, a line of fire coming at him
         if (flat < Fl.ring_m + 8) { e.state = 'circle'; e.t = rand(F.wait_s[0], F.wait_s[1]) + 2.2; e.ang = Math.atan2(e.pos.z - h.pos.z, e.pos.x - h.pos.x); }
         break;
       }
@@ -279,17 +279,17 @@ export async function createEmber(G, { foeMaterial, D }) {
         const L2 = L * 0.52, W2 = Wd * 0.46; G.fx.now(cell, v2.x + v3.x * L2, v2.y + v3.y * L2, v2.z + v3.z * L2, viewX.x * W2, viewX.y * W2, viewX.z * W2, v3.x * -L2, v3.y * -L2, v3.z * -L2, HOT, 1, 1.0, 0.8);
       }
       // the crown of fire: it stands straight up off his head and his speed lays it back
-      s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.56 * flick * (0.5 + 0.5 * e.heat), Wc = 0.27; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
+      s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
       G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.5);
       // seen from far off he's a light, and the sprite holds its size on the screen so a phone reads him at 40 m
-      if (far > 14) { const halo = Math.min(far * 0.07, 9); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, FIRE, clamp((far - 14) / 40, 0.1, 0.6)); }
+      if (far > 14) { const halo = Math.min(far * 0.075, 16); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, FIRE, clamp((far - 14) / 40, 0.1, 0.75)); }
       if ((e.smokeT = (e.smokeT || 0) - dt) <= 0) {
-        e.smokeT = sp > 14 ? 0.035 : 0.09; v1.copy(e.pos).addScaledVector(e.up, -0.9); const k = 0.5 + Math.min(1, sp / 30);
-        G.fx.sp('smoke', v1, k, sp > 14 ? 1.6 : 0.9, SMOKE, { s0: 0.3 * k, s1: 1.1 * k, a: 0.34, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 });
+        e.smokeT = sp > 14 ? 0.07 : 0.16; v1.copy(e.pos).addScaledVector(e.up, -0.9); const k = 0.45 + 0.5 * Math.min(1, sp / 30);
+        G.fx.sp('smoke', v1, k, sp > 14 ? 1.1 : 0.8, SMOKE, { s0: 0.26 * k, s1: 0.9 * k, a: 0.15, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 });
         if (Math.random() < 0.5) G.fx.sp('dot', v1, 0.1, 0.8, HOT, { s0: 0.11, s1: 0.03, hot: 0.8, add: 1, vx: e.vel.x * 0.2 + rand(-1.4, 1.4), vy: e.vel.y * 0.2 + rand(-1, 1.6), vz: e.vel.z * 0.2 + rand(-1.4, 1.4), grav: 3 });
       }
       // low over the sea the jets dig into it
-      const dy = e.pos.y; if (dy < 5.5 && groundAt(e.pos.x, e.pos.z) < 0 && (e.washT = (e.washT || 0) - dt) <= 0) { e.washT = 0.14; v1.set(e.pos.x, 0.06, e.pos.z); G.fx.ring(v1.clone(), 1.6 + (5.5 - dy) * 0.5, 0.5, 0xeaf6ff, Y); if (Math.random() < 0.5) G.fx.sp('smoke', v1, 1, 0.9, STEAM, { s0: 0.5, s1: 1.5, a: 0.3, add: 0.1, hot: 0, vy: 1.2, vx: rand(-2, 2), vz: rand(-2, 2), drag: 1, rot: Math.random() * 6.28 }); }
+      const dy = e.pos.y; if (dy < 5.5 && groundAt(e.pos.x, e.pos.z) < 0 && (e.washT = (e.washT || 0) - dt) <= 0) { e.washT = 0.1; const near = (5.5 - dy) / 5.5, k = 0.5 + near; for (let i = 0; i < 2; i++) { const a = Math.random() * 6.283, c = Math.cos(a), n = Math.sin(a); v1.set(e.pos.x + c * 0.7, 0.1, e.pos.z + n * 0.7); G.fx.sp('smoke', v1, k, 0.7, STEAM, { s0: 0.3 * k, s1: 1.1 * k, a: 0.16 + 0.16 * near, add: 0.1, hot: 0, vx: c * 5 * k, vy: 0.6, vz: n * 5 * k, drag: 1.6, rot: Math.random() * 6.28 }); } }
     }
     drawJetSound(e, far, lit);
   }
@@ -300,11 +300,11 @@ export async function createEmber(G, { foeMaterial, D }) {
   const R = { on: false, cool: Q.raid.first_s, list: [], told: false, kills: 0 };
   const quiet = () => { const b = G.boss; return G.playing && !G.paused && G.started && !(b && b.active) && !(G.quest && G.quest.cineOn && G.quest.cineOn()) && !(G.cine && G.cine.active) && G.enemies.count() === 0; };
   function raidNow(n = 1, from = null) {
-    const h = G.hero, yaw = G.camYaw + rand(-0.5, 0.5);
+    const h = G.hero, yaw = G.camYaw + rand(-0.15, 0.15);
     for (let i = 0; i < n; i++) {
-      const p = from ? from.clone() : new THREE.Vector3(h.pos.x + Math.sin(yaw) * -Q.raid.from_m + i * 18, Q.raid.high_m + i * 4, h.pos.z + Math.cos(yaw) * -Q.raid.from_m); const e = X.spawn('emberkin', p); if (e) R.list.push(e);
+      const p = from ? from.clone() : new THREE.Vector3(h.pos.x + Math.sin(yaw) * Q.raid.from_m + i * 18, Q.raid.high_m + i * 4, h.pos.z + Math.cos(yaw) * Q.raid.from_m); const e = X.spawn('emberkin', p); if (e) R.list.push(e);
     }
-    R.on = R.list.length > 0; if (R.on) { G.combat.log.push({ t: G.time, type: 'raid', n: R.list.length }); if (!FLAG.film) G.ui.toast && G.ui.toast('Fire on the horizon', 'An Emberkin is coming', 4); }
+    R.on = R.list.length > 0; if (R.on) { G.combat.log.push({ t: G.time, type: 'raid', n: R.list.length }); if (!FLAG.film) { if (h.pos.y < -3) G.ui.toast('Fire above the water', 'An Emberkin is coming. Go up and look at the sky', 6); else G.ui.toast('Fire on the horizon', 'An Emberkin is coming', 4); } }
     return R.list;
   }
   function raid(dt) {
@@ -321,7 +321,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, raids: R, shots, MAX,
     warm: [...pool.map((s) => s.g)],
-    use(x) { X = x; R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); },
+    use(x) { X = x; R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born(e) { e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
       const a = e.slot.acts; for (const n of WEIGHTS) { a[n].reset(); a[n].setEffectiveWeight(n === 'fly_hover' ? 1 : 0); a[n].play(); } },
   };
