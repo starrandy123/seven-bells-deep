@@ -61,6 +61,11 @@ async function boot() {
   // every program the game can ask for is built now, the pooled and hidden ones too, so a first shark can't stall a frame
   const hidden = []; scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
   await look.precompile(); for (const o of hidden) o.visible = false; G.fx.prewarm();
+  if (G.world.wet && G.world.wet.prewarm) G.world.wet.prewarm();
+  // a linked program still stalls at its first real draw, in the GPU process, where the page's clock can't see it (pace, 1 Nov: 253 ms at 9 s of play, no stage of the game).
+  // So one frame draws everything once now, in the same task as the frame that replaces it, behind the loading screen.
+  { const back = []; scene.traverse((o) => { if (!o.isMesh && !o.isPoints && !o.isLine && !o.isGroup) return; back.push([o, o.visible, o.frustumCulled, o.count]); o.visible = true; o.frustumCulled = false; if (o.isInstancedMesh && !o.count) o.count = 1; });
+    look.render(); for (const [o, v, f, c] of back) { o.visible = v; o.frustumCulled = f; if (o.isInstancedMesh) o.count = c; } }
 
   const sp = G.world.data.spawn, h = G.hero;
   h.pos.copy(W(sp.x, sp.y, sp.z)); h.heading = G.camYaw = sp.yaw || 0;

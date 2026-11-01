@@ -1157,7 +1157,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             #include <colorspace_fragment>
           }`,
       });
-      const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = wet ? 12 : fall ? 14 : 13; scene.add(mesh);
+      const mesh = new THREE.Mesh(g, m); mesh.name = kind; mesh.frustumCulled = false; mesh.renderOrder = wet ? 12 : fall ? 14 : 13; scene.add(mesh);
       return mesh;
     };
     return { river: rg ? make(rg.P, rg.A, rg.I, 'river', rg.B) : null, falls: make(fpos, fflow, fidx, 'fall', fgeo), wet: make(wpos, wflow, widx, 'wet'), mist: fallsMist };
