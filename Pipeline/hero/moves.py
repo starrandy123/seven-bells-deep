@@ -1241,7 +1241,7 @@ def meta(sk, clips):
     for name, c in clips.items():
         dur = c['n'] / FPS; e = {'dur': round(dur, 4), 'loop': c['loop'], 'hit': None, 'reach': 0.0, 'arc_deg': 0.0, 'lunge': GAMEPLAY.get(name, {}).get('lunge', 0.0), 'cancel': round(dur, 3)}
         if c.get('gait'): e['gait'] = c['gait']
-        if c.get('once'): e['once'] = c['once']
+        if c.get('once'): e['once'] = {'on': c['once']['on']}
         if c.get('blow') is not None:
             first = int(c['blow'] * FPS)
             a, b, peak, sp, pts = blow_window(sk, c, first); top = sp[peak]

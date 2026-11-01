@@ -44,4 +44,4 @@ def main():
                 line(px, w, h, (ox - 40, oy), (ox + 40, oy), (70, 80, 90))
                 for a, b, co in BONES: line(px, w, h, pt(P[a]), pt(P[b]), COL[co])
     png(out, w, h, px); print(out, w, h)
-main()
+if __name__ == '__main__': main()

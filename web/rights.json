@@ -1,7 +1,7 @@
 {
  "schema": "mosa.rights.v1",
  "searched": "The files: every file in this build. Our own index.html, js/*.js and the assets written by our own scripts in DrownedCity/Pipeline (Blender and numpy, seeded); assets/hero.glb and assets/reaver.glb start from two Microsoft Rocketbox avatars, changed by our scripts; vendor/three. Rocketbox's licence file is carried in licenses/.",
- "mine": "The game's code, rules, shaders, HUD and all its sound (Web Audio, no sound files); the world of Thalor: its seabed, coral, kelp, rock, ruins, statue, arena, shrines and bells; the whale, sharks, rays, turtles, jellies, fish, dolphins and the Leviathan (modelled by our Blender scripts); the Warden's armour, trident and mantle, the Reavers' armour and spears, and every swim and fight move (keyed by our Python scripts). The Warden and Thalor are original: not a comic-book character, not a famous game.",
+ "mine": "The game's code, rules, shaders, HUD and all its sound (Web Audio, no sound files); the world of Thalor: its seabed, coral, kelp, rock, ruins, statue, arena, shrines and bells; the whale, sharks, rays, turtles, jellies, fish, dolphins and the Leviathan (modelled by our Blender scripts); the Warden's armour, trident and mantle, the Reavers' armour and spears, and every swim and fight move, with the walk and run taken from the Rocketbox motion named below (keyed by our Python scripts). The Warden and Thalor are original: not a comic-book character, not a famous game.",
  "others": [
   {
    "what": "three.js r185, the 3D library, carried in vendor/three",
@@ -26,6 +26,12 @@
    "by": "NotesMosaic",
    "license": "MIT-0",
    "from": "https://notesmosaic.com/mcp/port-kit.js"
+  },
+  {
+   "what": "The Warden's walk, jog, run, sprint and standing motion in assets/hero.glb and assets/hero_phone.glb: Microsoft Rocketbox animations m_walk_neutral_01, m_run_neutral_01, m_run_fast_01, m_idle_neutral_01, m_run_start, m_run_stop, m_walk_start, m_walk_stop",
+   "by": "Microsoft",
+   "license": "MIT",
+   "from": "https://github.com/microsoft/Microsoft-Rocketbox"
   }
  ]
 }

@@ -60,7 +60,7 @@ const M1 = async (page, stamp) => page.evaluate((hz) => {
       if (h.speed > (out.speeds[name] || 0)) out.speeds[name] = +h.speed.toFixed(1);
     }
   };
-  run('walk', { my: 0.22, mx: 0, ud: 0, boost: false }, 3, 5); run('jog', { my: 0.55, mx: 0, ud: 0, boost: false }, 2.5, 5); run('run', { my: 1, mx: 0, ud: 0, boost: false }, 2.5, 5); run('sprint', { my: 1, mx: 0, ud: 0, boost: true }, 2.2, 5, 8.7);
+  run('walk', { my: 0.22, mx: 0, ud: 0, boost: false }, 3, 5); run('jog', { my: 0.55, mx: 0, ud: 0, boost: false }, 2.5, 5); run('run', { my: 1, mx: 0, ud: 0, boost: false }, 2.5, 5); run('sprint', { my: 1, mx: 0, ud: 0, boost: true }, 2.2, 5, 9.1);
   return out;
 }, stamp);
 
@@ -84,12 +84,12 @@ await section(['M1b', 'M1s', 'M1c', 'M6a'], async () => {
     // every step's length in time, against the speed at it: walk, jog, run, then a sprint and on up to super
     const room = () => { const s = R.sea; R.room(() => 6); R.at(s.x - s.ax * 140, -s.y + s.ay * 140, Math.atan2(s.ax, -s.ay)); }; const starts = []; const steps = (wish, n, noSuper) => { room(); h.boostFuel = 1; Q.drive(wish); let was = b.legs.map((l) => l.down), last = -1, nth = 0; const list = []; for (let i = 0; i < n; i++) { if (noSuper) h.boostHeld = 0; G.frame(dt); b.legs.forEach((l, k) => { if (l.down && !was[k]) { if (last >= 0) { const rate = 1 / ((i - last) * dt); if (++nth > 2) list.push([h.spd, rate]); else starts.push([h.spd, rate, nth]); } last = i; } was[k] = l.down; }); } return list; };      // the first steps of a start aren't a cadence yet, so M1b leaves them out; M1s reads them, because a leg that flickers at every start is seen at every start (QA, second reader)
     const all = [...steps({ my: 0.22, mx: 0, ud: 0, boost: false }, 300), ...steps({ my: 0.55, mx: 0, ud: 0, boost: false }, 240), ...steps({ my: 1, mx: 0, ud: 0, boost: false }, 240), ...steps({ my: 1, mx: 0, ud: 0, boost: true }, 300), ...steps({ my: 1, mx: 0, ud: 0, boost: true }, 300, true)];
-    for (const [s, rate] of all) { if (s <= 8.8 && rate > out.top) { out.top = rate; out.topAt = s.toFixed(1); } }
+    for (const [s, rate] of all) { if (s <= 9.2 && rate > out.top) { out.top = rate; out.topAt = s.toFixed(1); } }
     out.starts = starts.map((x) => [+x[0].toFixed(1), +x[1].toFixed(2), x[2]]); R.room(null); const fast = all.filter((x) => x[0] > 34); out.fast = fast.length ? fast.reduce((a, x) => a + x[1], 0) / fast.length : 0; out.n = all.length;
-    out.at = [1.3, 3.9, 5.9, 8.7, 20, 36].map((s) => { const near = all.filter((x) => Math.abs(x[0] - s) < 1.2); return near.length ? `${s} m/s ${(near.reduce((a, x) => a + x[1], 0) / near.length).toFixed(2)}/s` : ''; }).filter(Boolean);
+    out.at = [1.3, 3.9, 5.9, 9.1, 20, 36].map((s) => { const near = all.filter((x) => Math.abs(x[0] - s) < 1.2); return near.length ? `${s} m/s ${(near.reduce((a, x) => a + x[1], 0) / near.length).toFixed(2)}/s` : ''; }).filter(Boolean);
     // the hips over a walk, and where in the step they're lowest
-    const walk = () => { R.at(L.x, L.z, L.yaw); Q.drive({ my: 0.22, mx: 0, ud: 0, boost: false }); for (let i = 0; i < 70; i++) G.frame(dt); const ys = [], marks = []; let was = b.legs.map((l) => l.down); for (let i = 0; i < 150; i++) { G.frame(dt); hips.getWorldPosition(v); ys.push(v.y - G.world.heightAt(h.pos.x, -h.pos.z)); b.legs.forEach((l, k) => { if (l.down && !was[k]) marks.push(i); was[k] = l.down; }); } let sum = 0, n = 0; for (let m = 0; m + 1 < marks.length; m++) { const a = marks[m], c = marks[m + 1]; let lo = a; for (let i = a; i < c; i++) if (ys[i] < ys[lo]) lo = i; sum += (lo - a) / (c - a); n++; } return { bob: (Math.max(...ys) - Math.min(...ys)) * 100, low: n ? sum / n : -1 }; };
-    out.walk = walk(); return out;
+    const walk = () => { room(); Q.drive({ my: 0.22, mx: 0, ud: 0, boost: false }); for (let i = 0; i < 70; i++) G.frame(dt); const ys = [], marks = []; let was = b.legs.map((l) => l.down); for (let i = 0; i < 150; i++) { G.frame(dt); hips.getWorldPosition(v); ys.push(v.y - G.world.heightAt(h.pos.x, -h.pos.z)); b.legs.forEach((l, k) => { if (l.down && !was[k]) marks.push(i); was[k] = l.down; }); } let sum = 0, n = 0; for (let m = 0; m + 1 < marks.length; m++) { const a = marks[m], c = marks[m + 1]; let lo = a; for (let i = a; i < c; i++) if (ys[i] < ys[lo]) lo = i; sum += (lo - a) / (c - a); n++; } return { bob: (Math.max(...ys) - Math.min(...ys)) * 100, low: n ? sum / n : -1 }; };
+    out.walk = walk(); R.room(null); return out;
   });
   line('M1b', r.top <= 5 && r.top > 3 && r.n > 20, `the step rate stays at or under 5 a second up to sprint: most ${r.top.toFixed(2)}, at ${r.topAt} m/s; ${r.at.join(', ')}`);
   { const top = r.starts.reduce((a, x) => (x[1] > a[1] ? x : a), [0, 0, 0]); line('M1s', r.starts.length >= 8 && top[1] <= 5, `a start's first two steps, which M1b leaves out, at or under M1b's own 5 a second: most ${top[1].toFixed(2)}/s, step ${top[2]} of a start, at ${top[0]} m/s, over ${r.starts.length} steps: ${r.starts.map((x) => x[1].toFixed(1)).join(' ')}`); }
@@ -570,6 +570,22 @@ await section(['M20', 'M20b'], async () => {
   const say = (r, k) => `${r.where} ${r[k].map(deg).join(', ')}°`;
   line('M20', both.every((r) => r.on === 'c' && r.turned.every((a, i) => Math.abs(a - r.want[i]) <= Math.abs(r.want[i]) * 0.15)), `a swipe on the right of the screen turns the camera by the swipe: ${both.map((r) => say(r, 'turned')).join(' · ')}, wanted ${water.want.map(deg).join(', ')}° (within 15 %), on ${both.map((r) => r.on).join(', ')}`);
   line('M20b', both.every((r) => r.drift.every((a) => Math.abs(a) < 0.02)), `the camera stops when the thumb lifts: in the next 1.5 s ${both.map((r) => say(r, 'drift')).join(' · ')} (under 1.1°)`);
+  await o.close();
+});
+// M4s: a start and a stop are the capture's, on feet that stay down --------------------
+await section(['M4s', 'M4t'], async () => {
+  const o = await open1();
+  const r = await o.page.evaluate(() => {
+    const Q = window.__qa, G = window.__game, h = G.hero, b = h.body, R = window.__rig, dt = 1 / 60, V = h.pos.constructor, s = R.sea, go = { my: 1, mx: 0, ud: 0, boost: false }, none = { my: 0, mx: 0, ud: 0, boost: false };
+    R.room(() => 6); const home = () => R.at(s.x - s.ax * 140, -s.y + s.ay * 140, Math.atan2(s.ax, -s.ay));
+    // how far a foot that's down moves in a frame, through this stretch
+    const watch = (N, each) => { let worst = 0, held = [false, false], kinds = ['', ''], was = [new V(), new V()], cur = [new V(), new V()]; for (let i = 0; i < N; i++) { G.frame(dt); if (each) each(i); b.legs.forEach((l, k) => { const kind = R.kind(l); R[kind](l, cur[k]); if (l.down && held[k] && kind === kinds[k]) worst = Math.max(worst, cur[k].distanceTo(was[k]) * 100); held[k] = l.down; kinds[k] = kind; was[k].copy(cur[k]); }); } return worst; };
+    home(); Q.drive(none); for (let i = 0; i < 30; i++) G.frame(dt); Q.drive(go); let name = '', first = -1; const startSlide = watch(60, (i) => { if (b.loco && !name) { name = b.loco; first = i; } });
+    home(); Q.drive(go); for (let i = 0; i < 120; i++) G.frame(dt); const from = h.spd; Q.drive(none); let sName = '', sFirst = -1, end = -1; const stopSlide = watch(150, (i) => { if (b.loco && !sName) { sName = b.loco; sFirst = i; } if (end < 0 && h.spd < 0.05) end = i; });
+    const both = b.legs.every((l) => l.down); R.room(null); return { name, first, startSlide, sName, sFirst, stopSlide, end, from, both };
+  });
+  line('M4s', /run_start|walk_start/.test(r.name) && r.first >= 0 && r.first <= 6 && r.startSlide <= 3, `a start is the capture's: ${r.name || 'none'} within ${r.first} frames of the press (≤ 6), a foot that's down moves at most ${r.startSlide.toFixed(2)} cm a frame (≤ 3)`);
+  line('M4t', /run_stop/.test(r.sName) && r.sFirst >= 0 && r.sFirst <= 21 && r.stopSlide <= 3 && r.end >= 0 && r.both, `a stop is the capture's: ${r.sName || 'none'} within ${r.sFirst} frames of letting go from ${r.from.toFixed(1)} m/s (≤ 21), a foot that's down moves at most ${r.stopSlide.toFixed(2)} cm a frame (≤ 3), still at ${(r.end / 60).toFixed(2)} s, both feet down ${r.both}`);
   await o.close();
 });
 // a probe, not a wall: a run, frame by frame

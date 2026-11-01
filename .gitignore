@@ -20,8 +20,6 @@ Pipeline/hero/probe/
 Pipeline/film/unreal/logs*
 Pipeline/film/unreal/cache/
 Pipeline/film/tmp/
-# the whole video is kept as parts; rebuild it with: cat reel/takes/IMG_0633_1080p.mp4.part-* > reel/takes/IMG_0633_1080p.mp4
-reel/takes/IMG_0633_1080p.mp4
 
 # scraped pages, not ours to keep
 Pipeline/research/scratch/
