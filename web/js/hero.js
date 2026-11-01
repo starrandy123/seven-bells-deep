@@ -133,6 +133,63 @@ export async function createHero(G) {
     if (t > g && t <= feet + 0.7) g = t;
     const s = solidTop(x, z, feet + STEP_UP); return s > g ? s : g;
   };
+  // ------------------------------------------------------------------ waterfalls he swims up (Randy, 1 Nov: "I need to also be able to swim up waterfalls")
+  // Each fall is a column of water down its rock: the sheet walks out from the lip until it's clear of the ground at that height, exactly as world.js draws it, so the
+  // water he swims in is the water he sees. Rows every metre down, each with the sheet's centre (game coordinates) and the way out from the rock.
+  const FALLS = (G.world.data.waterfalls || []).map((f) => {
+    const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), H = f.z0 - f.z1, rows = Math.max(2, Math.ceil(H)); let o = 0; const row = [];
+    for (let i = 0; i <= rows; i++) {
+      const z = f.z0 - (H * i) / rows;
+      for (; o < 60; o += 0.2) { const ly = -o; if (G.world.heightAt(f.x - ly * sn, f.y + ly * c) < z - 0.35) break; }
+      const ly = -(o + 0.35); row.push({ y: z, x: f.x - ly * sn, z: -(f.y + ly * c) });
+    }
+    // out of the rock (game x, z): the sheet faces down its own local -y; along it: its local x
+    return { f, row, hw: f.w * 0.5, out: { x: sn, z: c }, side: { x: c, z: -sn }, top: f.z0, bot: f.z1 };
+  });
+  // where a point sits on a fall: its height's row, how far across the sheet and how far out from it
+  function onFall(F, x, y, z) {
+    if (y < F.bot - 0.6 || y > F.top + 0.4) return null;
+    const t = clamp((F.top - y) / (F.top - F.bot), 0, 1) * (F.row.length - 1), i = Math.min(F.row.length - 2, Math.floor(t)), u = t - i, a = F.row[i], b = F.row[i + 1];
+    const cx = a.x + (b.x - a.x) * u, cz = a.z + (b.z - a.z) * u, dx = x - cx, dz = z - cz;
+    return { cx, cz, across: dx * F.side.x + dz * F.side.z, outward: dx * F.out.x + dz * F.out.z };
+  }
+  const CLIMB_V = 6.5, CLIMB_BOOST = 11, CLIMB_SIDE = 3.2, CLIMB_OUT = 0.55;      // m/s up the falls, boosted, across them; how far out from the sheet's centre he swims
+  function fallNear() {
+    for (const F of FALLS) { const q = onFall(F, h.pos.x, h.pos.y, h.pos.z); if (q && Math.abs(q.across) < F.hw + 0.4 && q.outward > -1.2 && q.outward < 2.4) return { F, q }; }
+    return null;
+  }
+  // in: he's at the water and pushing into it (toward the rock or up), or comes down into it from a jump
+  function tryClimb(u, wishX, wishZ) {
+    if (!FALLS.length || h.climb || h.state !== 'swim' || h.surf || h.ride) return false;
+    const n = fallNear(); if (!n) return false;
+    const into = -(wishX * n.F.out.x + wishZ * n.F.out.z);
+    if (!(into > 0.35 || (h.air && h.vel.y < 0) || (u.ud > 0.5))) return false;
+    h.climb = n.F; h.air = false; h.land = false; h.grounded = false; h.breach = null; h.jumps = 0; h.vel.set(0, 0, 0); h.porpoise = null; h.driveT = 0;
+    G.fx.bubbles(h.pos.clone(), 14, 0.8); G.audio.splash(); if (G.quest) G.quest.note('falls');
+    return true;
+  }
+  function stepClimb(u, dt, boosting) {
+    const F = h.climb, q = onFall(F, h.pos.x, h.pos.y, h.pos.z);
+    if (!q || Math.abs(q.across) > F.hw + 0.8) { h.climb = null; leave(0); return; }
+    // the stick: forward or up is up the water, back is down it, sideways runs across the sheet
+    const up = clamp(u.my + Math.max(0, u.ud), -1, 1), side = clamp(u.mx, -1, 1), vUp = (boosting ? CLIMB_BOOST : CLIMB_V) * up;
+    // across, measured against the camera: the sheet's own side, signed so stick-right goes to the screen's right
+    const sr = (F.side.x * right.x + F.side.z * right.z) >= 0 ? 1 : -1, vSide = CLIMB_SIDE * side * sr;
+    h.vel.y = damp(h.vel.y, vUp, 6, dt);
+    const across = clamp(q.across + vSide * dt, -F.hw + 0.3, F.hw - 0.3), outward = damp(q.outward, CLIMB_OUT, 8, dt);
+    const ny = h.pos.y + h.vel.y * dt, q2 = onFall(F, h.pos.x, ny, h.pos.z) || q;
+    h.pos.set(q2.cx + F.side.x * across + F.out.x * outward, ny, q2.cz + F.side.z * across + F.out.z * outward);
+    // facing the rock, a breath of speed into it so the body points at the water, head up the fall
+    h.vel.x = -F.out.x * 0.6 + F.side.x * vSide; h.vel.z = -F.out.z * 0.6 + F.side.z * vSide;
+    h.heading = Math.atan2(-F.out.x, -F.out.z);
+    if (Math.random() < dt * 6) G.fx.bubbles(h.pos.clone(), 2, 0.4);
+    // over the top: up and over the lip into the water above it
+    if (h.pos.y >= F.top - 0.1 && up > 0) { h.climb = null; leave(7.5); h.vel.x = -F.out.x * 4.5; h.vel.z = -F.out.z * 4.5; h.jumps = 1; splash(0.6); return; }
+    // down to its foot: on his feet
+    if (h.pos.y <= F.bot + STAND && up < 0) { h.climb = null; const g = groundAt(h.pos.x, h.pos.z); if (h.pos.y - g <= STAND + 0.6) { h.land = true; h.grounded = true; h.pos.y = g + STAND; h.spd = 0; } else leave(0); return; }
+    // Jump lets go: a kick off the water, away from the rock
+    if (h.jumpBuf > 0) { h.jumpBuf = 0; h.climb = null; leave(6); h.vel.x = F.out.x * 5; h.vel.z = F.out.z * 5; h.jumps = 1; }
+  }
   // out of anything that moved into him. A solid never lifts a walker, unless it's straight under him (he has come down onto its top) or he was put right inside one: then he stands on it
   function settle() { const x = h.pos.x, y = h.pos.y, z = h.pos.z; if (!collide(0.42)) return; const up = h.pos.y - y; if (up < 0.6 && (up <= 0 || Math.hypot(h.pos.x - x, h.pos.z - z) > 0.002)) h.pos.y = y; }
   // collide and slide (Fauerby): he goes as far as he can, and what's left of the move runs along what he met. `flat` keeps him at his height: a walker is stopped by a wall, never lifted
@@ -404,7 +461,9 @@ export async function createHero(G) {
     if (u.jump) { h.jumpBuf = BUFFER; u.jump = false; } else h.jumpBuf = Math.max(0, h.jumpBuf - dt);
     const heldJump = u.jumpHeld !== undefined ? u.jumpHeld : TOUCH ? true : u.ud > 0;
     h.coyote = Math.max(0, h.coyote - dt);
-    if (h.air) stepAir(u, dt, heldJump);
+    if (!h.climb && (h.land || h.air) && inputAmt + Math.max(0, u.ud) > 0.2) tryClimb(u, wish.x, wish.z);
+    if (h.climb) stepClimb(u, dt, u.boost && inputAmt > 0.2);
+    else if (h.air) stepAir(u, dt, heldJump);
     else if (h.state === 'surf') stepSurf(u, dt);
     else if (h.state === 'swim' && h.land) stepGround(u, dt, boosting);
     else if (h.state === 'swim') {
@@ -423,23 +482,23 @@ export async function createHero(G) {
     }
 
     // a tap of Jump in the water, with no aiming: near the surface he drives up and out on his own; deeper, one strong kick up. A dip between two leaps keeps all his speed
-    if (h.state === 'swim' && !h.land && !h.air) {
+    if (h.state === 'swim' && !h.land && !h.air && !h.climb) {
       h.keepT = Math.max(0, (h.keepT || 0) - dt);
       if (h.jumpBuf > 0) { const deep = waveY(h.pos.x, h.pos.z) - h.pos.y; h.jumpBuf = 0; h.driveV = Math.max(h.speed, h.keepT > 0 ? h.keepV : 0); h.driveT = deep <= DRIVE_NEAR ? (deep + 1.2) / DRIVE_V + 0.1 : DRIVE_DEEP; G.fx.bubbles(h.pos, 12, 0.7); G.audio.bubble(); }
       if (h.driveT > 0) { h.driveT -= dt; h.vel.y = Math.max(h.vel.y, DRIVE_V); }
       if (h.porpoise) { const p = h.porpoise; p.t += dt; h.vel.x = p.x; h.vel.z = p.z; h.vel.y = p.up * (2 * Math.min(p.t / PORPOISE_T, 1) - 1); if (p.t > PORPOISE_T + 0.3) h.porpoise = null; }
     } else if (!h.air) { h.driveT = 0; h.porpoise = null; }
     if (h.land && !h.air && h.state !== 'swim') stepGroundIdle(dt);       // a blow, a parry, a hit on land: carried by the blow's own speed, on the ground
-    else if (!h.air && !h.land && h.state !== 'surf') slide(h.vel.x * dt, h.vel.y * dt, h.vel.z * dt, 0.62, false);
+    else if (!h.air && !h.land && h.state !== 'surf' && !h.climb) slide(h.vel.x * dt, h.vel.y * dt, h.vel.z * dt, 0.62, false);
 
     // the shore: he comes up onto his feet where he can stand with his head out, and the height never jumps
-    if (!h.air && !h.land && h.state !== 'surf') {
+    if (!h.air && !h.land && h.state !== 'surf' && !h.climb) {
       const g = groundAt(h.pos.x, h.pos.z);
       if (g + STAND >= SWIM_Y && h.pos.y < 0.5) { h.land = true; h.grounded = true; h.spd = Math.hypot(h.vel.x, h.vel.z); if (G.quest) G.quest.note('land'); }
     }
 
     // the surface: gentle at low speed, a leap when you hit it fast, or when you ask
-    if (h.state === 'surf') { /* the swell has him */ }
+    if (h.state === 'surf' || h.climb) { /* the swell, or a fall, has him */ }
     else if (!h.air && !h.land) {
       if (h.pos.y > SWIM_Y) {
         if (h.state === 'swim' && h.porpoise) breach(h.porpoise.v);
@@ -476,7 +535,7 @@ export async function createHero(G) {
         h.pitchT = damp(h.pitchT, h.air && !h.breach ? clamp(Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), -0.35, 0.35) : Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), h.breach ? 10 : 6, dt);
       } else { h.heading = wrap(h.heading + wrap(G.camYaw - h.heading) * (1 - Math.exp(-2.4 * dt))); h.bank = damp(h.bank, 0, 4, dt); h.pitchT = damp(h.pitchT, 0, 3, dt); }
     } else { h.bank = damp(h.bank, 0, 8, dt); }
-    const tiltGoal = h.breach ? 1.46 : h.land || h.air || h.state === 'surf' ? 0 : h.state === 'swim' ? smooth(1.6, 5, h.speed) * 1.42 + h.surge * 0.1 : (h.tiltGoal ?? 0.18);
+    const tiltGoal = h.climb ? 1.3 : h.breach ? 1.46 : h.land || h.air || h.state === 'surf' ? 0 : h.state === 'swim' ? smooth(1.6, 5, h.speed) * 1.42 + h.surge * 0.1 : (h.tiltGoal ?? 0.18);
     h.tiltTo = tiltGoal; h.tilt = damp(h.tilt, tiltGoal, h.state === 'attack' || h.breach ? 12 : 5, dt);
     stepSfx += h.speed * dt;
     if ((boosting || (h.tideTier || 0) > 1) && !h.land && stepSfx > 2.5) { stepSfx = 0; G.fx.bubbles(h.pos.clone(), 3 + (h.surge * 4 | 0) + (h.tideTier || 0) * 2, 0.5 + (h.tideTier || 0) * 0.2); }
