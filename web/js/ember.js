@@ -307,7 +307,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     const reach = 3 + 10 * spool, gy = Math.max(groundAt(p.x, p.z), 0), d = p.y - 0.9 - gy; if (d > reach || d < -1 || (box.washT = (box.washT || 0) - dt) > 0) return;
     const near = 1 - clamp(d / reach, 0, 1), wet = gy <= 0.02, col = wet ? FOAM : DUST; box.washT = 0.045 + 0.07 * (1 - near); v1.set(p.x, gy + 0.12, p.z);
     for (let i = 0; i < 2; i++) { const a = Math.random() * 6.283, c = Math.cos(a), n = Math.sin(a), r = 0.3 + 1.4 * (1 - near), vel = 5 + 10 * near; v2.set(v1.x + c * r, v1.y, v1.z + n * r); G.fx.sp('smoke', v2, 1, 0.6 + 0.5 * Math.random(), col, { s0: 0.5, s1: 1.8 + 1.8 * near, a: (wet ? 0.34 : 0.36) * (0.35 + 0.65 * near), add: 0, hot: 0, vx: c * vel, vz: n * vel, vy: wet ? 2.2 : 0.7, drag: 1.5, rot: Math.random() * 6.28 }); }
-    if ((box.ringT = (box.ringT || 0) - dt) <= 0) { box.ringT = 0.38; G.fx.ring(v1.clone(), 2.5 + 3.5 * near, 0.6, wet ? 0xe8fbff : 0xd8c8b0, Y); }
+    if (wet && (box.ringT = (box.ringT || 0) - dt) <= 0) { box.ringT = 0.38; G.fx.ring(v1.clone(), 2.5 + 3.5 * near, 0.6, 0xe8fbff, Y); }
   }
   function draw(e, dt) {
     const s = e.slot, g = s.g, sp = e.vel.length(), Fl = Q.flight;

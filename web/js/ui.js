@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Fire flies like a real suit now: Boost and Jump take off, he holds at the top, tap Fly. Let go of the stick to hover';
+const NEWS = 'Fire: hold Boost to run on the jets, Jump for a big fire jump, then in the air hold Fly to fly or hover. Slide your thumb on Fly to look';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -128,6 +128,7 @@ export function createUI(G) {
   const lookUp = (e) => { if (e.pointerId === lookId) lookId = null; if (e.pointerId === stickId && floatStick) stickUp(e); };
   addEventListener('pointerup', lookUp); addEventListener('pointercancel', lookUp);
 
+  let thumbX = 0, thumbY = 0, thumbMoved = false;
   const hold = (id, name, isHold) => {
     const b = $(id); b.classList.add('show');
     b.addEventListener('pointerdown', (e) => {
@@ -135,7 +136,10 @@ export function createUI(G) {
       if (isHold) { held[name] = true; if (name === 'boostB' && G.settings.toggleBoost) boostLatch = !boostLatch; } else if (name === 'ride') doContext(); else press(name);
       if (name === 'call') held.callB = true;
       try { b.setPointerCapture(e.pointerId); } catch (_) {}
+      thumbX = e.clientX; thumbY = e.clientY; thumbMoved = false;
     });
+    // a thumb held on Boost or Fly also turns the view when it slides: flying takes both thumbs, and the look can't wait for one to come free
+    if (name === 'boostB') b.addEventListener('pointermove', (e) => { if (!held.boostB) return; const dx = e.clientX - thumbX, dy = e.clientY - thumbY; if (!thumbMoved && Math.hypot(dx, dy) < 9) return; thumbMoved = true; input.yaw -= dx * 0.0052 * sens(); input.pitch -= dy * 0.0052 * sens(); thumbX = e.clientX; thumbY = e.clientY; });
     const up = () => { b.classList.remove('down'); if (isHold) held[name] = false; if (name === 'call') held.callB = false; };
     b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
     return b;
@@ -226,13 +230,13 @@ export function createUI(G) {
     const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
     const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
     $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
-    $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Boost and Jump take off, then Fly. Super goes all fire' : 'Back to the sea', 4); });
+    $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Hold Boost to run on the jets, Jump to take off, then Fly. Super goes all fire' : 'Back to the sea', 4); });
     { let saved = null; try { saved = localStorage.getItem('thalor.side'); } catch (_) { /* water, then */ } G.sideNow = 'water'; if (saved === 'fire' && !FLAG.film) { G.ember.setSide('fire', { place: true, quiet: true }); if (G.quest) G.quest.endTitle(); } paintSide(); }
     setTimeout(() => screens.map.warm(), 1200);
     // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
     for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + BUILD;
     const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen && seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };      // only to someone who was here before it
-    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); if (G.sideNow === 'fire') toast('You are the fire', 'Boost and Jump take off, then Fly. Super goes all fire', 6); };
+    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); if (G.sideNow === 'fire') toast('You are the fire', 'Hold Boost to run on the jets, Jump to take off, then Fly. Super goes all fire', 6); };
     $('dive').addEventListener('click', go);
     let sure = false;
     $('newGame').addEventListener('click', () => {
@@ -383,7 +387,7 @@ export function createUI(G) {
 
   let flyShown = false;
   function update(dt) {
-    { const f = !!(G.hero && G.hero.fireAir); if (f !== flyShown) { flyShown = f; bBoost.textContent = f ? 'Fly' : 'Boost'; bBoost.setAttribute('aria-label', f ? 'Fly' : 'Boost'); } }      // from the moment he takes off, Boost is Fly
+    { const f = !!(G.hero && G.sideNow === 'fire' && G.hero.air && !G.hero.skim); if (f !== flyShown) { flyShown = f; bBoost.textContent = f ? 'Fly' : 'Boost'; bBoost.setAttribute('aria-label', f ? 'Fly' : 'Boost'); } }      // from the moment he takes off, Boost is Fly
     if (cueT > 0 && (cueT -= dt) <= 0) bParry.classList.remove('call');
     for (const id in timers) { if ((timers[id] -= dt) <= 0) hide(id); }
     feedStep(dt);

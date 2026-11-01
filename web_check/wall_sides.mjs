@@ -25,10 +25,10 @@ await section(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], async () => {
   const air = await page.evaluate(() => { const h = window.__game.hero; return { air: h.air, fireAir: h.fireAir, y: +h.pos.y.toFixed(1), label: document.getElementById('bBoost').textContent }; });
   const eased = ups.every((v, i) => !i || v >= ups[i - 1] - 3);
   line('S4', air.fireAir && air.label === 'Fly' && eased, `Boost and Jump take off, the lift eased in: speed up ${ups.join(' ')}, and Boost reads "${air.label}"`);
-  await page.evaluate(() => window.__qa.drive({ boost: true, my: 0, mx: 0 })); await page.waitForTimeout(100); await page.evaluate(() => window.__qa.drive({ boost: false, my: 0, mx: 0 })); await page.waitForTimeout(600);
-  const fly = await page.evaluate(() => { const h = window.__game.hero; return { fly: h.fly, y: +h.pos.y.toFixed(1) }; }); await page.waitForTimeout(700); const still = await page.evaluate(() => +window.__game.hero.pos.y.toFixed(1));
-  await page.evaluate(() => window.__qa.drive({ jumpHeld: true, my: 0, mx: 0 })); await page.waitForTimeout(900); const gl = await page.evaluate(() => { const h = window.__game.hero; return { vy: +h.vel.y.toFixed(1), y: +h.pos.y.toFixed(1), fly: h.fly }; }); await page.evaluate(() => window.__qa.drive({ jumpHeld: false, my: 0, mx: 0 }));
-  line('S5', fly.fly && Math.abs(still - fly.y) < 2.5 && gl.vy < -1.5 && gl.vy > -6.5, `a press of Fly holds him up (${fly.y} then ${still} m), and Jump held glides him down at ${gl.vy} m/s`);
+  await page.evaluate(() => window.__qa.drive({ boost: true, my: 0, mx: 0 })); await page.waitForTimeout(1500);
+  const fly = await page.evaluate(() => { const h = window.__game.hero; return { fly: h.fly, y: +h.pos.y.toFixed(1), vy: +h.vel.y.toFixed(1) }; }); await page.waitForTimeout(700); const still = await page.evaluate(() => +window.__game.hero.pos.y.toFixed(1));
+  await page.evaluate(() => window.__qa.drive({ boost: false, jumpHeld: true, my: 0, mx: 0 })); await page.waitForTimeout(900); const gl = await page.evaluate(() => { const h = window.__game.hero; return { vy: +h.vel.y.toFixed(1), y: +h.pos.y.toFixed(1), fly: h.fly }; }); await page.evaluate(() => window.__qa.drive({ jumpHeld: false, my: 0, mx: 0 }));
+  line('S5', fly.fly && Math.abs(still - fly.y) < 2.5 && !gl.fly && gl.vy < -1.5 && gl.vy > -6.5, `Fly held hovers him (${fly.y} then ${still} m), and let go with Jump held he glides down at ${gl.vy} m/s`);
   await page.evaluate(() => { const b = window.__game.ember; b.heroSuper(); }); await page.waitForTimeout(300);
   const sup = await page.evaluate(() => { const H = window.__game.ember.heroForm; return { man: H.man.visible, fire: H.fire.visible, t: H.sup }; }); line('S6', sup.fire && !sup.man, `Super: the all-fire form: ${JSON.stringify(sup)}`);
   await page.screenshot({ path: `${out}/super_fire.jpg`, type: 'jpeg', quality: 80 });
