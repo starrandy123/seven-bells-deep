@@ -1131,26 +1131,31 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             vec2 huv = (vec2(vP.x - ocMap.x, -vP.z - ocMap.y)/ocMap.z + .5)/ocMap.w;
             float dep = vG.x - texture(tOcHeight, huv).r;
             float tau = vF.x, across = vF.y, turb = vF.w, churn = vG.y;
-            // (the noise tile holds ~48 cells: a ripple a metre or two across is a few hundredths of the tile, and finer than that would only alias into stripes)
-            float a = texture(tOcNoise, vec2(across*.019 + .37, (tau - t)*.020)).b;
-            float b = texture(tOcNoise, vec2(across*.043 + .11 + t*.0021, (tau - t*.82)*.047)).a;
-            float c3 = mix(texture(tOcNoise, vec2(across*.10 + .73 - t*.0035, (tau - t*1.18)*.11)).b, .5, smoothstep(14.0, 40.0, dist));
-            float rough = .16 + .8*turb + 1.1*churn;                                            // a calm run is nearly a mirror; rapids and a fall's churn break it up
-            vec3 n = normalize(vec3(((a - .5)*.45 + (b - .5)*.35 + (c3 - .5)*.3)*rough, 1.0, ((b - .5)*.45 + (c3 - .5)*.35 - (a - .5)*.15)*rough));
+            // (the noise tile holds ~48 cells: a ripple of a metre is ~.02 of the tile; finer than ~.1 a metre only aliases into stripes, so the finest layer
+            // gives way with distance)
+            float a = texture(tOcNoise, vec2(across*.025 + .37, (tau - t)*.028)).b;
+            float b = texture(tOcNoise, vec2(across*.055 + .11 + t*.002, (tau - t*.82)*.06)).a;
+            float c3 = mix(texture(tOcNoise, vec2(across*.12 + .73 - t*.003, (tau - t*1.2)*.13)).b, .5, smoothstep(10.0, 34.0, dist));
+            float rough = .34 + .8*turb + 1.1*churn;
+            vec3 n = normalize(vec3(((a - .5)*.5 + (b - .5)*.42 + (c3 - .5)*.36)*rough, 1.0, ((b - .5)*.5 + (c3 - .5)*.4 - (a - .5)*.2)*rough));
             float F = .02 + .98*pow(1.0 - max(dot(-rd, n), 0.0), 5.0);
             vec3 Rr = reflect(rd, n);
-            vec3 sky = mix(ocSkyH, ocSkyZ, smoothstep(0.0, .6, Rr.y));
+            // what it mirrors: the sky overhead, the green of its own banks toward its edges and low down (no water reads as water mirroring only the sky)
+            float edgeK = smoothstep(.35, 1.05, abs(across)/vF.z);
+            vec3 refl = mix(mix(ocSkyH, ocSkyZ, smoothstep(0.0, .6, Rr.y)), vec3(.05, .085, .045), clamp(.22 + .5*edgeK + .3*(1.0 - smoothstep(.0, .25, Rr.y)), 0.0, .85));
             float deep = smoothstep(.06, 1.3, dep);
-            vec3 body = mix(vec3(.07, .12, .09), mix(ocSeaS, ocSeaD, .6)*.42, deep);             // clear over the shallows (the bed shows, drawn wet), tea-green as it deepens
-            vec3 c = mix(body, sky*.92, F*.85);
+            vec3 body = mix(vec3(.09, .12, .07), mix(ocSeaS, ocSeaD, .6)*.42, deep);              // clear over the shallows (the bed shows, drawn wet), tea-green as it deepens
+            vec3 c = mix(body, refl, F*.78);
             vec3 Hh = normalize(ocSunA - rd);
-            c += ocSunCol*(.55 + .8*turb)*pow(max(dot(n, Hh), 0.0), 220.0);                     // glints
+            c += ocSunCol*(.55 + .8*turb)*pow(max(dot(n, Hh), 0.0), 200.0);                      // glints
+            // bubbles and scum drawn out along the current (it reads as moving water even where it's calm); white in the rapids and the churn under a fall
+            float strk = smoothstep(.64, .82, texture(tOcNoise, vec2(across*.07 + .51, (tau - t)*.010)).b)*(1.0 - smoothstep(.55, 1.0, abs(across)/vF.z));
             float fn = texture(tOcNoise, vec2(across*.06 + .2, (tau - t)*.065)).b*.6 + c3*.4;
             float white = smoothstep(.70 - .38*turb - .5*churn, .94 - .22*churn, fn + b*.15)*max(turb, churn);
             float lace = (1.0 - smoothstep(.02, .20, dep))*smoothstep(.45, .74, c3*.6 + a*.4);
             vec3 foamC = ocHaze*1.2 + vec3(.06);
-            c = mix(c, foamC, clamp(max(white, lace*.75), 0.0, 1.0));
-            float alpha = smoothstep(0.0, .10, dep)*mix(.22, .84, max(max(deep, F*.85), max(white, lace)))*vG.z;
+            c = mix(c, foamC, clamp(max(max(white, lace*.75), strk*.32), 0.0, 1.0));
+            float alpha = smoothstep(0.0, .10, dep)*mix(.24, .86, max(max(deep, F*.85), max(white, lace)))*vG.z;
             if (alpha < .004) discard;`}
             gl_FragColor = vec4(ocApply(c, vP), alpha);
             #include <tonemapping_fragment>
