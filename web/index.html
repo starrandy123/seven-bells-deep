@@ -67,27 +67,31 @@
   #fade.on { opacity: 1; }
   #speedv { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 48%, rgba(190, 245, 255, 0.34) 86%, rgba(230, 252, 255, 0.6)); }
 
-  /* ---- the thumb cluster: every button a 12 px gap from its neighbour (C3), three rows of arc upright, three columns turned ---- */
+  /* ---- the thumb cluster: a diamond around Strike (Jump above, Parry left, Boost right), the equipped power beside it, and a hotbar of
+         small slots over it that EQUIPS a power (tap a slot; tap the equipped one again to use it). Randy, 1 Nov: "minimalistic diamond
+         design ... and a hotbar to equip different powers". Six big targets, as in Colosseum, instead of twelve. ---- */
   .btn { position: absolute; pointer-events: auto; border-radius: 50%; display: none; align-items: center; justify-content: center; text-align: center; color: var(--ink); touch-action: none;
-         font-weight: 800; font-size: 17px; letter-spacing: -0.3px; line-height: 1.05; padding: 0; overflow-wrap: anywhere; background: rgba(6, 34, 54, 0.74); border: 2px solid rgba(160, 240, 255, 0.56); width: 66px; height: 66px; box-sizing: border-box; }
+         font-weight: 800; font-size: 15px; letter-spacing: -0.3px; line-height: 1.05; padding: 0; overflow-wrap: anywhere; background: rgba(6, 34, 54, 0.62); border: 2px solid rgba(160, 240, 255, 0.5); width: 62px; height: 62px; box-sizing: border-box; }
   .btn.show { display: flex; } .btn.down { background: rgba(26, 120, 150, 0.94) !important; border-color: #fff !important; transform: scale(0.93); }
   body:not(.touch) .btn::after { content: attr(data-key); position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 700; padding: 0 5px; border-radius: 6px; background: rgba(4, 22, 40, 0.92); color: var(--gold); white-space: nowrap; }
-  .btn.cool { color: rgba(234, 252, 255, 0.8); background: rgba(6, 34, 54, 0.5); border-color: rgba(160, 240, 255, 0.3); }
+  .btn.cool { color: rgba(234, 252, 255, 0.7); background: rgba(6, 34, 54, 0.42); border-color: rgba(160, 240, 255, 0.26); }
   .btn.call { background: #ffd678; color: #2a1a00; border-color: #fff; transform: scale(1.18); transition: transform 0.08s; box-shadow: 0 0 26px rgba(255, 214, 120, 0.9); }
-  #bAtk { width: 92px; height: 92px; right: var(--right); bottom: var(--bottom); font-size: 20px; background: rgba(96, 62, 10, 0.84); border-color: #ffe0a0; }
-  #bBoost { right: calc(var(--right) + 104px); bottom: var(--bottom); }
-  #bParry { right: calc(var(--right) + 13px); bottom: calc(var(--bottom) + 104px); }
-  #bDash { right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + 78px); }
-  #bSpin { right: calc(var(--right) + 13px); bottom: calc(var(--bottom) + 182px); }
-  #bWave { right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + 156px); }
-  #bP4 { right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + 234px); }
-  #bCall { right: calc(var(--right) + 104px); bottom: calc(var(--bottom) + 312px); background: rgba(84, 28, 78, 0.8); }
-  #bCast { right: calc(var(--right) + 182px); bottom: calc(var(--bottom) + 312px); background: rgba(24, 58, 96, 0.8); }
-  #bCast.call { border-color: #ffe0a0; }
-  #bJump { right: calc(var(--right) + 182px); bottom: calc(var(--bottom) + 156px); background: rgba(24, 58, 96, 0.8); }
-  #bStance { right: calc(var(--right) + 182px); bottom: calc(var(--bottom) + 234px); background: rgba(24, 58, 96, 0.8); border-color: #9ff4ff; }
-  body[data-stance=ice] #bStance { background: rgba(70, 96, 130, 0.86); border-color: #e4f6ff; }
-  #bRide { right: calc(var(--right) + 13px); bottom: calc(var(--bottom) + 260px); background: rgba(14, 84, 68, 0.84); border-color: #bff5dc; }
+  /* the diamond: its centre 118 px in from the right and 120 px up, each button 78 px from it */
+  #bAtk { width: 84px; height: 84px; right: calc(var(--right) + 76px); bottom: var(--bottom); font-size: 18px; background: rgba(96, 62, 10, 0.8); border-color: #ffe0a0; }
+  #bJump { right: calc(var(--right) + 87px); bottom: calc(var(--bottom) + 167px); }
+  #bParry { right: calc(var(--right) + 165px); bottom: calc(var(--bottom) + 89px); }
+  #bBoost { right: calc(var(--right) + 9px); bottom: calc(var(--bottom) + 89px); }
+  /* the equipped power, at the diamond's free corner */
+  #bPow { right: calc(var(--right) + 9px); bottom: calc(var(--bottom) + 167px); background: rgba(24, 58, 96, 0.78); border-color: #ffe0a0; font-size: 13px; }
+  body[data-stance=ice] #bPow { background: rgba(70, 96, 130, 0.82); border-color: #e4f6ff; }
+  #bRide { right: var(--right); bottom: calc(var(--bottom) + 297px); background: rgba(14, 84, 68, 0.84); border-color: #bff5dc; }
+  /* the hotbar: one row of small slots over the diamond; a locked slot takes no room */
+  #hotbar { position: absolute; right: var(--right); bottom: calc(var(--bottom) + 241px); display: flex; flex-direction: row-reverse; gap: 6px; pointer-events: none; }
+  #hotbar .btn { position: relative; width: 44px; height: 44px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0; background: rgba(4, 22, 40, 0.56); border-width: 1.5px; border-color: rgba(160, 240, 255, 0.32); }
+  #hotbar .btn.eq { border-color: #ffe0a0; background: rgba(96, 62, 10, 0.62); box-shadow: 0 0 10px rgba(255, 214, 120, 0.5); }
+  #hotbar #bStance { border-color: #9ff4ff; }
+  body[data-stance=ice] #hotbar #bStance { background: rgba(70, 96, 130, 0.7); border-color: #e4f6ff; }
+  #bCast.call, #bPow.out { border-color: #ffe0a0; }
   #stick { position: absolute; left: calc(var(--left) + 10px); bottom: var(--bottom); width: 132px; height: 132px; border-radius: 50%; display: none; pointer-events: auto; touch-action: none;
            background: rgba(6, 40, 62, 0.34); border: 2px solid rgba(160, 240, 255, 0.42); }
   body.touch #stick { display: block; }
@@ -106,8 +110,6 @@
 
   /* a short phone upright: the Call moves over the stick, so the feed has room */
   @media (max-height: 740px) and (min-height: 461px) {
-    #bCall { right: auto; left: calc(var(--left) + 10px); bottom: calc(var(--bottom) + 144px); }
-    #bCast { right: auto; left: calc(var(--left) + 10px); bottom: calc(var(--bottom) + 220px); }
     #feed { max-height: calc(100vh - var(--top) - var(--bottom) - 508px); }
   }
   /* turned: the lead band sits between the vitals and the pause button, the feed between the stick and the cluster */
@@ -116,14 +118,13 @@
     #lead { top: var(--top); left: calc(var(--left) + 184px); right: calc(var(--right) + 76px); }
     #obj { max-width: min(46vw, 420px); }
     #compass { width: min(40vw, 320px); }
-    #feed { top: calc(var(--top) + 100px); left: calc(var(--left) + 152px); right: calc(var(--right) + 346px); max-height: calc(100vh - var(--top) - var(--bottom) - 100px); }
+    #feed { top: calc(var(--top) + 100px); left: calc(var(--left) + 152px); right: calc(var(--right) + 250px); max-height: calc(100vh - var(--top) - var(--bottom) - 170px); }
     #toast b { font-size: 26px; }
-    #bJump { right: calc(var(--right) + 182px); bottom: var(--bottom); }
-    #bP4 { right: calc(var(--right) + 182px); bottom: calc(var(--bottom) + 78px); }
-    #bCall { right: calc(var(--right) + 182px); bottom: calc(var(--bottom) + 156px); }
-    #bStance { right: calc(var(--right) + 260px); bottom: var(--bottom); }
-    #bRide { right: calc(var(--right) + 260px); bottom: calc(var(--bottom) + 78px); }
-    #bCast { right: calc(var(--right) + 260px); bottom: calc(var(--bottom) + 156px); }
+    /* turned: the diamond is lower (Jump beside Boost), the hotbar runs along the bottom left of it */
+    #bJump { right: calc(var(--right) + 9px); bottom: calc(var(--bottom) + 167px); }
+    #bPow { right: calc(var(--right) + 165px); bottom: calc(var(--bottom) + 167px); }
+    #hotbar { right: calc(var(--right) + 244px); bottom: var(--bottom); }
+    #bRide { right: calc(var(--right) + 244px); bottom: calc(var(--bottom) + 56px); }
   }
 
   /* ---- talking ---- */
@@ -224,13 +225,16 @@
   <div class="btn" id="bAtk" data-key="J">Strike</div>
   <div class="btn" id="bBoost" data-key="Shift">Boost</div>
   <div class="btn" id="bParry" data-key="L">Parry</div>
-  <div class="btn" id="bDash" data-key="K">Riptide</div>
-  <div class="btn" id="bSpin" data-key="Q">Mael&shy;strom</div>
-  <div class="btn" id="bWave" data-key="E">Wave</div>
-  <div class="btn" id="bP4" data-key="G">Geyser</div>
-  <div class="btn" id="bStance" data-key="X">Water</div>
-  <div class="btn" id="bCall" data-key="R">Call</div>
-  <div class="btn" id="bCast" data-key="V">Cast</div>
+  <div class="btn" id="bPow" aria-label="Use the equipped power">Power</div>
+  <div id="hotbar">
+    <div class="btn" id="bStance" data-key="X">Water</div>
+    <div class="btn" id="bDash" data-key="K">Riptide</div>
+    <div class="btn" id="bSpin" data-key="Q">Mael&shy;strom</div>
+    <div class="btn" id="bWave" data-key="E">Wave</div>
+    <div class="btn" id="bP4" data-key="G">Geyser</div>
+    <div class="btn" id="bCast" data-key="V">Cast</div>
+    <div class="btn" id="bCall" data-key="R">Call</div>
+  </div>
   <div class="btn" id="bRide" data-key="F">Ride</div>
   <div class="btn" id="bJump" data-key="Space">Jump</div>
   <div id="pauseB" aria-label="Pause">II</div>
