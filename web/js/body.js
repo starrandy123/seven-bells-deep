@@ -435,7 +435,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     else if (m === 'surf') {
       surfT = (surfT + dc * (0.75 + 0.75 * smooth(8, 26, h.surf ? h.surf.v : 0))) % (CL.surf_stand ? CL.surf_stand.dur : 2); const c = h.carve || 0, w = Math.abs(c), side = c > 0 ? 'surf_carve_R' : 'surf_carve_L';
       sample('surf_stand', surfT, 1 - w); if (w > 1e-3) sample(side, surfT * (CL[side] ? CL[side].dur / (CL.surf_stand ? CL.surf_stand.dur : 2) : 1), w);
-    } else if (m === 'air' && h.fly && CL.fly_hover) { airT += dc; const f = clamp(speed / 13, 0, 1), b = clamp((speed - 22) / 10, 0, 1); sample('fly_hover', airT % CL.fly_hover.dur, 1 - f); sample('fly_forward', airT % CL.fly_forward.dur, f * (1 - b)); sample('fly_boost', airT % CL.fly_boost.dur, f * b); }
+    } else if (m === 'air' && h.flyPose && CL.fly_hover) { airT += dc; const f = clamp(speed / 13, 0, 1), b = clamp((speed - 22) / 10, 0, 1); sample('fly_hover', airT % CL.fly_hover.dur, 1 - f); sample('fly_forward', airT % CL.fly_forward.dur, f * (1 - b)); sample('fly_boost', airT % CL.fly_boost.dur, f * b); }
     else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
     else if (m === 'air') { airT += dc; sample(has('fall') ? 'fall' : 'idle_tread', airT % (has('fall') ? CL.fall.dur : 3), 1); }
     else if (h.ride && CL.ride_grip) { rideT = (rideT + dc) % CL.ride_grip.dur; sample('ride_grip', rideT, 1); }

@@ -394,11 +394,11 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
   function heroBurn(dt) {
     if (!H2.on) return; const h = G.hero, B = h.bones; if (H2.sup > 0 && (H2.sup -= dt) <= 0) { H2.cool = Q.super.hero_again_s; showHero(); burst(v1.copy(h.pos), 12, 1); } if (H2.cool > 0) H2.cool -= dt;
-    const sup = H2.sup > 0; if (!h.fly && !sup) return;
+    const sup = H2.sup > 0, burning = h.flyPose; if (!burning && !sup) return;
     h.root.updateMatrixWorld(true); B.spine_3.getWorldPosition(v1); B.hips.getWorldPosition(v2); H2.up.subVectors(v1, v2).normalize();
-    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : 0.5, flick = 0.82 + 0.3 * Math.random(); if (h.fly || sup) jetsOf(H2.pairs, H2.up, thrust, flick * (h.fly ? 1 : 0.5), FIRE, HOT, 0.55, 0.8);
+    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); jetsOf(H2.pairs, H2.up, thrust, flick * (burning ? 1 : 0.5), FIRE, HOT, 0.55, 0.8);
     if (sup) { const cam = G.camera.position; B.head.getWorldPosition(v1); v1.addScaledVector(H2.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(h.vel, -0.5).normalize(); const Lc = 0.42 * flick, Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize(); G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.55); }
-    if (h.fly) { loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.07 : 0.16; v1.copy(h.pos).addScaledVector(H2.up, -0.9); G.fx.sp('smoke', v1, 0.7, h.speed > 14 ? 1.1 : 0.8, SMOKE, { s0: 0.2, s1: 0.7, a: 0.14, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 }); } }
+    if (burning) { loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.07 : 0.16; v1.copy(h.pos).addScaledVector(H2.up, -0.9); G.fx.sp('smoke', v1, 0.7, h.speed > 14 ? 1.1 : 0.8, SMOKE, { s0: 0.2, s1: 0.7, a: 0.14, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 }); } }
   }
 
   function step(dt) {

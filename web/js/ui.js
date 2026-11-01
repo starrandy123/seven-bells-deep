@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Pick Water or Fire on the home screen, switch from Pause. Fire: hold Jump to fly, Super goes all fire';
+const NEWS = 'Pick Water or Fire on the home screen, switch from Pause. Fire: Boost and Jump take off, then tap Fly. Hold Jump to glide';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -226,13 +226,13 @@ export function createUI(G) {
     const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
     const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
     $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
-    $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Hold Jump to fly. Super goes all fire' : 'Back to the sea', 4); });
+    $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Boost and Jump take off, then Fly. Super goes all fire' : 'Back to the sea', 4); });
     { let saved = null; try { saved = localStorage.getItem('thalor.side'); } catch (_) { /* water, then */ } G.sideNow = 'water'; if (saved === 'fire' && !FLAG.film) { G.ember.setSide('fire', { place: true, quiet: true }); if (G.quest) G.quest.endTitle(); } paintSide(); }
     setTimeout(() => screens.map.warm(), 1200);
     // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
     for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + BUILD;
     const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen && seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };      // only to someone who was here before it
-    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); if (G.sideNow === 'fire') toast('You are the fire', 'Hold Jump to fly. Super goes all fire', 6); };
+    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); if (G.sideNow === 'fire') toast('You are the fire', 'Boost and Jump take off, then Fly. Super goes all fire', 6); };
     $('dive').addEventListener('click', go);
     let sure = false;
     $('newGame').addEventListener('click', () => {
@@ -381,7 +381,9 @@ export function createUI(G) {
     wp.classList.add('on'); wp.style.transform = `translate(${proj.x.toFixed(1)}px,${proj.y.toFixed(1)}px)`;
   }
 
+  let flyShown = false;
   function update(dt) {
+    { const f = !!(G.hero && G.hero.fireAir); if (f !== flyShown) { flyShown = f; bBoost.textContent = f ? 'Fly' : 'Boost'; bBoost.setAttribute('aria-label', f ? 'Fly' : 'Boost'); } }      // from the moment he takes off, Boost is Fly
     if (cueT > 0 && (cueT -= dt) <= 0) bParry.classList.remove('call');
     for (const id in timers) { if ((timers[id] -= dt) <= 0) hide(id); }
     feedStep(dt);

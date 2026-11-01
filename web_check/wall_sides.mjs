@@ -2,6 +2,7 @@
 //   node wall_sides.mjs <base> <chromium|webkit>
 import { gate } from './lib/h.mjs';
 const { line, note, open, section, finish, out } = await gate('wall_sides', { budget: 150 });
+const QA = '/Users/randy/Documents/UnrealProjects/DrownedCity_fire/web_check/lib/qa_page.js'; void QA;
 const TURNED = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const tap = async (page, sel) => { const b = await page.locator(sel).boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); };
 await section(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], async () => {
@@ -18,13 +19,16 @@ await section(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], async () => {
   const labels = await page.evaluate(() => ['bStance', 'bDash', 'bSpin', 'bWave', 'bP4', 'bCast', 'bCall'].map((i) => document.getElementById(i).textContent + (document.getElementById(i).classList.contains('locked') ? ' (locked)' : '')));
   line('S3', labels[0] === 'Fire' && labels[6] === 'Super' && !labels.some((l) => /locked/.test(l)), `his hotbar is the fire kit, nothing locked: ${labels.join(', ')}`);
   await page.screenshot({ path: `${out}/play_fire.jpg`, type: 'jpeg', quality: 80 });
-  // Jump, then Jump again: the jets
-  await tap(page, '#bJump'); await page.waitForTimeout(280); await tap(page, '#bJump'); await page.waitForTimeout(500);
-  const fly = await page.evaluate(() => { const h = window.__game.hero; return { fly: h.fly, air: h.air, y: h.pos.y }; });
-  line('S4', fly.fly, `Jump and Jump again takes off, by the button: ${JSON.stringify(fly)}`);
-  const y0 = fly.y; { const b = await page.locator('#bJump').boundingBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2, c = await ctx.newCDPSession(page).catch(() => null); if (c) { await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy }] }); await page.waitForTimeout(1500); await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); } else await page.evaluate(() => { window.__qa && 0; }); }
-  await page.waitForTimeout(200); const hi = await page.evaluate(() => { const h = window.__game.hero; return { y: h.pos.y, fly: h.fly }; });
-  line('S5', hi.fly && (hi.y > y0 + 3 || /webkit/.test(String(page.context().browser().browserType().name()))), `held Jump climbs: ${y0.toFixed(1)} to ${hi.y.toFixed(1)} m`);
+  // his flight: Boost and Jump together, then Boost reads Fly. Driven through the input the buttons feed, since two thumbs held at once can't be tapped from here in WebKit
+  await page.evaluate(() => { const Q = window.__qa, G = window.__game; window.__ys = []; Q.drive({ boost: true, jump: true, my: 0, mx: 0 }); }); await page.waitForTimeout(120); await page.evaluate(() => { window.__qa.drive({ boost: false, my: 0, mx: 0 }); });
+  const ups = []; for (let i = 0; i < 6; i++) { await page.waitForTimeout(90); ups.push(await page.evaluate(() => +window.__game.hero.vel.y.toFixed(1))); }
+  const air = await page.evaluate(() => { const h = window.__game.hero; return { air: h.air, fireAir: h.fireAir, y: +h.pos.y.toFixed(1), label: document.getElementById('bBoost').textContent }; });
+  const eased = ups.every((v, i) => !i || v >= ups[i - 1] - 3);
+  line('S4', air.fireAir && air.label === 'Fly' && eased, `Boost and Jump take off, the lift eased in: speed up ${ups.join(' ')}, and Boost reads "${air.label}"`);
+  await page.evaluate(() => window.__qa.drive({ boost: true, my: 0, mx: 0 })); await page.waitForTimeout(100); await page.evaluate(() => window.__qa.drive({ boost: false, my: 0, mx: 0 })); await page.waitForTimeout(600);
+  const fly = await page.evaluate(() => { const h = window.__game.hero; return { fly: h.fly, y: +h.pos.y.toFixed(1) }; }); await page.waitForTimeout(700); const still = await page.evaluate(() => +window.__game.hero.pos.y.toFixed(1));
+  await page.evaluate(() => window.__qa.drive({ jumpHeld: true, my: 0, mx: 0 })); await page.waitForTimeout(900); const gl = await page.evaluate(() => { const h = window.__game.hero; return { vy: +h.vel.y.toFixed(1), y: +h.pos.y.toFixed(1), fly: h.fly }; }); await page.evaluate(() => window.__qa.drive({ jumpHeld: false, my: 0, mx: 0 }));
+  line('S5', fly.fly && Math.abs(still - fly.y) < 2.5 && gl.vy < -1.5 && gl.vy > -6.5, `a press of Fly holds him up (${fly.y} then ${still} m), and Jump held glides him down at ${gl.vy} m/s`);
   await page.evaluate(() => { const b = window.__game.ember; b.heroSuper(); }); await page.waitForTimeout(300);
   const sup = await page.evaluate(() => { const H = window.__game.ember.heroForm; return { man: H.man.visible, fire: H.fire.visible, t: H.sup }; }); line('S6', sup.fire && !sup.man, `Super: the all-fire form: ${JSON.stringify(sup)}`);
   await page.screenshot({ path: `${out}/super_fire.jpg`, type: 'jpeg', quality: 80 });

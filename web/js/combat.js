@@ -186,7 +186,7 @@ export function createCombat(G, h, api) {
     if (u.dodge) { u.dodge = false; buf.push('dodge', now); }
     if (u.stance) { u.stance = false; swapStance(); }
     // Boost's press is the dodge when there's a fight on: the burst of a dodge runs on into the boost if it's held
-    if (u.boost && !wasBoost && inFight()) buf.push('dodge', now);
+    if (u.boost && !wasBoost && inFight() && !h.fireAir) buf.push('dodge', now);      // in the air the man in red's Boost is Fly
     wasBoost = !!u.boost;
 
     for (const k in win) win[k] = Math.max(0, win[k] - df);
