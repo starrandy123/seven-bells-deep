@@ -140,6 +140,15 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | G13 | His phone HUD | check green | CR-36: `g_hud` G7h and `input` C1t 21 of 21 in WebKit. `ui` C3 (hotbar 5 px apart) and E1h (labels 14 px) stay red, his call |
 | G14 | One line at a time | building | in `ui.js`; a wall owed |
 
+## Open on the walls, 19:13 1 Nov
+
+- `walls_page` goes red in about 2 of 3 runs on `part2` with different lines each time (Shoalsong, hit-stop, "at least one kind answers"). Clean 2 of 2 on the movement branch before the merge, so the combat merge is the suspect, unproven. Footwork draws from the seeded `Math.random`, which would move every later roll; not checked.
+- `walls_land`: `land_frost_fort` red 1 of 4 whole runs on the movement branch, a captain never landed a blow in 60 s; 0 of 3 on the baseline; passes alone.
+- Plants: 74 of 80 caught. Not caught: `climbs_anything`, `bank_jitters`, `super_legs_slow`, `no_ghosts`, `no_dust`, `surf_no_jump`.
+- `reaver*.glb` not rebuilt, so the forearm fix isn't in them.
+- `pace` B4s reads the swim's mean speed, 26 m/s against 30, frames clean.
+- For the next hero rebuild: `*.tga` is gitignored, so link `Textures` from the Mac folder's `Pipeline/hero/base_rocketbox/Sports_Male_01/`.
+
 ## The "not yet checked" commits, read (Phase 0, 1 Nov 18:22)
 
 | Commit | What it said | Now |
