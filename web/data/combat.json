@@ -2,7 +2,7 @@
   "_doc": "Every blow and power as data. Frames are 60 Hz sim frames from the move's first frame. `startup` frames of wind-up, then `active` frames that can hit, `total` to the end. `cancel` is the first frame each class of input may start: dodge, parry, strike, power, free (the stick walks out of it). A class missing from `cancel` never interrupts this move. `clip_t` is [clip time at frame 0, at the first active frame, at the last frame]: the move's frames rule the clip. Numbers are measured from the reference where DESIGN.md says so and ours otherwise.",
   "fps": 60,
   "input": {
-    "buffer_f": 12,
+    "buffer_f": 12, "drift_mps": 4.5,
     "chain_gap_f": 24,
     "after_dodge_f": 30,
     "after_parry_f": 48,
@@ -66,7 +66,7 @@
   "difficulty": {
     "_doc": "G.settings.difficulty. tell scales how long a blow shows, and never takes one under the 0.5 s of P8. damage is what lands on him, foe_hp how much they take.",
     "easy": { "damage": 0.7, "tell": 1.2, "foe_hp": 0.85, "tokens": 1 },
-    "normal": { "damage": 1, "tell": 1, "foe_hp": 1, "tokens": 1 },
+    "normal": { "damage": 1, "tell": 1, "foe_hp": 1, "tokens": 2 },
     "hard": { "damage": 1.3, "tell": 0.92, "foe_hp": 1.5, "tokens": 2, "captains": true }
   },
   "upgrades": {
@@ -131,6 +131,11 @@
       { "id": "land_cinder_rim", "at": "cindermere", "dx": -112, "dy": -108, "r": 24, "mix": ["magma_husk", "archer", "magma_husk"] }
     ]
   },
+  "foeplay": {
+    "_doc": "how a soldier fills his wait, and how he takes a blow. every_s: how often he does something; feint, cut: the shares (the rest step back). flinch: how far he leans from a hit, light, medium, heavy, in radians, always away from where it came from. arc: a blow of arc_knock or more on the ground throws him up arc_up_mps; he flies till he lands",
+    "every_s": [0.7, 1.5], "feint": 0.4, "cut": 0.35, "feint_s": 0.32, "in_mps": 7, "back_mps": 6, "cut_mps": 7,
+    "flinch": [0.3, 0.45, 0.68], "arc_knock": 12, "arc_up_mps": 9.5, "arc_s": 1.2, "finish_s": 0.8, "finish_k": 0.28
+  },
   "rosters": {
     "_doc": "who stands where (P6). An encounter's reaver and shark slots are filled in turn from the place's lists: the bell it is tied to, else the nearest hold within near_m, else open. reef_m round the spawn is the reef. The story opens each list a kind per bell, so a new player meets Reavers and sharks, and the cast arrives one counter at a time. An encounter with its own mix keeps it.",
     "near_m": 320, "reef_m": 300,
@@ -150,10 +155,10 @@
   },
   "foes": {
     "_doc": "Every enemy blow: tell_s is how long it shows before it can land, strike_s how long it can land, recover_s how long the foe is open afterwards. P8 holds every tell to at least 0.5 s. unblockable blows must be dodged. parry_cue_s is how long before contact the Parry button calls.",
-    "reaver": { "name": "Reaver", "counter": "any blow; parry for a full opening", "body": "reaver", "brain": "soldier", "hp": 240, "r": 0.8, "poise": 110, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [1.0, 2.8], "blows": [
+    "reaver": { "name": "Reaver", "counter": "any blow; parry for a full opening", "body": "reaver", "brain": "soldier", "hp": 240, "r": 0.8, "poise": 110, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [0.7, 1.8], "blows": [
       { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 9 },
       { "id": "chop", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 11 } ] },
-    "captain": { "short": "A shield: parry the bash, or freeze him", "name": "Reaver Captain", "counter": "shield: parry the bash or freeze him for a long opening; it is down while he recovers from a swing", "body": "reaver", "brain": "soldier", "scale": 1.18, "shield": true, "hp": 480, "r": 0.95, "poise": 180, "speed_mps": 6.5, "hold_m": 4.6, "wait_s": [1.1, 2.4], "guard_arc_deg": 150, "guard_break_s": 3.2, "blows": [
+    "captain": { "short": "A shield: parry the bash, or freeze him", "name": "Reaver Captain", "counter": "shield: parry the bash or freeze him for a long opening; it is down while he recovers from a swing", "body": "reaver", "brain": "soldier", "scale": 1.18, "shield": true, "hp": 480, "r": 0.95, "poise": 180, "speed_mps": 6.5, "hold_m": 4.6, "wait_s": [0.8, 1.8], "guard_arc_deg": 150, "guard_break_s": 3.2, "blows": [
       { "id": "bash", "clip": "tell_slash", "clip_t": [0.38, 1.13, 1.4], "tell_s": 0.75, "strike_s": 0.18, "recover_s": 0.8, "reach_m": 3.6, "lunge_mps": 8, "damage": 14 },
       { "id": "overhead", "clip": "tell_chop", "clip_t": [0.0, 0.85, 1.4], "tell_s": 1.0, "strike_s": 0.2, "recover_s": 1.0, "reach_m": 3.8, "lunge_mps": 9, "damage": 20, "unblockable": true } ] },
     "archer": { "short": "Dodge sideways, or parry the harpoon back", "name": "Reaver Archer", "counter": "dodge sideways; a parry sends the harpoon back; the whip pulls him in", "body": "reaver", "brain": "archer", "scale": 0.96, "harpoon": true, "hp": 160, "r": 0.75, "poise": 70, "speed_mps": 8, "hold_m": 17, "wait_s": [1.8, 3.2], "blows": [
@@ -169,11 +174,11 @@
       { "id": "slam", "tell_s": 1.05, "strike_s": 0.22, "recover_s": 1.2, "reach_m": 4.8, "lunge_mps": 1, "damage": 20, "unblockable": true } ] },
     "siren": { "short": "Any hit breaks her song", "name": "Siren", "counter": "her song draws him in: any hit breaks it, and the whip reaches her first", "body": "reaver", "brain": "siren", "fragile": true, "scale": 0.92, "tint": [0.35, 0.95, 0.85], "hp": 170, "r": 0.75, "poise": 60, "speed_mps": 6, "hold_m": 13, "wait_s": [2.2, 3.4], "blows": [
       { "id": "charm", "clip": "atk2", "clip_t": [0.0, 0.23, 0.72], "tell_s": 1.1, "strike_s": 1.6, "recover_s": 0.8, "reach_m": 22, "pull_mps2": 30, "damage": 0 } ] },
-    "frost_wight": { "short": "The cold can't touch it: soak it", "name": "Frost Wight", "counter": "the cold can't touch it; soak it and it takes half again as much", "body": "reaver", "brain": "soldier", "tint": [0.62, 0.86, 1.15], "immune": "chill", "soaked_mul": 1.5, "hp": 300, "r": 0.8, "poise": 120, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [1.0, 2.4], "blows": [
+    "frost_wight": { "short": "The cold can't touch it: soak it", "name": "Frost Wight", "counter": "the cold can't touch it; soak it and it takes half again as much", "body": "reaver", "brain": "soldier", "tint": [0.62, 0.86, 1.15], "immune": "chill", "soaked_mul": 1.5, "hp": 300, "r": 0.8, "poise": 120, "speed_mps": 7.5, "hold_m": 4.8, "wait_s": [0.7, 1.7], "blows": [
       { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 11, "status_on_hero": "chill" } ] },
     "magma_husk": { "short": "Soak it to crack the crust", "name": "Magma Husk", "counter": "dry, it shrugs off blows: soak it to crack the crust, then strike", "body": "reaver", "brain": "soldier", "tint": [1.25, 0.42, 0.14], "needs_soak": 0.35, "hp": 320, "r": 0.85, "poise": 130, "speed_mps": 6.8, "hold_m": 4.8, "wait_s": [1.1, 2.4], "blows": [
       { "id": "chop", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 13 } ] },
-    "duelist": { "name": "Duelist", "short": "Two blows, then stop: parry his answer", "counter": "two blows and he's set: the next he turns aside and answers. Stop when he glows, parry the answer, and he's wide open. One of his swings hangs before it falls", "body": "reaver", "brain": "soldier", "scale": 1.04, "tint": [0.8, 0.9, 1.25], "hp": 300, "r": 0.8, "poise": 150, "speed_mps": 8, "hold_m": 4.2, "wait_s": [0.9, 2.0],
+    "duelist": { "name": "Duelist", "short": "Two blows, then stop: parry his answer", "counter": "two blows and he's set: the next he turns aside and answers. Stop when he glows, parry the answer, and he's wide open. One of his swings hangs before it falls", "body": "reaver", "brain": "soldier", "scale": 1.04, "tint": [0.8, 0.9, 1.25], "hp": 300, "r": 0.8, "poise": 150, "speed_mps": 8, "hold_m": 4.2, "wait_s": [0.6, 1.5],
       "riposte": { "after_hits": 2, "window_s": 1.6, "stance_s": 1.3, "blow": { "id": "answer", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.5, "strike_s": 0.14, "recover_s": 0.7, "reach_m": 3.6, "lunge_mps": 9, "damage": 13 } },
       "blows": [ { "id": "slash", "clip": "tell_slash", "clip_t": [0.45, 1.13, 1.4], "tell_s": 0.62, "strike_s": 0.16, "recover_s": 0.55, "reach_m": 3.2, "lunge_mps": 6.5, "damage": 10 }, { "id": "feint", "clip": "tell_chop", "clip_t": [0.1, 0.85, 1.4], "tell_s": 0.72, "feint_s": 0.42, "strike_s": 0.18, "recover_s": 0.65, "reach_m": 3.4, "lunge_mps": 7, "damage": 12 } ] },
     "thornback": { "name": "Thornback", "short": "Spines up: hold off, or reach it from afar", "counter": "spines up, a blow at arm's length comes back on you: wait for them to lie flat, or reach it from afar", "body": "barracuda", "brain": "fish", "scale": 3.2, "tint": [1.2, 0.86, 0.72], "hp": 210, "r": 1.2, "poise": 95, "speed_mps": 8, "ring_m": 8, "wait_s": [1.1, 2.6],

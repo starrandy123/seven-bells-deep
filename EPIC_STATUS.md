@@ -107,6 +107,8 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | Q23 | Published bytes match the frozen copy | todo | |
 | Q24 | Files the first view doesn't need load after first play | check green | load Q24 on a copy of the live map: 3 packs load late, 0.97 MB; 3.82 MB as sent before first play. Packs wait for the hero to move, or half a minute at the title |
 
+<!-- 1 Nov 17:50: Pipeline/wip/combat merged: footwork (20 s fight, 3 Reavers: sea 10 feints 8 cuts 5 back; land 18, 17, 9), flinch, arcs, the slow finish, stick drift through recovery. walls_fights all green. walls_page 82 of 85: the camera's 0.328 m against 0.3 (unread), the gull at 0,-1000 (known), 1.20 s against 1.2 (rounding). -->
+
 ## Part 2 (§20, CR-35). `accepted` is his word alone
 
 | ID | What | Status | Check |

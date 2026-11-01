@@ -638,7 +638,11 @@ export function createFx(G) {
   // every frame, so this goes on after it and leaves nothing behind
   const punchV = new THREE.Vector3(), punchOut = new THREE.Vector3(); let punchF = 0;
   function punch(dir, amount) { punchV.copy(dir).multiplyScalar(amount * 0.5); punchF = amount; }
+  // the last foe of a fight: the lens goes in on him and eases back
+  const pushP = new THREE.Vector3(); let pushT = 0, pushS = 1;
+  function pushIn(p, s) { if (G.settings && G.settings.shake === false) return; pushP.copy(p); pushP.y += 0.9; pushT = pushS = s; }
   function applyPunch(dt) {
+    if (pushT > 0) { pushT = Math.max(0, pushT - dt); const cam = G.camera, q = Math.sin((1 - pushT / pushS) * Math.PI), ease = q * q * (3 - 2 * q); cam.position.lerp(pushP, ease * 0.34); cam.fov -= ease * 7; cam.updateProjectionMatrix(); stats.pushing = ease; } else stats.pushing = 0;
     if (punchF < 0.004) return; const cam = G.camera, k = Math.exp(-20 * dt);
     if (G.settings && G.settings.shake === false) { punchF = 0; punchV.set(0, 0, 0); return; }
     cam.getWorldDirection(punchOut); cam.position.addScaledVector(punchOut, punchF).add(punchV); punchF *= k; punchV.multiplyScalar(k);
@@ -723,5 +727,5 @@ export function createFx(G) {
     warmList.forEach((o, i) => { o.visible = was[i]; });
   }
 
-  return { update, speed, punch, prewarm, warmList, edge, song, rayLight, silt, spines, crown, sheet, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
+  return { update, speed, punch, prewarm, warmList, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
 }

@@ -197,6 +197,8 @@ export async function createEnemies(G) {
     e.shatter = false;
     const d = new THREE.Vector3().subVectors(e.pos, from).normalize();
     e.vel.addScaledVector(d, info.knock === undefined ? 6 : info.knock);
+    e.flX = d.x; e.flZ = d.z; e.flA = info.heavy ? D.foeplay.flinch[2] : (info.poise || 0) >= 14 ? D.foeplay.flinch[1] : D.foeplay.flinch[0]; e.flT = 0;
+    if (e.onLand && !e.launched && (info.knock || 0) >= D.foeplay.arc_knock) { e.launched = D.foeplay.arc_s; e.vel.y = D.foeplay.arc_up_mps; }
     if (info.launch) { e.launched = Math.max(e.launched, info.stun || 1.2); e.vel.y = Math.max(e.vel.y, info.launch); dropToken(e); }
     e.poise -= info.poise || 0;
     if (e.poise <= 0) { stagger(e); return 'hit'; }
@@ -227,6 +229,8 @@ export async function createEnemies(G) {
   function die(e) {
     dropToken(e); endTell(e); const broken = e.shatter; e.state = 'dead'; e.t = broken ? 0.05 : 0.9; G.quest && G.quest.note('kill'); G.hero.hp = Math.min(G.hero.maxHp, G.hero.hp + 9);
     G.combat.log.push({ t: G.time, type: 'kill', foe: e.kind });
+    // the last of them: the moment leans out and the lens goes in
+    if (e.enc && e.enc.list && e.enc.list.length && !e.enc.list.some((q) => q !== e && q.hp > 0 && !q.hidden)) { const Q = D.foeplay; G.slowT = Q.finish_s; G.slowK = Q.finish_k; G.fx.pushIn(e.pos, Q.finish_s * 1.5); G.combat.log.push({ t: G.time, type: 'finish', foe: e.kind }); G.audio.boom(); }
     if (!e.fishy && !broken) playClip(e, 'death', 0.08, true);
     if (broken) e.slot.g.visible = false; else { G.fx.dissolve && G.fx.dissolve(e.pos, e.def.body); G.fx.bubbles(e.pos, 18, 1.4); }
     e.frozen = 0; e.stagger = 0; e.vel.multiplyScalar(0.4);
@@ -246,7 +250,12 @@ export async function createEnemies(G) {
   // what a walker stands on: the ground, or a solid whose top is within a step of his feet, as the hero does, so a fight on stairs or a deck stays a fight
   const footAt = (x, z, feet) => { const g = groundAt(x, z), s = G.world.solidTop(x, -z, feet + STEP); return s > g ? s : g; };
   function collide(e, r, px, pz, dt) {
-    if (e.launched > 0 && e.pos.y > SEA_Y && dt) { e.vel.y -= 26 * dt; return; }           // thrown clear of the sea: it flies till it comes down
+    // thrown clear of the sea, or off his feet: he flies till the ground takes him. Solids still stop him
+    if (e.launched > 0 && e.pos.y > SEA_Y && dt) {
+      e.vel.y -= 26 * dt; const q = { x: e.pos.x, y: -e.pos.z, z: e.pos.y }; if (G.world.collide(q, r) && Number.isFinite(q.x + q.y + q.z)) { e.pos.set(q.x, q.z, -q.y); }
+      const f = footAt(e.pos.x, e.pos.z, e.pos.y - STAND); if (e.pos.y > f + STAND || f < SEA_Y - 0.4) return;
+      e.pos.y = f + STAND; e.vel.y = 0; e.launched = 0; G.fx.silt(e.pos, 1.2, false); G.audio.hit(false); return;
+    }
     if (e.onLand && e.def.body === 'reaver') { const feet = e.pos.y - STAND, f = footAt(e.pos.x, e.pos.z, feet); if (f > feet) e.pos.y = f + STAND; }      // up the step first, or the step stops him
     const p = { x: e.pos.x, y: -e.pos.z, z: e.pos.y };
     if (G.world.collide(p, r)) { if (Number.isFinite(p.x + p.y + p.z)) e.pos.set(p.x, p.z, -p.y); else if (!e.nanTold) { e.nanTold = true; console.error('world.collide returned non-finite', e.kind, e.enc && e.enc.id, [e.pos.x, e.pos.y, e.pos.z, r]); } }
@@ -359,6 +368,14 @@ export async function createEnemies(G) {
     return res;
   }
 
+  // ------------------------------------------------------------------ what a soldier does while he waits his turn: he doesn't stand. He steps, cuts the other way, feints
+  function footwork(e, dt, dist) {
+    const Q = D.foeplay; if ((e.stepT = (e.stepT === undefined ? rand(0.2, 0.9) : e.stepT) - dt) > 0 || dist > 9) return; e.stepT = rand(Q.every_s[0], Q.every_s[1]);
+    to.subVectors(G.hero.pos, e.pos); to.y = 0; to.normalize(); const r = Math.random(); G.combat.log.push({ t: G.time, type: 'foot', foe: e.kind, what: r < Q.feint ? 'feint' : r < Q.feint + Q.cut ? 'cut' : 'back' });
+    if (r < Q.feint) { e.waitLeft = e.t; e.state = 'feint'; e.t = Q.feint_s; e.vel.addScaledVector(to, Q.in_mps); if (e.def.body === 'reaver') playClip(e, 'tell_slash', 0.06, true); }
+    else if (r < Q.feint + Q.cut) { e.circleDir *= -1; side.crossVectors(to, AY).normalize().multiplyScalar(e.circleDir * Q.cut_mps); e.vel.add(side); }
+    else e.vel.addScaledVector(to, -Q.back_mps);
+  }
   // ------------------------------------------------------------------ the soldier: closes, circles, waits his turn, tells, strikes
   function soldier(e, dt) {
     const h = G.hero, dist = e.pos.distanceTo(h.pos), F = e.def;
@@ -370,10 +387,13 @@ export async function createEnemies(G) {
         const hold = (dist - F.hold_m) * 1.6; to.normalize().multiplyScalar(hold).add(side).multiplyScalar(e.slow);
         e.vel.x = damp(e.vel.x, to.x, 3, dt); e.vel.y = damp(e.vel.y, to.y, 3, dt); e.vel.z = damp(e.vel.z, to.z, 3, dt);
         if (dist > 12) e.state = 'swimTo';
-        if (e.t <= 0 && takeToken(e)) beginTell(e);
+        if (e.t <= 0 && takeToken(e)) { beginTell(e); break; }
         if (e.t <= 0 && !e.hold) e.t = 0.3;
+        footwork(e, dt, dist);
         break;
       }
+      // a feint: a hard step in with the blade coming up, and straight back out. No blow in it and no rim, so it asks nothing of a parry: it's a man looking for his moment
+      case 'feint': e.vel.multiplyScalar(Math.exp(-5 * dt)); if (e.t <= 0) { to.subVectors(h.pos, e.pos); to.y = 0; to.normalize(); e.vel.addScaledVector(to, -D.foeplay.back_mps); e.state = 'circle'; e.t = Math.min(rand(0.2, 0.7), e.waitLeft || 0.6); if (e.cur) e.cur.fadeOut(0.16); e.cur = null; } break;
       case 'tell': {
         const near = dist > 3.2; steer(e, h.pos, near ? 2.6 : 0.2, 6, dt);
         if (tellStep(e, dt)) beginStrike(e);
@@ -578,7 +598,7 @@ export async function createEnemies(G) {
     return false;
   }
 
-  const qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qR = new THREE.Quaternion();
+  const qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qR = new THREE.Quaternion(), qF = new THREE.Quaternion(), flAxis = new THREE.Vector3();
   function step(dt) {
     const h = G.hero;
     swim.t.value += dt * 7;
@@ -642,14 +662,17 @@ export async function createEnemies(G) {
       e.u.uFlash.value *= Math.exp(-16 * dt);
       if (e.state === 'dead') e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 1.25);
       qY.setFromAxisAngle(AY, e.heading);
+      if (e.flA > 0) { e.flT += dt; if (e.flT > 0.8) e.flA = 0; }
       if (e.def.body === 'reaver') {
         const goal = e.onLand ? 0 : e.state === 'swimTo' ? clamp(e.vel.length() / 6, 0, 1) * 1.25 : 0.14; if (e.frozen <= 0) e.tilt = damp(e.tilt, goal, 6, dt);
         g.position.y -= 0.9 * Math.cos(e.tilt); qX.setFromAxisAngle(AX, e.tilt); g.quaternion.copy(qY).multiply(qX);
+        if (e.flA > 0) { flAxis.set(e.flZ, 0, -e.flX); qF.setFromAxisAngle(flAxis, Math.sin(Math.min(1, e.flT / 0.05) * 1.5708) * Math.exp(-e.flT * 6.5) * e.flA); g.quaternion.premultiply(qF); }
         if (e.slot.mixer && e.frozen <= 0) e.slot.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
         if (e.state === 'tell') G.fx.edge(e.pos, e.blow && e.blow.unblockable);
         if (e.state === 'tell' && e.slot.tip && G.fx.glint) { e.slot.tip.getWorldPosition(tipW); G.fx.glint(tipW, e.blow && e.blow.unblockable ? 0xff4422 : 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
       } else {
         const p = Math.atan2(e.vel.y, Math.hypot(e.vel.x, e.vel.z)); qX.setFromAxisAngle(AX, -p); qR.setFromAxisAngle(AZ, e.roll); g.quaternion.copy(qY).multiply(qX).multiply(qR);
+        if (e.flA > 0) { flAxis.set(e.flZ, 0, -e.flX); qF.setFromAxisAngle(flAxis, Math.sin(Math.min(1, e.flT / 0.05) * 1.5708) * Math.exp(-e.flT * 6.5) * e.flA); g.quaternion.premultiply(qF); }
         if (e.def.lure && e.state !== 'dead' && G.fx.glint) { tipW.copy(e.pos); tipW.y += 1.1 * (e.def.scale || 1); tipW.x += Math.sin(e.heading) * 1.5; tipW.z += Math.cos(e.heading) * 1.5; G.fx.glint(tipW, 0x9ffff0, 0.28 + 0.14 * Math.sin(G.time * 3)); }
         if (e.state === 'tell') G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
         if (e.state === 'tell' && G.fx.glint) { tipW.copy(e.pos); tipW.y += 0.5; tipW.x += Math.sin(e.heading) * 1.4; tipW.z += Math.cos(e.heading) * 1.4; G.fx.glint(tipW, 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
