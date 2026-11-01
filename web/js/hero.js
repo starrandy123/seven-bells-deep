@@ -109,7 +109,7 @@ export async function createHero(G) {
   }
 
   const h = {
-    root, pos: new THREE.Vector3(), vel: new THREE.Vector3(), heading: 0, pitchT: 0, tilt: 0, bank: 0, speed: 0,
+    bones, model, root, pos: new THREE.Vector3(), vel: new THREE.Vector3(), heading: 0, pitchT: 0, tilt: 0, bank: 0, speed: 0,
     hp: 100, maxHp: 100, tide: 60, maxTide: 100, inv: 0, cool: { dash: 0, spin: 0, wave: 0, call: 0 }, powers: { dash: false, spin: false, wave: false, call: false }, ride: null, rideT: 0, surge: 0, boostHeld: 0, land: false, grounded: false, drawPos: new THREE.Vector3(), prev: new THREE.Vector3(),
     state: 'swim', atk: null, next: null, air: false, boostFuel: 1, combatT: 99, target: null, stun: 0, dead: false, parryT: 0, locked: false, moves,
     drawYaw: 0, bodyPitch: 0, jumps: 0, coyote: 0, jumpBuf: 0, jumpPrep: 0, jumpHold: false, apexY: 0, pivot: 0, spd: 0, omega: 0, accel: 0,
@@ -237,7 +237,7 @@ export async function createHero(G) {
   });
 
   h.respawn = (p, yaw) => {
-    h.surf = null; h.carve = 0; h.pos.copy(p); h.prev.copy(p); h.drawPos.copy(p); h.vel.set(0, 0, 0); h.hp = h.maxHp; h.tide = 60; h.dead = false; h.state = 'swim'; h.heading = yaw || 0; h.inv = 2; h.spd = 0;
+    h.fly = false; h.surf = null; h.carve = 0; h.pos.copy(p); h.prev.copy(p); h.drawPos.copy(p); h.vel.set(0, 0, 0); h.hp = h.maxHp; h.tide = 60; h.dead = false; h.state = 'swim'; h.heading = yaw || 0; h.inv = 2; h.spd = 0;
     body.clear(0.2); body.place();
   };
 
@@ -260,12 +260,14 @@ export async function createHero(G) {
   const leanF = second({ f: 1.7, z: 0.6 }), rakeF = second({ f: 1.5, z: 0.8 }); let leanS = follower(0), rakeS = follower(0);
   const waveY = (x, z) => (G.sky && G.sky.waveAt ? G.sky.waveAt(x, z) : 0);
   function startSurf() {
+    if (G.sideNow === 'fire') return;      // the sea doesn't carry the man in red
     const v = Math.hypot(h.vel.x, h.vel.z); h.state = 'surf'; h.surf = { v: Math.min(v, SURF_TOP), t: 0 }; h.heading = Math.atan2(h.vel.x, h.vel.z); h.vel.y = 0; carveS = follower(0); swellS = follower(0); leanS = follower(h.surfLean || 0); rakeS = follower(h.surfRake || 0); h.surgeLock = true;
     G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 6, 0.7, 0xe8fbff); G.quest && G.quest.note('surf');
   }
   function endSurf() { h.state = 'swim'; h.surf = null; h.carve = 0; h.surgeLock = false; }
   // Boost on land: he calls the water up under his feet and rides it (Randy, 1 Nov: "for the boost in land, we need the water animation and movement surf")
   function startLandSurf() {
+    if (G.sideNow === 'fire') return;
     h.state = 'surf'; h.surf = { v: Math.max(h.spd, LAND_SURF_CRUISE * 0.75), t: 0, land: true }; h.land = false; h.grounded = false; h.vel.y = 0; carveS = follower(0); swellS = follower(0); leanS = follower(h.surfLean || 0); rakeS = follower(h.surfRake || 0);
     G.fx.ring(h.pos.clone().setY(h.pos.y - STAND + 0.05), 4, 0.6, 0xe8fbff); G.audio.splash(); if (G.quest) G.quest.note('land_surf');
   }
@@ -459,6 +461,21 @@ export async function createHero(G) {
     if (h.jumpBuf > 0 && h.state === 'swim') { h.jumpBuf = 0; h.jumpPrep = JUMP_PREP * 0.5; }
   }
 
+  // the fire side flies: Jump, then Jump again in the air, and the jets at his palms and soles hold him. He goes where he looks, as he swims; Boost is everything they have; Jump held climbs. The ground takes him when he comes down to it, and so does the sea
+  const FLY = { cruise: 15, boost: 34, climb: 9, k: 2.8 };
+  h.fly = false; h.endFly = () => { h.fly = false; };
+  function startFly() { h.fly = true; h.air = true; h.land = false; h.grounded = false; h.jumps = 2; h.breach = null; h.jumpHold = false; h.plunge = false; h.vel.y = Math.max(h.vel.y, 5); h.apexY = h.pos.y; G.fx.ring(h.pos.clone(), 3.5, 0.4, 0xff8a30); G.audio.swing(); G.combat.teach && G.combat.teach('fly', 'Flying', 'Go where you look. Boost for speed, hold Jump to climb'); }
+  function stepFly(u, dt, held, inputAmt) {
+    const top = u.boost ? FLY.boost : FLY.cruise, a = top * inputAmt;
+    h.vel.x = damp(h.vel.x, wish.x * a, FLY.k, dt); h.vel.y = damp(h.vel.y, wish.y * a + (held ? FLY.climb : 0) + Math.sin(G.time * 2.2) * 0.25, FLY.k, dt); h.vel.z = damp(h.vel.z, wish.z * a, FLY.k, dt);
+    slide(h.vel.x * dt, h.vel.y * dt, h.vel.z * dt, 0.42, false);
+    { const t = terrain(h.pos.x, h.pos.z) + 0.42; if (h.pos.y < t) h.pos.y = t; } h.apexY = h.pos.y;
+    if (h.state === 'attack' || h.state === 'parry') G.combat.stepAttack(dt);
+    const g1 = groundAt(h.pos.x, h.pos.z);
+    if (g1 > SWIM_Y - STAND - 0.1 && h.vel.y <= 0.6 && h.pos.y <= g1 + STAND + 0.2) { h.fly = false; landOn(g1); }
+    else if (h.pos.y < -0.2 && g1 < SWIM_Y - STAND) { h.fly = false; h.air = false; h.land = false; G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, -0.05, h.pos.z), 7, 1.1, 0xe8fbff); G.fx.bubbles(h.pos, 26, 1.6); }
+  }
+
   h.step = (dt) => {
     const u = G.ui.sample(), cam = G.camera;
     h.prevHeading = h.heading;
@@ -521,8 +538,13 @@ export async function createHero(G) {
     if (u.jump) { h.jumpBuf = BUFFER; u.jump = false; } else h.jumpBuf = Math.max(0, h.jumpBuf - dt);
     const heldJump = u.jumpHeld !== undefined ? u.jumpHeld : TOUCH ? true : u.ud > 0;
     h.coyote = Math.max(0, h.coyote - dt);
-    if (!h.climb && (h.land || h.air) && inputAmt + Math.max(0, u.ud) > 0.2) tryClimb(u, wish.x, wish.z);
+    if (!h.fly && !h.climb && (h.land || h.air) && inputAmt + Math.max(0, u.ud) > 0.2) tryClimb(u, wish.x, wish.z);
+    if (G.sideNow === 'fire' && !h.fly && !h.climb) {      // Jump again in the air, or just keep holding it: one thumb, either way
+      h.jumpHeldT = heldJump && u.jumpHeld ? (h.jumpHeldT || 0) + dt : 0;
+      if (h.air && (h.jumpBuf > 0 || h.jumpHeldT > 0.3)) { h.jumpBuf = 0; startFly(); }
+    }
     if (h.climb) stepClimb(u, dt, u.boost && inputAmt > 0.2);
+    else if (h.fly) stepFly(u, dt, heldJump, inputAmt);
     else if (h.air) stepAir(u, dt, heldJump);
     else if (h.state === 'surf') stepSurf(u, dt);
     else if (h.state === 'swim' && h.land) stepGround(u, dt, boosting);
@@ -567,7 +589,7 @@ export async function createHero(G) {
         else { h.pos.y = SWIM_Y; h.vel.y = Math.min(0, h.vel.y); }
       }
       collide(0.62);
-    } else if (h.vel.y < 0 && h.pos.y < 1 && h.air) body.clear(0.3);
+    } else if (h.vel.y < 0 && h.pos.y < 1 && h.air && !h.fly) body.clear(0.3);
 
     // the map's edge: the sea turns him back. Over the last stretch his outward speed is held to what can still stop in time, however fast he came; close to the line it runs the other way, a current
     // shoving him back in. It follows the map's size, and the line itself is firm
@@ -592,11 +614,11 @@ export async function createHero(G) {
         const y = Math.atan2(h.vel.x, h.vel.z), dy = wrap(y - h.heading);
         h.heading = wrap(h.heading + dy * (1 - Math.exp(-6.5 * dt)));
         h.bank = damp(h.bank, clamp(-dy * 1.1, -0.9, 0.9), 5, dt);
-        h.pitchT = damp(h.pitchT, h.air && !h.breach ? clamp(Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), -0.35, 0.35) : Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), h.breach ? 10 : 6, dt);
+        h.pitchT = damp(h.pitchT, h.air && !h.breach && !h.fly ? clamp(Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), -0.35, 0.35) : Math.atan2(h.vel.y, Math.hypot(h.vel.x, h.vel.z)), h.breach ? 10 : 6, dt);
       } else { h.heading = wrap(h.heading + wrap(G.camYaw - h.heading) * (1 - Math.exp(-2.4 * dt))); h.bank = damp(h.bank, 0, 4, dt); h.pitchT = damp(h.pitchT, 0, 3, dt); }
     } else { h.bank = damp(h.bank, 0, 8, dt); }
     if (h.state !== 'surf') { h.surfLean = damp(h.surfLean || 0, 0, 7, dt); h.surfRake = damp(h.surfRake || 0, 0, 7, dt); }      // off the ride he comes back upright, never in one frame
-    const tiltGoal = h.climb ? 1.3 : h.breach ? 1.46 : h.land || h.air || h.state === 'surf' ? 0 : h.state === 'swim' ? smooth(1.6, 5, h.speed) * 1.42 + h.surge * 0.1 : (h.tiltGoal ?? 0.18);
+    const tiltGoal = h.fly ? smooth(2, 18, h.speed) * 1.32 : h.climb ? 1.3 : h.breach ? 1.46 : h.land || h.air || h.state === 'surf' ? 0 : h.state === 'swim' ? smooth(1.6, 5, h.speed) * 1.42 + h.surge * 0.1 : (h.tiltGoal ?? 0.18);
     h.tiltTo = tiltGoal; h.tilt = damp(h.tilt, tiltGoal, h.state === 'attack' || h.breach ? 12 : 5, dt);
     stepSfx += h.speed * dt;
     if ((boosting || (h.tideTier || 0) > 1) && !h.land && stepSfx > 2.5) { stepSfx = 0; G.fx.bubbles(h.pos.clone(), 3 + (h.surge * 4 | 0) + (h.tideTier || 0) * 2, 0.5 + (h.tideTier || 0) * 0.2); }

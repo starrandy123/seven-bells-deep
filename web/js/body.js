@@ -52,6 +52,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     for (const t of c.tracks) { const [b, prop] = t.name.split('.'), i = index[b]; if (i === undefined) continue; if (prop === 'quaternion') e.q[i] = t.createInterpolant(); else if (prop === 'position' && b === 'hips') e.p = t.createInterpolant(); }
     CL[c.name] = e;
   }
+  // more clips, later: what another file brings for the same bones (the fire side's flight and blows, ember.js)
+  function learn(list) { for (const c of list) { const e = { name: c.name, dur: c.duration, q: new Array(N).fill(null), p: null }; for (const t of c.tracks) { const [b, prop] = t.name.split('.'), i = index[b]; if (i === undefined) continue; if (prop === 'quaternion') e.q[i] = t.createInterpolant(); else if (prop === 'position' && b === 'hips') e.p = t.createInterpolant(); } if (!CL[c.name]) CL[c.name] = e; } }
   const has = (n) => !!CL[n], animated = new Array(N).fill(false);
   for (const n in CL) CL[n].q.forEach((x, i) => { if (x) animated[i] = true; });
   const ACT = []; for (let i = 0; i < N; i++) if (animated[i]) ACT.push(i);
@@ -433,7 +435,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     else if (m === 'surf') {
       surfT = (surfT + dc * (0.75 + 0.75 * smooth(8, 26, h.surf ? h.surf.v : 0))) % (CL.surf_stand ? CL.surf_stand.dur : 2); const c = h.carve || 0, w = Math.abs(c), side = c > 0 ? 'surf_carve_R' : 'surf_carve_L';
       sample('surf_stand', surfT, 1 - w); if (w > 1e-3) sample(side, surfT * (CL[side] ? CL[side].dur / (CL.surf_stand ? CL.surf_stand.dur : 2) : 1), w);
-    } else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
+    } else if (m === 'air' && h.fly && CL.fly_hover) { airT += dc; const f = clamp(speed / 13, 0, 1), b = clamp((speed - 22) / 10, 0, 1); sample('fly_hover', airT % CL.fly_hover.dur, 1 - f); sample('fly_forward', airT % CL.fly_forward.dur, f * (1 - b)); sample('fly_boost', airT % CL.fly_boost.dur, f * b); }
+    else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
     else if (m === 'air') { airT += dc; sample(has('fall') ? 'fall' : 'idle_tread', airT % (has('fall') ? CL.fall.dur : 3), 1); }
     else if (h.ride && CL.ride_grip) { rideT = (rideT + dc) % CL.ride_grip.dur; sample('ride_grip', rideT, 1); }
     else {
@@ -529,6 +532,6 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   }
   // where the feet stand at ease is where the `stand` clip has them
   if (CL.stand) { sample('stand', 0, 1); settle(); held.set(pose); heldP = poseP.slice(); for (const l of legs) { const c = clipLeg(l); IDLE[l.s] = { f: c.A[2], l: c.A[0] }; } }
-  const api = { draw, play, clear, inertia, has, place, raw: false, get shot() { return shot; }, legs, S, FT, get phase() { return phase; }, get gaitOn() { return gaitOn; }, get loco() { return loco ? loco.name : null; }, get fall() { return fall; }, get sheathK() { return sheath.k; }, get mode() { return mode; }, get inertActive() { return inertT < 0.3; } };
+  const api = { draw, play, clear, inertia, has, place, learn, raw: false, get shot() { return shot; }, legs, S, FT, get phase() { return phase; }, get gaitOn() { return gaitOn; }, get loco() { return loco ? loco.name : null; }, get fall() { return fall; }, get sheathK() { return sheath.k; }, get mode() { return mode; }, get inertActive() { return inertT < 0.3; } };
   return api;
 }

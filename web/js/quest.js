@@ -182,7 +182,7 @@ export function createQuest(G) {
     if (ICE.has(what) && (!h.powers.ice || !document.body.dataset.stance)) return false;
     return !G.combat || !G.combat.has || !!G.combat.has(what);
   }
-  function chapterCard(def) { G.ui.toast(def.card || `Chapter ${WORDS[def.chapter] || def.chapter}`, def.title, 5.5); }
+  function chapterCard(def) { if (G.sideNow === 'fire') return; G.ui.toast(def.card || `Chapter ${WORDS[def.chapter] || def.chapter}`, def.title, 5.5); }
   // A boss is the whole fight at its place: the court that stands there in free roam stays out of it, as combat's walls measured it, and the bell it guards is free when the boss falls
   function clearCourt(pl, r) { for (const e of G.enemies.encounters) if (!e.ours && !e.cleared && e.state === 'idle' && Math.hypot(e.x - pl.x, e.y - pl.y) < r) { e.cleared = true; st.cleared.add(e.id); } }
   function standDown() { for (const e of G.enemies.encounters) if (/^patrol_/.test(e.id) && e.state === 'idle') { e.cleared = true; st.cleared.add(e.id); } }

@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'The Burnt Isle: a fire city on the ground and one in the sky. Swim south past the islet. A ring of fire lifts you up';
+const NEWS = 'Pick Water or Fire on the home screen, switch from Pause. Fire: hold Jump to fly, Super goes all fire';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -222,11 +222,17 @@ export function createUI(G) {
     if (DATA.broken.length) { $('load').style.display = ''; setLoad(1, `Part of the game did not load: ${DATA.broken.join(', ')}`); }
     refreshTitle();
     if (G.quest) G.quest.titleShot();
+    // water or fire: picked here, kept, and changed from the pause screen. Randy, 1 Nov: "Allow users to choose in the Home Screen for water and fire and be able to switch too"
+    const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
+    const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
+    $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
+    $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Hold Jump to fly. Super goes all fire' : 'Back to the sea', 4); });
+    { let saved = null; try { saved = localStorage.getItem('thalor.side'); } catch (_) { /* water, then */ } G.sideNow = 'water'; if (saved === 'fire' && !FLAG.film) { G.ember.setSide('fire', { place: true, quiet: true }); if (G.quest) G.quest.endTitle(); } paintSide(); }
     setTimeout(() => screens.map.warm(), 1200);
     // which build this is: on the title and the pause screen, and said once when it changes. Randy, 1 Nov: "Did you push the new update?" A returning player at the first reef had nothing on the screen to say so
     for (const e of document.querySelectorAll('.build')) e.textContent = 'Build ' + BUILD;
     const tellBuild = () => { let seen = null; try { seen = localStorage.getItem('thalor.build'); localStorage.setItem('thalor.build', String(BUILD)); } catch (_) { /* no store: it's said each time */ } if (seen && seen !== String(BUILD)) toast('Build ' + BUILD + ' is in', NEWS, 7); };      // only to someone who was here before it
-    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); };
+    const go = () => { G.audio.start(); if (G.quest) G.quest.endTitle(); cut(); $('title').classList.remove('on'); $('hud').classList.add('on'); onDive(); tellBuild(); if (G.sideNow === 'fire') toast('You are the fire', 'Hold Jump to fly. Super goes all fire', 6); };
     $('dive').addEventListener('click', go);
     let sure = false;
     $('newGame').addEventListener('click', () => {
@@ -301,9 +307,9 @@ export function createUI(G) {
   // combat calls this on every swap and whenever a power opens: four slots of { id, name, open }, and slots.ice once Ice is open
   function setStance(stance, slots) {
     document.body.dataset.stance = stance;
-    const short = (n) => (n === 'Ice Path' ? n : n.split(' ').pop().replace('Maelstrom', 'Mael\u00adstrom'));      // the button says the last word: Lance, Breath, Wave
+    const short = (n) => (n === 'Ice Path' || n === 'Lava Path' ? n : n === 'Wall of Fire' ? 'Wall' : n.split(' ').pop().replace('Maelstrom', 'Mael\u00adstrom').replace('Firewheel', 'Fire\u00adwheel'));      // the button says the last word: Lance, Breath, Wave
     [bDash, bSpin, bWave, bP4].forEach((b, i) => { b.textContent = short(slots[i].name); b.setAttribute('aria-label', slots[i].name); b.classList.toggle('locked', !slots[i].open); });
-    bStance.textContent = stance === 'ice' ? 'Ice' : 'Water'; bStance.classList.toggle('locked', !slots.ice);
+    const fire = G.sideNow === 'fire'; bStance.textContent = stance === 'ice' ? (fire ? 'Magma' : 'Ice') : (fire ? 'Fire' : 'Water'); bStance.classList.toggle('locked', !slots.ice); bCast.textContent = fire ? 'Spear' : 'Cast'; bCall.textContent = fire ? 'Super' : 'Call';
     declareControls();
   }
   function hurt(a) { $('hurt').style.opacity = a; }

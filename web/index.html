@@ -152,6 +152,9 @@
     #title h1 { font-size: 40px; max-width: none; margin: 0 0 2px; }
     #titleBtns { flex-direction: row; gap: 12px; align-self: flex-end; } .cta { padding: 10px 34px; }
   }
+  body[data-side="fire"] #obj, body[data-side="fire"] #compass, body[data-side="fire"] #dist, body[data-side="fire"] #hint { display: none !important; }
+  #sidePick { display: flex; gap: 10px; } .side { font: 700 17px var(--font); min-height: 48px; min-width: 104px; padding: 0 20px; border-radius: 999px; color: var(--ink); background: rgba(4, 22, 40, 0.8); border: 2px solid rgba(255, 255, 255, 0.34); }
+  #pickWater.on { background: linear-gradient(180deg, #b7fbff, #4ff0ff); color: #03212d; border-color: #eafcff; } #pickFire.on { background: linear-gradient(180deg, #ffd27a, #ff6a1f); color: #2d0a00; border-color: #fff0d6; }
   .cta { font: 700 18px var(--font); color: #03212d; background: linear-gradient(180deg, #b7fbff, #4ff0ff); border: 0; padding: 16px 44px; border-radius: 999px; min-height: 62px; box-shadow: 0 8px 34px rgba(79, 240, 255, 0.34); cursor: pointer; }
   .link { font: 700 17px var(--font); color: var(--ink); background: rgba(4, 22, 40, 0.8); border: 1px solid rgba(255, 255, 255, 0.34); border-radius: 999px; padding: 10px 22px; margin-top: 14px; min-height: 62px; cursor: pointer; }
   #load { position: fixed; left: 50%; bottom: 13%; transform: translateX(-50%); width: min(60vw, 280px); }
@@ -248,12 +251,12 @@
 <div id="hurt"></div>
 <div id="fade"></div>
 <div class="screen on" id="title"><small class="build"></small>
-  <div id="titleTop"><h1 id="titleName">SEVEN BELLS DEEP</h1><p>The drowned city waits for its last Warden.</p></div>
-  <div id="titleBtns"><button class="cta" id="dive" style="display:none">Dive</button><button class="link" id="newGame" style="display:none">New game</button><button class="link" id="stackB" style="display:none">How it was made</button></div>
+  <div id="titleTop"><h1 id="titleName">SEVEN BELLS DEEP</h1><p id="titleLine">The drowned city waits for its last Warden.</p></div>
+  <div id="titleBtns"><div id="sidePick" style="display:none"><button class="side" id="pickWater">Water</button><button class="side" id="pickFire">Fire</button></div><button class="cta" id="dive" style="display:none">Dive</button><button class="link" id="newGame" style="display:none">New game</button><button class="link" id="stackB" style="display:none">How it was made</button></div>
   <div id="load"><div class="bar"><i></i></div><small>Filling the sea</small></div>
 </div>
 <div class="screen" id="menu"><small class="build"></small>
-  <div id="menuHead"><h2 id="menuTitle">Paused</h2><span id="menuPearls"></span><button class="btn2" id="resume">Swim on</button></div>
+  <div id="menuHead"><h2 id="menuTitle">Paused</h2><span id="menuPearls"></span><button class="btn2" id="swapSide">Play as Fire</button><button class="btn2" id="resume">Swim on</button></div>
   <div id="menuBody">
     <div class="tab" id="tab-quests"></div>
     <div class="tab" id="tab-map"><div id="mapBox"><canvas id="mapC"></canvas><div id="mapZoom"><button id="mapIn" aria-label="Zoom in">+</button><button id="mapOut" aria-label="Zoom out">&minus;</button></div><div id="mapSheet"><div class="g"><b></b><small></small></div><button class="btn2" id="mapGo">Travel</button></div></div></div>

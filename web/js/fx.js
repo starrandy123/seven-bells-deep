@@ -326,17 +326,18 @@ export function createFx(G) {
   const fMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
-    uniforms: { uT: shared.uT, tN: { value: noiseT }, uSun: { value: sunDir } },
+    uniforms: { uT: shared.uT, tN: { value: noiseT }, uSun: { value: sunDir }, uHot: { value: 0 } },
     vertexShader: `attribute vec3 aF; varying vec3 vN, vW, vF; varying vec2 vUv; uniform float uT;
       void main() { vUv = uv; vF = aF; vN = normal; vec3 p = position + normal * (sin(uv.x * 9.0 - uT * 11.0 + uv.y * 6.0) * 0.022 + sin(uv.x * 23.0 + uT * 7.0) * 0.012);
         vW = p; gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`,
-    fragmentShader: `uniform float uT; uniform sampler2D tN; uniform vec3 uSun; varying vec3 vN, vW, vF; varying vec2 vUv;
+    fragmentShader: `uniform float uT, uHot; uniform sampler2D tN; uniform vec3 uSun; varying vec3 vN, vW, vF; varying vec2 vUv;
       void main() {
         vec3 V = normalize(cameraPosition - vW), N = normalize(vN); if (!gl_FrontFacing) N = -N;
         float n1 = texture2D(tN, vUv * vec2(0.5, 0.33) + vec2(-uT * 0.9, uT * 0.17)).r, n2 = texture2D(tN, vUv * vec2(1.3, 0.8) + vec2(uT * 0.5, -uT * 0.43)).r;
         N = normalize(N + (vec3(n1, n2, 1.0 - n1) - 0.5) * 0.9);
         float nv = clamp(dot(N, V), 0.0, 1.0), fres = pow(1.0 - nv, 2.6);
         vec3 deep = mix(vec3(0.03, 0.42, 0.68), vec3(0.0, 0.10, 0.26), vF.z), mid = mix(vec3(0.16, 0.68, 0.88), vec3(0.01, 0.33, 0.60), vF.z), lite = vec3(0.72, 0.98, 1.0);
+        if (uHot > 0.5) { deep = mix(vec3(0.62, 0.10, 0.01), vec3(0.22, 0.02, 0.0), vF.z); mid = mix(vec3(1.0, 0.42, 0.04), vec3(0.72, 0.16, 0.01), vF.z); lite = vec3(1.0, 0.86, 0.5); }      // the same stream, of fire
         vec3 R = reflect(-V, N); float sky = smoothstep(-0.25, 0.85, R.y);
         // light through a thick body: dark at its heart, lit where it thins
         vec3 col = mix(deep, mid, smoothstep(0.1, 0.9, n1 * 0.7 + (1.0 - nv) * 0.8));
@@ -346,7 +347,7 @@ export function createFx(G) {
         col = mix(col, mix(mid, lite * 1.3, sky), fres * 0.92);
         float s = max(dot(R, uSun), 0.0), spec = pow(s, 80.0) * 2.6 + pow(s, 10.0) * 0.2;
         float foam = smoothstep(0.6, 0.72, n1 * 0.6 + n2 * 0.6 + vF.x * 0.62 - 0.3);
-        col = mix(col, vec3(0.93, 0.99, 1.0), foam);
+        col = mix(col, uHot > 0.5 ? vec3(1.0, 0.9, 0.6) : vec3(0.93, 0.99, 1.0), foam);
         float a = clamp((mix(0.3, 0.46, vF.z) + fres * 0.7 + vein * 0.3 + foam * 0.5), 0.0, 1.0) * vF.y;
         gl_FragColor = vec4((col + spec) * a, a); }`,
   });
@@ -741,5 +742,8 @@ export function createFx(G) {
     warmList.forEach((o, i) => { o.visible = was[i]; });
   }
 
-  return { update, speed, punch, prewarm, warmList, sp, now, ball, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
+  // which side he's playing: the sprites' water colours and the stream's
+  const WET = { water: C.water.clone(), foam: C.foam.clone(), bead: C.bead.clone(), dark: C.dark.clone() };
+  function setSide(fire) { fMat.uniforms.uHot.value = fire ? 1 : 0; if (fire) { C.water.setRGB(1.0, 0.42, 0.07); C.foam.setRGB(1.0, 0.86, 0.6); C.bead.setRGB(1.0, 0.72, 0.28); C.dark.setRGB(0.24, 0.03, 0.0); } else { C.water.copy(WET.water); C.foam.copy(WET.foam); C.bead.copy(WET.bead); C.dark.copy(WET.dark); } }
+  return { update, speed, punch, prewarm, warmList, sp, now, ball, setSide, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
 }

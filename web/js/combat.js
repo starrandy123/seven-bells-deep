@@ -42,7 +42,7 @@ export function createCombat(G, h, api) {
     return best;
   }
 
-  const open = (id) => { const k = D.unlock[id]; return k === true || k === undefined ? true : !!h.powers[k]; };
+  const open = (id) => { if (G.sideNow === 'fire') return true; const k = D.unlock[id]; return k === true || k === undefined ? true : !!h.powers[k]; };
   const afford = (id) => !!D.moves[id] && h.tide >= costOf(id);
   const coolOf = (id) => cool[id] || 0;
 
@@ -62,6 +62,8 @@ export function createCombat(G, h, api) {
   }
 
   // the clip runs at whatever speed puts its contact on the move's first active frame, and its end on the last frame
+  const fireMove = (id) => (G.sideNow === 'fire' && D.fire.moves[id]) || null;
+  const nameOf = (id) => (G.sideNow === 'fire' && D.fire.names[id]) || D.moves[id].name;
   const rateFor = (d, f) => { const [t0, t1, t2] = d.clip_t, s = f < d.startup && d.startup > 0 ? (t1 - t0) / (d.startup / FPS) : (t2 - t1) / Math.max(1e-3, (d.total - d.startup) / FPS); return Math.max(0.05, s); };
 
   // ------------------------------------------------------------------ a move starts
@@ -74,9 +76,10 @@ export function createCombat(G, h, api) {
     h.atk = cur; h.next = null; h.state = d.kind === 'parry' ? 'parry' : 'attack'; h.combatT = 0; h.target = target; h.plunge = false;
     log('start', { id, stance });
     if (d.clip) {
-      api.play(d.clip_ice && stance === 'ice' ? d.clip_ice : d.clip_land && h.land && !h.air ? d.clip_land : d.clip, d.kind === 'strike' ? 0.05 : 0.07);
+      const fm = fireMove(id); cur.timing = fm ? { ...d, clip_t: fm.clip_t } : d;     // the man in red fights with his fists: the same move, its own clip
+      api.play(fm ? fm.clip : d.clip_ice && stance === 'ice' ? d.clip_ice : d.clip_land && h.land && !h.air ? d.clip_land : d.clip, d.kind === 'strike' ? 0.05 : 0.07);
       const sh = h.body && h.body.shot;
-      if (sh && d.clip_t) { cur.shot = sh; sh.t = d.clip_t[0]; sh.rate = rateFor(d, 0) * cur.close; }
+      if (sh && d.clip_t) { cur.shot = sh; sh.t = cur.timing.clip_t[0]; sh.rate = rateFor(cur.timing, 0) * cur.close; }
     }
     if (d.kind === 'strike' || d.motion === 'dash') startReach(cur);
     if (d.kind === 'dodge') startDodge(cur);
@@ -136,8 +139,9 @@ export function createCombat(G, h, api) {
 
   function showSlots() {
     if (!G.ui.setStance) return;
-    if (open('shoalsong')) { G.ui.unlock('call'); teach('song_open', 'Shoalsong', 'Hold Call: what the ring touches follows you'); }
-    if (open('cast')) { G.ui.unlock('cast'); teach('cast_open', 'Homeward Cast', 'Cast throws the trident. Cast or Strike calls it home'); } const slots = D.stances[stance].slots.map((id) => ({ id, name: D.moves[id].name, open: open(id) })); slots.ice = open('ice'); slots.cast = open('cast'); G.ui.setStance(stance, slots); }
+    if (G.sideNow === 'fire') { G.ui.unlock('call'); G.ui.unlock('cast'); }
+    else if (open('shoalsong')) { G.ui.unlock('call'); teach('song_open', 'Shoalsong', 'Hold Call: what the ring touches follows you'); }
+    if (G.sideNow !== 'fire' && open('cast')) { G.ui.unlock('cast'); teach('cast_open', 'Homeward Cast', 'Cast throws the trident. Cast or Strike calls it home'); } const slots = D.stances[stance].slots.map((id) => ({ id, name: nameOf(id), open: open(id) })); slots.ice = open('ice'); slots.cast = open('cast'); G.ui.setStance(stance, slots); }
   function swapStance() {
     if (stance === 'water' && !open('ice')) { G.ui.lockedTip(D.locked_tip.ice); return; }
     setStance(stance === 'water' ? 'ice' : 'water');
@@ -163,6 +167,7 @@ export function createCombat(G, h, api) {
     if (u.wave) { u.wave = false; buf.push('slot3', now); }
     if (u.p4) { u.p4 = false; buf.push('slot4', now); }
     // Call: the press sings; held, the song goes on down its tiers, and letting go is what fires the tier it reached
+    if (u.call && G.sideNow === 'fire') { u.call = false; G.ember.heroSuper(); }      // the man in red's Call: all fire
     if (u.call) { u.call = false; charge = { t: 0, tier: 0 }; buf.push('song', now); }
     if (charge) {
       charge.t += dt; // the pack and the whale come through the sea: on land the song is all there is
@@ -197,7 +202,7 @@ export function createCombat(G, h, api) {
     if (cur) {
       const d = cur.def, before = cur.f;
       cur.f += df * (cur.f < d.startup ? cur.close : 1);
-      if (before < d.startup && cur.f >= d.startup && cur.shot && d.clip_t) cur.shot.rate = rateFor(d, d.startup);
+      if (before < d.startup && cur.f >= d.startup && cur.shot && d.clip_t) cur.shot.rate = rateFor(cur.timing || d, d.startup);
       if (cur.f >= d.total) { log('end', { id: cur.id }); finish(); }
     }
     buf.expire(now);
@@ -338,7 +343,7 @@ export function createCombat(G, h, api) {
 
   function land(e, a, mul = 1) {
     if (a.hits.has(e)) return; a.hits.add(e); a.landed = true;
-    const d = a.def, el = d.element || stance, st = D.stances[el], dmg = d.damage * st.damage_mul * mul * (a.id === 'riptide' && lv('riptide') >= 1 ? D.upgrades.riptide.damage : 1);
+    const d = a.def, el = d.element || stance, st = D.stances[el], dmg = d.damage * st.damage_mul * mul * (G.ember ? G.ember.heroMul() : 1) * (a.id === 'riptide' && lv('riptide') >= 1 ? D.upgrades.riptide.damage : 1);
     const info = { move: a.id, melee: d.kind === 'strike' && a.id !== 'whip', element: el, status: a.status || d.status || st.status, shatters: !!d.shatters, knock: d.knock || 0, stun: (d.stun_s || 0) * (a.stunMul || 1), poise: d.poise || 0, launch: (d.launch || 0) * (a.launchMul || 1), heavy: d.impact === 'heavy' || d.impact === 'finisher' };
     const res = e.onHit(dmg, a.from || h.pos, d.clip || a.id, info);
     if (res === 'blocked') {
@@ -441,7 +446,7 @@ export function createCombat(G, h, api) {
   });
 
   return {
-    presses, stepAttack, findTarget, startAttack, ready, log: LOG, teach,
+    presses, stepAttack, findTarget, startAttack, ready, log: LOG, teach, relabel: showSlots,
     get data() { return D; }, get charging() { return !!charge; },
     get cur() { return cur; },
     get stance() { return stance; },
