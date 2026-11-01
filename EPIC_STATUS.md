@@ -120,12 +120,12 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | P15 | Water tornado he makes and rides | building | hold Jump, 28 m; no plant has run on it |
 | W22 | Land that reads as natural islands | building | his 16:57 word: not yet, W26 |
 | G12 | Every session starts at sea | check green | `returning_at_sea.mjs` |
-| V1 | Emberkin bodies | todo | |
-| V2 | Flight on fire thrusters | todo | |
-| V3 | The same power set, in fire | todo | |
+| V1 | Emberkin bodies | building | a regular man in red, no weapon (`ember.glb`, one rig, two meshes); `wall_ember` E10 in both engines; CMU boxing and kick on his blows; his eye owed |
+| V2 | Flight on fire thrusters | building | foes: `wall_ember` E1-E5, the lean comes from the thrust; played: Boost and Jump, then Fly, Jump held glides (CR-47), `wall_sides` S4, S5 through the input, not two real thumbs; his eye owed on the takeoff |
+| V3 | The same power set, in fire | building | played: the water kit in fire colours and fire names, fists from capture. Each power's own move and look still owed; foes have bolts, strafe, swoop, slam |
 | V4 | Range, both sides | todo | |
-| V5 | Water against fire | todo | |
-| V6 | Fire biomes | todo | |
+| V5 | Water against fire | building | water douses and drops him, doused blows do double, relights: `wall_ember` E7-E9, E12; fire and water bolts cancel in steam |
+| V6 | Fire biomes | building | the Burnt Isle: black rock and a volcano. Lava rivers, ash, burning ruins and an orange sky still owed |
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
