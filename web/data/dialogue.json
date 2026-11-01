@@ -1,0 +1,686 @@
+{
+ "minnow_first": [
+  [
+   "minnow",
+   "Oh! You moved. You've been a rock for as long as I've been diving."
+  ],
+  [
+   "minnow",
+   "I'm Minnow. I've got forty-one fish in my book and you're not any of them."
+  ],
+  [
+   "minnow",
+   "There are sharks on the reef, and they've seen you. Can you do something large?"
+  ]
+ ],
+ "minnow_bell": [
+  [
+   "minnow",
+   "That's the Reef Bell. Nobody has ever heard that. NOBODY."
+  ],
+  [
+   "minnow",
+   "It rang the windows out of the harbour, I bet. Gran is going to want a word with you."
+  ],
+  [
+   "minnow",
+   "Come up to Sunward. I'll swim slow. You look like you're still waking up."
+  ]
+ ],
+ "tamsin_first": [
+  [
+   "tamsin",
+   "So you're what shook my windows out."
+  ],
+  [
+   "tamsin",
+   "Tamsin Vear. I run this harbour, which means I run the lamp. Somebody on this wall has lit it every night for three hundred years."
+  ],
+  [
+   "tamsin",
+   "Nobody remembers why. You don't stop, though. It isn't a thing you stop."
+  ],
+  [
+   "tamsin",
+   "There's forty-one notches cut in the wall under it, too. Minnow thinks they're fish."
+  ],
+  [
+   "minnow",
+   "They could be fish."
+  ],
+  [
+   "tamsin",
+   "You've got a question on your face and no idea what it is. Go and see Bram in the kelp. He's been out there so long he's half otter."
+  ]
+ ],
+ "bram_first": [
+  [
+   "bram",
+   "Mind the otters. They run the place. I just pay the rent in clams."
+  ],
+  [
+   "bram",
+   "Boats have been going missing at the edge of the kelp. There's nets strung across the Long Nave, down in the green. Not fishing nets."
+  ],
+  [
+   "bram",
+   "Cut them, would you? And if you see a fella in rusted armour, don't wave."
+  ]
+ ],
+ "bram_after": [
+  [
+   "bram",
+   "Felt that one in my teeth. The otters have gone very quiet, which I've never seen."
+  ],
+  [
+   "bram",
+   "Look at this. Came off one of those nets. There's a stamp on it. Old city mark."
+  ],
+  [
+   "bram",
+   "Only people who could read that are in Meridon. Don't ask me who's left in Meridon. I don't go down there. It smells of bread."
+  ]
+ ],
+ "ferrant_first": [
+  [
+   "ferrant",
+   "A customer! Sit, sit, the morning batch is nearly..."
+  ],
+  [
+   "ferrant",
+   "Oh. You're wet."
+  ],
+  [
+   "ferrant",
+   "Everyone's wet lately. Three hundred years of lately, I suppose. I keep meaning to close up."
+  ],
+  [
+   "ferrant",
+   "That tag? You'll want the Clerk, at the Rotunda. There are men in the square who won't let anyone through. They won't say why."
+  ]
+ ],
+ "ambry_first": [
+  [
+   "ambry",
+   "Name. Post. Reason for absence."
+  ],
+  [
+   "warden",
+   "Warden."
+  ],
+  [
+   "ambry",
+   "Warden of Thalor. Absent from post, three hundred and six years. I'll need that in writing."
+  ],
+  [
+   "ambry",
+   "This tag is garrison issue. Rescue nets, for pulling people out of the water."
+  ],
+  [
+   "ambry",
+   "Those men in the square are yours, sir. They're still trying to save people. They've just forgotten which way is up."
+  ],
+  [
+   "ambry",
+   "The lamps round the Gilded Bell went out with the office. Light them and I'll let you ring it. There's a form, but I'll waive it."
+  ]
+ ],
+ "ambry_after": [
+  [
+   "ambry",
+   "The Gilded Bell, rung during office hours for once."
+  ],
+  [
+   "ambry",
+   "The next is under the ice. Take a coat. That was a joke. I've had three hundred years to work on it."
+  ]
+ ],
+ "tove_first": [
+  [
+   "tove",
+   "You're the one making the ice sing. Every bell, the floe cracks a little further south."
+  ],
+  [
+   "tove",
+   "Tove Sael. My mother cut ice here, and hers. There's a bell down in the old ice. We don't cut near it. If you lie flat on the floe you can hear it thinking."
+  ],
+  [
+   "tove",
+   "Something's woken in the caves. Go down, and don't fight the cold. Breathe out. Let it have you for a moment."
+  ]
+ ],
+ "tove_after": [
+  [
+   "tove",
+   "There. You feel that? Water's only ice that hasn't made up its mind."
+  ],
+  [
+   "tove",
+   "You've got it in your hands now. Be polite with it."
+  ],
+  [
+   "tove",
+   "South and down from here the sea gets hot. There's a smith at the vents who will shout at you. Let her."
+  ]
+ ],
+ "marta_first": [
+  [
+   "marta",
+   "Is that my trident? Give it here. WHAT have you been hitting with it?"
+  ],
+  [
+   "marta",
+   "Three centuries I've kept this forge hot, on the off chance you'd turn up and apologise to your equipment."
+  ],
+  [
+   "marta",
+   "I need heart-ember from the deep vents. Mind the Husks. That's the furnace crew, what's left of them. Decent lads."
+  ]
+ ],
+ "marta_after": [
+  [
+   "marta",
+   "There. That'll hold. Don't hit anything for a day. That was also a joke. Nobody down here laughs."
+  ],
+  [
+   "marta",
+   "You were at the seventh bell, that night. I heard it stop."
+  ],
+  [
+   "warden",
+   "I remember the bell. I don't remember why I left it."
+  ],
+  [
+   "marta",
+   "Go and see Nell. She's down where the lamps are. Take your time. She's had the practice."
+  ]
+ ],
+ "nell_first": [
+  [
+   "nell",
+   "You took your time."
+  ],
+  [
+   "nell",
+   "It's all right. I kept them lit. You said stay by the lamp and you'd come back for me."
+  ],
+  [
+   "nell",
+   "So I stayed by the lamp."
+  ],
+  [
+   "warden",
+   "How long?"
+  ],
+  [
+   "nell",
+   "I stopped counting at a hundred thousand. Then I counted lamps."
+  ],
+  [
+   "nell",
+   "You'd got forty-one of us to the boats. I was the last. The lower school was flooding and you left the bell and you came for us, and you went back down for me."
+  ],
+  [
+   "nell",
+   "Then the water came. That's all. That's why the seventh bell stopped."
+  ],
+  [
+   "nell",
+   "The Deep Bell's just down there. Ring it, and then can we go up? I'd like to see the sky. I've forgotten what colour it does."
+  ]
+ ],
+ "nell_bell": [
+  [
+   "nell",
+   "Oh, that's loud. I'd forgotten loud."
+  ],
+  [
+   "nell",
+   "I'm not scared of the dark. I just don't know the way any more. Stay close, will you? Don't go too fast."
+  ]
+ ],
+ "nell_out": [
+  [
+   "nell",
+   "Is that it? Is that the top? It's so far."
+  ],
+  [
+   "nell",
+   "I'll wait here. I'm good at it. Go and finish what you were doing."
+  ]
+ ],
+ "thole_gate": [
+  [
+   "thole",
+   "Halt. Nobody passes until the Warden relieves this post."
+  ],
+  [
+   "warden",
+   "Captain."
+  ],
+  [
+   "thole",
+   "Sir. You're late, sir."
+  ],
+  [
+   "thole",
+   "We held. The men held. Nobody got through. We kept pulling them out of the water, sir, we kept..."
+  ],
+  [
+   "warden",
+   "I know you did."
+  ],
+  [
+   "thole",
+   "Is it over?"
+  ],
+  [
+   "warden",
+   "Nearly. Open the gate, Orrin."
+  ]
+ ],
+ "thole_relieved": [
+  [
+   "warden",
+   "Captain Thole. You're relieved."
+  ],
+  [
+   "thole",
+   "Sir. Thank you, sir."
+  ],
+  [
+   "thole",
+   "Tell the men I'll be along. I think I'd like to see the sun."
+  ]
+ ],
+ "ending": [
+  [
+   "warden",
+   "Forty-one. I left the bell. The whole city, Tamsin. I left it."
+  ],
+  [
+   "tamsin",
+   "Forty-one children in the boats. I'm from the eleventh notch. Minnow's from the eleventh. Half this island's from the first nine."
+  ],
+  [
+   "tamsin",
+   "We've left a light on for you for three hundred years. You want to apologise? Go on. I'll wait."
+  ],
+  [
+   "minnow",
+   "You're number forty-two in my book, by the way. Very Big Fish."
+  ],
+  [
+   "nell",
+   "Is that lamp for me?"
+  ],
+  [
+   "tamsin",
+   "It's for whoever's still coming home, love. Come in. It's cold out."
+  ]
+ ],
+ "s_nets_offer": [
+  [
+   "tamsin",
+   "Lost nets on the reef. They keep on fishing with nobody at the other end. Turtles get in them."
+  ],
+  [
+   "tamsin",
+   "You've got the fork. Go and cut them loose. I'll owe you."
+  ]
+ ],
+ "s_nets_done": [
+  [
+   "tamsin",
+   "Good. I don't owe you much, mind. It's a harbour, not a bank."
+  ]
+ ],
+ "s_divers_offer": [
+  [
+   "odile",
+   "Odile Brask. Salvage. Two of my divers went into the Old Wreck and didn't come out."
+  ],
+  [
+   "odile",
+   "One of them's my brother, which is the only reason I'm asking nicely."
+  ]
+ ],
+ "s_divers_found": [
+  [
+   "luc",
+   "Don't tell her I panicked."
+  ],
+  [
+   "luc",
+   "The hull shifted and I lost the line. Which way's up? I'll follow you."
+  ]
+ ],
+ "s_divers_done": [
+  [
+   "odile",
+   "You absolute lump, Luc."
+  ],
+  [
+   "odile",
+   "Thank you. Don't tell him I said that either."
+  ]
+ ],
+ "s_whale_offer": [
+  [
+   "minnow",
+   "There's a whale on the outer reef with harpoons in her. She keeps singing the same bit over and over."
+  ],
+  [
+   "minnow",
+   "I think it's the bit that means ow. Please."
+  ]
+ ],
+ "s_whale_done": [
+  [
+   "minnow",
+   "She sang a different bit! It's going in the book. I'm calling her Mrs. Ow."
+  ]
+ ],
+ "s_bell_offer": [
+  [
+   "tamsin",
+   "The Reavers took the dinner bell off the fish hall. Who steals a dinner bell?"
+  ],
+  [
+   "tamsin",
+   "Anything that rings, they take. Bram saw a heap of them at Crown Cove. Fetch ours back, would you? People are eating at all hours."
+  ]
+ ],
+ "s_bell_done": [
+  [
+   "tamsin",
+   "There she is. Dinner at six, like civilised people. Sit down, you look thin."
+  ]
+ ],
+ "s_light_offer": [
+  [
+   "jory",
+   "SPEAK UP. Thirty years of foghorn, I've no ears left."
+  ],
+  [
+   "jory",
+   "Light's out! Gulls had the lens frame in a storm. There's three bits of glass in the shallows off Gull Rock. Bring them up, I'll do the rest."
+  ]
+ ],
+ "s_light_done": [
+  [
+   "jory",
+   "THERE she goes. Look at that. Nobody's lost tonight."
+  ],
+  [
+   "jory",
+   "What? No, I can't hear you. Very nice, though."
+  ]
+ ],
+ "s_chart_offer": [
+  [
+   "odile",
+   "Found half a chart in a dead man's boot. Don't ask. It's marks and a verse about three pieces."
+  ],
+  [
+   "odile",
+   "First mark's at the Sea Arch. You swim faster than my boat. We split it. I'm taking the larger half, obviously."
+  ]
+ ],
+ "s_chart_done": [
+  [
+   "odile",
+   "Is that it? A box of old spoons? I want you to know I'm keeping every one."
+  ]
+ ],
+ "s_list_offer": [
+  [
+   "minnow",
+   "I'm doing a list of everything in the sea and I can only hold my breath for a minute."
+  ],
+  [
+   "minnow",
+   "You swim near things, I write them down. Eight new ones. Deal? I'll give you something good. It's a secret."
+  ]
+ ],
+ "s_list_done": [
+  [
+   "minnow",
+   "Eight! Here. It was my great-great-great-gran's. It was just a fork in a box. I think it's yours."
+  ]
+ ],
+ "s_loaf_offer": [
+  [
+   "ferrant",
+   "There's a loaf on the shelf nobody's collected. A birthday loaf. Little girl from the lower terrace. Eleven."
+  ],
+  [
+   "ferrant",
+   "I've baked it fresh every year in case. You go down that way, don't you?"
+  ]
+ ],
+ "s_loaf_done": [
+  [
+   "nell",
+   "It's warm."
+  ],
+  [
+   "nell",
+   "How is it warm?"
+  ],
+  [
+   "nell",
+   "He remembered it's my birthday. It might not be. I'll say it is."
+  ]
+ ],
+ "s_goat_offer": [
+  [
+   "hob",
+   "My goat's on Gull Rock again. I don't know how. He doesn't know how."
+  ],
+  [
+   "hob",
+   "His name's Bishop. Tide's coming. He won't come for me. He might come for you. You look like a person who's in charge of things."
+  ]
+ ],
+ "s_goat_done": [
+  [
+   "hob",
+   "Bishop, you great fool. Look at you. Dry as a biscuit. Thank you. He says thank you. He doesn't, but I'm saying it."
+  ]
+ ],
+ "s_race_offer": [
+  [
+   "wick",
+   "Nobody's beaten the tide from the harbour to the Arch. Nobody! Bet you can't."
+  ],
+  [
+   "wick",
+   "Start at the ring. If you win I'll tell everyone you're real."
+  ]
+ ],
+ "s_race_done": [
+  [
+   "wick",
+   "You're real! I'm telling everyone!"
+  ]
+ ],
+ "s_pups_offer": [
+  [
+   "bram",
+   "Shark came through and the pups went everywhere. Three of them out in the nave, screaming blue murder."
+  ],
+  [
+   "bram",
+   "Pick them up by the scruff. They'll bite. It's affection."
+  ]
+ ],
+ "s_pups_done": [
+  [
+   "bram",
+   "All three. Now you're on the rent list too. It's one clam a week."
+  ]
+ ],
+ "s_tax_offer": [
+  [
+   "ambry",
+   "Three citizens are in arrears on the bell-tax. Three hundred and six years in arrears."
+  ],
+  [
+   "ambry",
+   "Deliver these notices. I know they're dead, sir. That's not an exemption."
+  ]
+ ],
+ "s_tax_done": [
+  [
+   "ambry",
+   "All served. Do you know, you're the first person to help me in three centuries. I'll put it on file. I may cry on the file. It's fine, it's waterproof."
+  ]
+ ],
+ "s_ember_offer": [
+  [
+   "tove",
+   "My stove's been out since my mother died. I can't seem to bring myself to light it."
+  ],
+  [
+   "tove",
+   "Marta says a heart-ember never goes cold if it's carried fast enough. Would you? I'd like the house warm again."
+  ]
+ ],
+ "s_ember_done": [
+  [
+   "tove",
+   "Oh. There's the smell of it. There she is. Sit a minute. No, don't say anything. Just sit."
+  ]
+ ],
+ "s_kraken_done": [
+  [
+   "odile",
+   "It's dead? You're sure? I'm putting that on the sign. Brask Salvage: The Thing Is Dead."
+  ]
+ ],
+ "s_stand_offer": [
+  [
+   "thole",
+   "There's three posts still out, sir. They haven't heard. They won't take it from me."
+  ],
+  [
+   "thole",
+   "It has to come from you. It's only two words."
+  ]
+ ],
+ "s_stand_post": [
+  [
+   "warden",
+   "Stand down, soldier. You're relieved."
+  ]
+ ],
+ "s_stand_done": [
+  [
+   "thole",
+   "That's all of them, sir. First time this city's been quiet."
+  ]
+ ],
+ "chat_tamsin_2": [
+  [
+   "tamsin",
+   "Bells keep ringing, I'll need new windows. Put it on your tab."
+  ]
+ ],
+ "chat_minnow_2": [
+  [
+   "minnow",
+   "Bram's otters bit me. I wrote that down too."
+  ]
+ ],
+ "chat_minnow_4": [
+  [
+   "minnow",
+   "Gran's been up on the wall every night. She says she isn't waiting for anybody. She's brought a chair."
+  ]
+ ],
+ "chat_ferrant_3": [
+  [
+   "ferrant",
+   "Bread? No, no. It's for looking at. You'd only get it wet."
+  ]
+ ],
+ "chat_jory_1": [
+  [
+   "jory",
+   "WHAT?"
+  ],
+  [
+   "jory",
+   "No, I've had my dinner."
+  ]
+ ],
+ "chat_odile_1": [
+  [
+   "odile",
+   "If you find anything on the bottom, it's mine. That's the law. It isn't, but it should be."
+  ]
+ ],
+ "chat_hob_1": [
+  [
+   "hob",
+   "He's a good goat. Bad at geography."
+  ]
+ ],
+ "chat_wick_1": [
+  [
+   "wick",
+   "Are you a real one? Tamsin says you're real. I think you might be two people in a coat."
+  ]
+ ],
+ "rua_first": [
+  [
+   "rua",
+   "You've come up my stairs dripping. Nobody comes up my stairs."
+  ],
+  [
+   "rua",
+   "Rua Cairn. I write down what the mountain does. It's been clearing its throat since your bells started."
+  ],
+  [
+   "rua",
+   "There's a smith under here keeping it warm. Black beach, then straight down. If it stops being water, you've gone too far."
+  ]
+ ],
+ "fleet1_offer": [
+  [
+   "odile",
+   "Wrackreach. Every boat that ever sank round here ends up there, and something's keeping them."
+  ],
+  [
+   "odile",
+   "There's lights on the old flagship. I've got a crew who'd like to stop being afraid of the dark."
+  ]
+ ],
+ "eda_first": [
+  [
+   "eda",
+   "Bosun Marl, rescue fleet. We got as far as the reef, that night. Forty boats."
+  ],
+  [
+   "eda",
+   "Then something took the rudders. We've been hauling on the same line ever since. Hold the deck a minute, would you?"
+  ]
+ ],
+ "eda_after": [
+  [
+   "eda",
+   "Thank you. The men won't say so. They've forgotten how."
+  ]
+ ],
+ "fleet2_offer": [
+  [
+   "eda",
+   "It's under us. It holds the wrecks like a child holds a toy."
+  ],
+  [
+   "eda",
+   "Finish it, and the fleet can stand down. We were only ever meant to be out for the night."
+  ]
+ ]
+}

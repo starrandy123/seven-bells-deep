@@ -1,0 +1,529 @@
+{
+ "people": [
+  {
+   "id": "minnow",
+   "name": "Minnow Vear",
+   "role": "Eleven. Keeps a book of everything in the sea.",
+   "at": {
+    "spawn": true,
+    "dir": 25,
+    "dist": 37,
+    "ground": 3
+   },
+   "body": "#e0a23c",
+   "portrait": {
+    "skin": "#a9744e",
+    "hair": "braids",
+    "hairCol": "#2a1a12",
+    "cloth": "#d9a03a",
+    "scarf": "#2d6a78",
+    "bg": [
+     "#6fd4d8",
+     "#1b7f96"
+    ],
+    "smile": 1,
+    "eyes": "#2a1a12"
+   },
+   "chat": [
+    {
+     "after": "ch1",
+     "d": "chat_minnow_2"
+    },
+    {
+     "after": "ch3",
+     "d": "chat_minnow_4"
+    }
+   ],
+   "barks": [
+    "That's a wrasse. That's not a very good wrasse.",
+    "Gran says don't bother you. Are you bothered?",
+    "I can hold my breath for a minute and four seconds."
+   ],
+   "scale": 0.76
+  },
+  {
+   "id": "tamsin",
+   "name": "Tamsin Vear",
+   "role": "Harbour-mistress of Sunward Hollow",
+   "at": {
+    "poi": "sunward_harbour|sunward_east",
+    "dir": 10,
+    "dist": 4,
+    "ground": 0
+   },
+   "body": "#34506a",
+   "portrait": {
+    "skin": "#b98a66",
+    "hair": "bun",
+    "hairCol": "#c9c4ba",
+    "cloth": "#34506a",
+    "scarf": "#8a3b22",
+    "bg": [
+     "#e9c49a",
+     "#7a93a8"
+    ],
+    "age": 0.8,
+    "smile": 0.25
+   },
+   "chat": [
+    {
+     "after": "ch1",
+     "d": "chat_tamsin_2"
+    }
+   ],
+   "barks": [
+    "Mind the wet paint. It's been wet since spring.",
+    "Somebody's got to do the lamp.",
+    "You're dripping on my harbour."
+   ]
+  },
+  {
+   "id": "jory",
+   "name": "Jory Kettle",
+   "role": "Lighthouse keeper. Quite deaf.",
+   "at": {
+    "poi": "sunward_lighthouse|sunward_south",
+    "dir": 120,
+    "dist": 4,
+    "ground": 0
+   },
+   "body": "#7a3b2c",
+   "portrait": {
+    "skin": "#c39573",
+    "hair": "cap",
+    "hairCol": "#27384a",
+    "cloth": "#7a3b2c",
+    "beard": "#d5d0c6",
+    "bg": [
+     "#c9dfe6",
+     "#5d7f96"
+    ],
+    "age": 0.9,
+    "smile": 0.7
+   },
+   "chat": [
+    {
+     "d": "chat_jory_1"
+    }
+   ],
+   "barks": [
+    "WHAT?",
+    "Lovely day for it! Whatever it is!",
+    "NOBODY'S LOST TONIGHT."
+   ]
+  },
+  {
+   "id": "odile",
+   "name": "Odile Brask",
+   "role": "Salvage diver. Runs a crew of three.",
+   "at": {
+    "poi": "sunward_harbour|sunward_east",
+    "dir": 75,
+    "dist": 13,
+    "ground": 0
+   },
+   "body": "#3a4a3a",
+   "portrait": {
+    "skin": "#8a5a3c",
+    "hair": "crop",
+    "hairCol": "#17120e",
+    "cloth": "#3a4a3a",
+    "bg": [
+     "#7fa9a0",
+     "#27474a"
+    ],
+    "frown": true,
+    "smile": 0
+   },
+   "after": "ch1",
+   "chat": [
+    {
+     "d": "chat_odile_1"
+    }
+   ],
+   "barks": [
+    "Finders keepers. That's maritime law. It isn't, but it should be.",
+    "Luc! Rope! No, the other rope!"
+   ]
+  },
+  {
+   "id": "hob",
+   "name": "Hob Tarrant",
+   "role": "Goatherd on the meadows",
+   "at": {
+    "poi": "sunward_hollow|sunward_east",
+    "dir": 225,
+    "dist": 20,
+    "ground": 0
+   },
+   "body": "#6a5a2c",
+   "portrait": {
+    "skin": "#c9a07c",
+    "hair": "wild",
+    "hairCol": "#8a7a68",
+    "cloth": "#6a5a2c",
+    "bg": [
+     "#cfe0a0",
+     "#6f9a5a"
+    ],
+    "age": 0.7,
+    "smile": 0.8
+   },
+   "after": "ch1",
+   "chat": [
+    {
+     "d": "chat_hob_1"
+    }
+   ],
+   "barks": [
+    "Have you seen a goat?",
+    "He's a good goat. It's the rocks that are the problem."
+   ]
+  },
+  {
+   "id": "wick",
+   "name": "Wick Pender",
+   "role": "Nine. Fastest swimmer in the harbour, he says.",
+   "at": {
+    "poi": "sunward_harbour|sunward_east",
+    "dir": 320,
+    "dist": 11,
+    "ground": 0
+   },
+   "body": "#b0502c",
+   "portrait": {
+    "skin": "#d3a47e",
+    "hair": "wild",
+    "hairCol": "#b0602a",
+    "cloth": "#b0502c",
+    "bg": [
+     "#a8e0d8",
+     "#3a9aa0"
+    ],
+    "smile": 1
+   },
+   "after": "ch1",
+   "chat": [
+    {
+     "d": "chat_wick_1"
+    }
+   ],
+   "barks": [
+    "Bet you can't.",
+    "I could beat you. I'm just busy."
+   ],
+   "scale": 0.76
+  },
+  {
+   "id": "bram",
+   "name": "Bram Sedge",
+   "role": "Lives on a raft at the top of the kelp",
+   "at": {
+    "poi": "otter_raft|long_nave",
+    "sea": true,
+    "dz": 0.34
+   },
+   "body": "#5a6a2c",
+   "portrait": {
+    "skin": "#9a6a48",
+    "hair": "wild",
+    "hairCol": "#9a9286",
+    "cloth": "#5a6a2c",
+    "beard": "#a59a8c",
+    "bg": [
+     "#9ac07a",
+     "#2f5a3a"
+    ],
+    "age": 0.9,
+    "smile": 0.6
+   },
+   "chat": [
+    {
+     "after": "ch2",
+     "d": "bram_after"
+    }
+   ],
+   "barks": [
+    "They've unionised. The otters.",
+    "Rent's a clam a week. I'm behind."
+   ]
+  },
+  {
+   "id": "ferrant",
+   "name": "Ferrant",
+   "role": "Baker of Meridon, three hundred years past closing",
+   "ghost": true,
+   "at": {
+    "poi": "meridon_bakery|meridon",
+    "dir": 300,
+    "dist": 42,
+    "ground": 1.2
+   },
+   "portrait": {
+    "skin": "#b88c6a",
+    "hair": "bald",
+    "hairCol": "#3a2a20",
+    "cloth": "#dcd4c0",
+    "apron": "#a89a84",
+    "beard": "#6a5a48",
+    "bg": [
+     "#f0c070",
+     "#8a5a2a"
+    ],
+    "smile": 0.8,
+    "age": 0.5
+   },
+   "chat": [
+    {
+     "after": "ch3",
+     "d": "chat_ferrant_3"
+    }
+   ],
+   "barks": [
+    "Morning batch is nearly ready.",
+    "Nearly.",
+    "You can't rush a loaf."
+   ]
+  },
+  {
+   "id": "ambry",
+   "name": "Perpetua Ambry",
+   "role": "Clerk of the Gilded City",
+   "ghost": true,
+   "at": {
+    "poi": "rotunda|meridon",
+    "dir": 20,
+    "dist": 16,
+    "ground": 1.2
+   },
+   "portrait": {
+    "skin": "#c9a488",
+    "hair": "bun",
+    "hairCol": "#2a2018",
+    "cloth": "#2a2a44",
+    "bg": [
+     "#d9b860",
+     "#6a4a20"
+    ],
+    "glasses": true,
+    "smile": 0.1,
+    "frown": true,
+    "age": 0.5
+   },
+   "barks": [
+    "Take a number.",
+    "There's a form for that.",
+    "Office hours are posted. They have not changed."
+   ]
+  },
+  {
+   "id": "rua",
+   "name": "Rua Cairn",
+   "role": "Fire-watcher of Crown Isle",
+   "at": {
+    "poi": "crown_temple|crown_cove",
+    "dir": 60,
+    "dist": 5,
+    "ground": 0
+   },
+   "body": "#8a3b2c",
+   "portrait": {
+    "skin": "#7a4a30",
+    "hair": "hood",
+    "hairCol": "#3a2018",
+    "cloth": "#6a2a1c",
+    "bg": [
+     "#ffb066",
+     "#5a2a2a"
+    ],
+    "age": 0.8,
+    "smile": 0.4
+   },
+   "barks": [
+    "It's clearing its throat.",
+    "Write it down. That's all I do. Somebody should."
+   ]
+  },
+  {
+   "id": "tove",
+   "name": "Tove Sael",
+   "role": "Ice-cutter of the Frost Isle",
+   "at": {
+    "poi": "frost_isle|frost_fort|crown_cove",
+    "dir": 40,
+    "dist": 6,
+    "ground": 0
+   },
+   "body": "#c9d9e0",
+   "portrait": {
+    "skin": "#e0c0a8",
+    "hair": "hood",
+    "hairCol": "#b9c9d4",
+    "cloth": "#5a7a8a",
+    "bg": [
+     "#dff2fa",
+     "#7fa9c4"
+    ],
+    "eyes": "#2a4a6a",
+    "smile": 0.4,
+    "age": 0.5
+   },
+   "barks": [
+    "Hear it? No. You have to lie down.",
+    "Cold's only weather."
+   ]
+  },
+  {
+   "id": "marta",
+   "name": "Marta Clinker",
+   "role": "Smith at the vent forge",
+   "ghost": true,
+   "at": {
+    "poi": "cinder_forge|cindermere|wreck",
+    "dir": 150,
+    "dist": 32,
+    "ground": 1.2
+   },
+   "portrait": {
+    "skin": "#8a5a3c",
+    "hair": "crop",
+    "hairCol": "#2a1a12",
+    "cloth": "#4a2a1a",
+    "apron": "#2a1a12",
+    "bg": [
+     "#ff9a4a",
+     "#6a1a0a"
+    ],
+    "frown": true,
+    "smile": 0.3,
+    "age": 0.6
+   },
+   "barks": [
+    "Don't touch that.",
+    "Or that.",
+    "Who taught you to hold a hammer? Nobody? It shows."
+   ]
+  },
+  {
+   "id": "nell",
+   "name": "Nell Tallow",
+   "role": "Keeper of the lamps at Vesper",
+   "ghost": true,
+   "at": {
+    "poi": "terraces|vesper",
+    "dir": 70,
+    "dist": 18,
+    "ground": 1.2
+   },
+   "portrait": {
+    "skin": "#d0a884",
+    "hair": "long",
+    "hairCol": "#3a2a20",
+    "cloth": "#5a7a9a",
+    "bg": [
+     "#2a6a8a",
+     "#051a2a"
+    ],
+    "smile": 0.35
+   },
+   "barks": [
+    "I've done this row. I'll do it again.",
+    "That one's nearly out."
+   ],
+   "scale": 0.76
+  },
+  {
+   "id": "thole",
+   "name": "Captain Orrin Thole",
+   "role": "Commander of the Thalor garrison",
+   "ghost": true,
+   "at": {
+    "gate": true,
+    "dist": 6,
+    "dir": 180,
+    "dz": 1
+   },
+   "portrait": {
+    "skin": "#7a8a80",
+    "hair": "bald",
+    "hairCol": "#2a2a2a",
+    "cloth": "#1c2a26",
+    "helm": "#8a3b22",
+    "beard": "#3a4a44",
+    "bg": [
+     "#3a5a5a",
+     "#0a1a1a"
+    ],
+    "smile": 0,
+    "frown": true,
+    "age": 0.7
+   },
+   "after": "ch6",
+   "barks": [
+    "Holding, sir.",
+    "The line holds."
+   ]
+  },
+  {
+   "id": "eda",
+   "name": "Bosun Eda Marl",
+   "role": "Rescue fleet, three hundred years at sea",
+   "ghost": true,
+   "at": {
+    "poi": "wrackreach|wreck",
+    "dir": 90,
+    "dist": 12,
+    "ground": 3
+   },
+   "portrait": {
+    "skin": "#a88a70",
+    "hair": "short",
+    "hairCol": "#2a2a2a",
+    "cloth": "#2a3a4a",
+    "bg": [
+     "#3a5a6a",
+     "#0a1a2a"
+    ],
+    "smile": 0.1,
+    "age": 0.5
+   },
+   "barks": [
+    "Haul.",
+    "Haul away.",
+    "Who's got the watch?"
+   ],
+   "after": "ch4"
+  }
+ ],
+ "extra": {
+  "warden": {
+   "name": "The Warden",
+   "portrait": {
+    "skin": "#8a5a3c",
+    "hair": "long",
+    "hairCol": "#1c1410",
+    "cloth": "#0c5c66",
+    "helm": "#c99a3f",
+    "bg": [
+     "#2a8aa0",
+     "#0a2a44"
+    ],
+    "smile": 0.1
+   }
+  },
+  "luc": {
+   "name": "Luc Brask",
+   "portrait": {
+    "skin": "#8a5a3c",
+    "hair": "short",
+    "hairCol": "#17120e",
+    "cloth": "#3a4a3a",
+    "bg": [
+     "#2a5a6a",
+     "#0a2030"
+    ],
+    "smile": 0.2
+   }
+  }
+ }
+}

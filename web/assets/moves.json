@@ -1,0 +1,1244 @@
+{
+ "ride_grip": {
+  "dur": 2.0,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 2.0
+ },
+ "idle_tread": {
+  "dur": 5.0,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 5.0
+ },
+ "idle_combat": {
+  "dur": 2.4,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 2.4
+ },
+ "swim_slow": {
+  "dur": 1.4,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.4
+ },
+ "swim_fast": {
+  "dur": 0.9,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.9
+ },
+ "boost": {
+  "dur": 0.6,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.6
+ },
+ "super": {
+  "dur": 0.3333,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.333
+ },
+ "atk1": {
+  "dur": 0.8333,
+  "loop": false,
+  "hit": [
+   0.167,
+   0.4
+  ],
+  "reach": 1.685,
+  "arc_deg": 34.1,
+  "lunge": 0.9,
+  "cancel": 0.5,
+  "peak_mps": 13.3,
+  "contact": 0.2
+ },
+ "atk2": {
+  "dur": 1.0667,
+  "loop": false,
+  "hit": [
+   0.267,
+   0.4
+  ],
+  "reach": 1.761,
+  "arc_deg": 105.0,
+  "lunge": 0.5,
+  "cancel": 0.54,
+  "peak_mps": 28.0,
+  "contact": 0.3
+ },
+ "atk3": {
+  "dur": 1.0667,
+  "loop": false,
+  "hit": [
+   0.3,
+   0.4
+  ],
+  "reach": 1.783,
+  "arc_deg": 37.9,
+  "lunge": 0.8,
+  "cancel": 0.66,
+  "peak_mps": 31.1,
+  "contact": 0.333
+ },
+ "atk_dash": {
+  "dur": 1.0667,
+  "loop": false,
+  "hit": [
+   0.133,
+   0.467
+  ],
+  "reach": 2.403,
+  "arc_deg": 20.3,
+  "lunge": 6.0,
+  "cancel": 0.667,
+  "peak_mps": 14.8,
+  "contact": 0.3
+ },
+ "atk_dash_land": {
+  "dur": 1.0667,
+  "loop": false,
+  "hit": [
+   0.2,
+   0.4
+  ],
+  "reach": 2.012,
+  "arc_deg": 3.5,
+  "lunge": 0.0,
+  "cancel": 0.52,
+  "peak_mps": 17.9,
+  "contact": 0.3
+ },
+ "atk_spin": {
+  "dur": 1.1333,
+  "loop": false,
+  "hit": [
+   0.167,
+   0.733
+  ],
+  "reach": 1.85,
+  "arc_deg": 321.9,
+  "lunge": 0.0,
+  "cancel": 0.893,
+  "peak_mps": 26.8,
+  "contact": 0.567
+ },
+ "cast_wave": {
+  "dur": 1.3333,
+  "loop": false,
+  "hit": [
+   0.433,
+   0.633
+  ],
+  "reach": 1.771,
+  "arc_deg": 51.6,
+  "lunge": 0.0,
+  "cancel": 0.833,
+  "peak_mps": 10.0,
+  "contact": 0.5
+ },
+ "parry": {
+  "dur": 0.7333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.1,
+  "guard": [
+   0.067,
+   0.5
+  ]
+ },
+ "hit_front": {
+  "dur": 0.7667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.767
+ },
+ "hit_back": {
+  "dur": 0.7667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.767
+ },
+ "death": {
+  "dur": 3.0,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 3.0
+ },
+ "victory": {
+  "dur": 2.4,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 2.4
+ },
+ "pick_up": {
+  "dur": 1.3,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.3
+ },
+ "leap": {
+  "dur": 1.3,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.3
+ },
+ "dodge_water": {
+  "dur": 0.4333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.433
+ },
+ "dodge_land": {
+  "dur": 0.4333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.433
+ },
+ "launcher": {
+  "dur": 0.5333,
+  "loop": false,
+  "hit": [
+   0.133,
+   0.233
+  ],
+  "reach": 1.808,
+  "arc_deg": 20.9,
+  "lunge": 0.0,
+  "cancel": 0.353,
+  "peak_mps": 31.0,
+  "contact": 0.167
+ },
+ "air1": {
+  "dur": 0.4333,
+  "loop": false,
+  "hit": [
+   0.167,
+   0.333
+  ],
+  "reach": 1.467,
+  "arc_deg": 252.2,
+  "lunge": 0.0,
+  "cancel": 0.433,
+  "peak_mps": 39.9,
+  "contact": 0.233
+ },
+ "air2": {
+  "dur": 0.4333,
+  "loop": false,
+  "hit": [
+   0.167,
+   0.267
+  ],
+  "reach": 1.659,
+  "arc_deg": 118.8,
+  "lunge": 0.0,
+  "cancel": 0.387,
+  "peak_mps": 49.3,
+  "contact": 0.2
+ },
+ "plunge": {
+  "dur": 0.3,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.3
+ },
+ "plunge_land": {
+  "dur": 0.3667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.367
+ },
+ "riposte": {
+  "dur": 0.5,
+  "loop": false,
+  "hit": [
+   0.0,
+   0.167
+  ],
+  "reach": 1.751,
+  "arc_deg": 16.0,
+  "lunge": 0.0,
+  "cancel": 0.287,
+  "peak_mps": 8.5,
+  "contact": 0.067
+ },
+ "finisher_water": {
+  "dur": 0.7667,
+  "loop": false,
+  "hit": [
+   0.1,
+   0.2
+  ],
+  "reach": 1.755,
+  "arc_deg": 103.5,
+  "lunge": 0.0,
+  "cancel": 0.32,
+  "peak_mps": 35.7,
+  "contact": 0.133
+ },
+ "finisher_ice": {
+  "dur": 0.7667,
+  "loop": false,
+  "hit": [
+   0.1,
+   0.167
+  ],
+  "reach": 1.853,
+  "arc_deg": 5.6,
+  "lunge": 0.0,
+  "cancel": 0.287,
+  "peak_mps": 34.7,
+  "contact": 0.133
+ },
+ "whip": {
+  "dur": 0.5333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.533,
+  "contact": 0.12
+ },
+ "geyser": {
+  "dur": 0.6333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.633,
+  "contact": 0.2
+ },
+ "lance_throw": {
+  "dur": 0.5667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.567,
+  "contact": 0.17
+ },
+ "glacier_stomp": {
+  "dur": 0.7333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.733,
+  "contact": 0.23
+ },
+ "breath_cone": {
+  "dur": 1.2,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.2,
+  "contact": 0.13
+ },
+ "jump": {
+  "dur": 0.5333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.533,
+  "takeoff": 0.07
+ },
+ "jump2": {
+  "dur": 0.6333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.633
+ },
+ "surf_jump": {
+  "dur": 0.5,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.5
+ },
+ "leap_super": {
+  "dur": 1.1,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.1
+ },
+ "land": {
+  "dur": 1.0,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.0,
+  "stands": 0.52
+ },
+ "surf_stand": {
+  "dur": 1.6,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.6
+ },
+ "surf_carve_L": {
+  "dur": 1.6,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.6
+ },
+ "surf_carve_R": {
+  "dur": 1.6,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.6
+ },
+ "stand": {
+  "dur": 5.0,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 5.0
+ },
+ "walk": {
+  "dur": 1.2,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.2,
+  "gait": {
+   "T": 1.2,
+   "L": 1.242,
+   "v": 1.035,
+   "beta": 0.625,
+   "on_L": 0.4722
+  },
+  "speed": 1.3
+ },
+ "run": {
+  "dur": 0.7333,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.733,
+  "gait": {
+   "T": 0.7333,
+   "L": 2.3015,
+   "v": 3.138,
+   "beta": 0.3636,
+   "on_L": 0.5
+  },
+  "speed": 4.2
+ },
+ "sprint": {
+  "dur": 0.6,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.6,
+  "gait": {
+   "T": 0.6,
+   "L": 2.8282,
+   "v": 4.714,
+   "beta": 0.4167,
+   "on_L": 0.4444
+  },
+  "speed": 8.2
+ },
+ "fall": {
+  "dur": 1.0,
+  "loop": true,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.0
+ },
+ "run_start": {
+  "dur": 0.6333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.633,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.2667
+     ],
+     [
+      0.4667,
+      0.6667
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.5333
+     ]
+    ]
+   },
+   "v": [
+    -0.19,
+    -0.28,
+    -0.29,
+    -0.21,
+    -0.08,
+    0.12,
+    0.37,
+    0.69,
+    1.03,
+    1.33,
+    1.63,
+    1.91,
+    2.15,
+    2.33,
+    2.45,
+    2.39,
+    2.17,
+    2.01,
+    2.04
+   ]
+  }
+ },
+ "run_start_m": {
+  "dur": 0.6333,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.633,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.5333
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.2667
+     ],
+     [
+      0.4667,
+      0.6667
+     ]
+    ]
+   },
+   "v": [
+    -0.19,
+    -0.28,
+    -0.29,
+    -0.21,
+    -0.08,
+    0.12,
+    0.37,
+    0.69,
+    1.03,
+    1.33,
+    1.63,
+    1.91,
+    2.15,
+    2.33,
+    2.45,
+    2.39,
+    2.17,
+    2.01,
+    2.04
+   ]
+  }
+ },
+ "run_stop": {
+  "dur": 1.2667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.267,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.4667,
+      1.3
+     ]
+    ],
+    "L": [
+     [
+      0.2,
+      0.4333
+     ],
+     [
+      0.8,
+      1.3
+     ]
+    ]
+   },
+   "v": [
+    1.06,
+    1.69,
+    2.15,
+    2.49,
+    2.78,
+    3.14,
+    3.56,
+    3.68,
+    3.22,
+    2.32,
+    1.29,
+    0.61,
+    0.61,
+    0.97,
+    1.06,
+    0.89,
+    0.9,
+    1.11,
+    1.19,
+    0.99,
+    0.61,
+    0.29,
+    0.14,
+    0.04,
+    -0.06,
+    -0.06,
+    0.0,
+    -0.03,
+    -0.14,
+    -0.18,
+    -0.14,
+    -0.14,
+    -0.18,
+    -0.2,
+    -0.2,
+    -0.21,
+    -0.22,
+    -0.25
+   ]
+  }
+ },
+ "run_stop_m": {
+  "dur": 1.2667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 1.267,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.2,
+      0.4333
+     ],
+     [
+      0.8,
+      1.3
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.1
+     ],
+     [
+      0.4667,
+      1.3
+     ]
+    ]
+   },
+   "v": [
+    1.06,
+    1.69,
+    2.15,
+    2.49,
+    2.78,
+    3.14,
+    3.56,
+    3.68,
+    3.22,
+    2.32,
+    1.29,
+    0.61,
+    0.61,
+    0.97,
+    1.06,
+    0.89,
+    0.9,
+    1.11,
+    1.19,
+    0.99,
+    0.61,
+    0.29,
+    0.14,
+    0.04,
+    -0.06,
+    -0.06,
+    0.0,
+    -0.03,
+    -0.14,
+    -0.18,
+    -0.14,
+    -0.14,
+    -0.18,
+    -0.2,
+    -0.2,
+    -0.21,
+    -0.22,
+    -0.25
+   ]
+  }
+ },
+ "walk_start": {
+  "dur": 0.9667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.967,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.3
+     ],
+     [
+      0.5667,
+      1.0
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.8333
+     ]
+    ]
+   },
+   "v": [
+    0.23,
+    0.29,
+    0.37,
+    0.46,
+    0.51,
+    0.43,
+    0.27,
+    0.11,
+    -0.04,
+    -0.14,
+    -0.13,
+    -0.03,
+    0.06,
+    0.18,
+    0.41,
+    0.67,
+    0.8,
+    0.85,
+    0.96,
+    1.16,
+    1.43,
+    1.66,
+    1.73,
+    1.61,
+    1.38,
+    1.22,
+    1.19,
+    1.19,
+    1.15
+   ]
+  }
+ },
+ "walk_start_m": {
+  "dur": 0.9667,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 0.967,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.8333
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.3
+     ],
+     [
+      0.5667,
+      1.0
+     ]
+    ]
+   },
+   "v": [
+    0.23,
+    0.29,
+    0.37,
+    0.46,
+    0.51,
+    0.43,
+    0.27,
+    0.11,
+    -0.04,
+    -0.14,
+    -0.13,
+    -0.03,
+    0.06,
+    0.18,
+    0.41,
+    0.67,
+    0.8,
+    0.85,
+    0.96,
+    1.16,
+    1.43,
+    1.66,
+    1.73,
+    1.61,
+    1.38,
+    1.22,
+    1.19,
+    1.19,
+    1.15
+   ]
+  }
+ },
+ "walk_stop": {
+  "dur": 2.0,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 2.0,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.0,
+      0.2667
+     ],
+     [
+      0.7,
+      2.0333
+     ]
+    ],
+    "L": [
+     [
+      0.2333,
+      0.7667
+     ],
+     [
+      1.0333,
+      2.0333
+     ]
+    ]
+   },
+   "v": [
+    0.66,
+    0.69,
+    0.93,
+    1.33,
+    1.63,
+    1.91,
+    2.22,
+    2.31,
+    2.23,
+    2.05,
+    1.74,
+    1.6,
+    1.61,
+    1.47,
+    1.15,
+    0.92,
+    0.87,
+    0.97,
+    1.3,
+    1.69,
+    1.75,
+    1.65,
+    1.69,
+    1.57,
+    1.07,
+    0.57,
+    0.34,
+    0.27,
+    0.25,
+    0.24,
+    0.07,
+    -0.14,
+    -0.11,
+    0.09,
+    0.19,
+    0.18,
+    0.15,
+    0.12,
+    0.09,
+    0.05,
+    0.01,
+    -0.02,
+    -0.03,
+    -0.06,
+    -0.07,
+    -0.07,
+    -0.08,
+    -0.1,
+    -0.11,
+    -0.1,
+    -0.09,
+    -0.1,
+    -0.11,
+    -0.11,
+    -0.09,
+    -0.09,
+    -0.1,
+    -0.11,
+    -0.1,
+    -0.09
+   ]
+  }
+ },
+ "walk_stop_m": {
+  "dur": 2.0,
+  "loop": false,
+  "hit": null,
+  "reach": 0.0,
+  "arc_deg": 0.0,
+  "lunge": 0.0,
+  "cancel": 2.0,
+  "once": {
+   "on": {
+    "R": [
+     [
+      0.2333,
+      0.7667
+     ],
+     [
+      1.0333,
+      2.0333
+     ]
+    ],
+    "L": [
+     [
+      0.0,
+      0.2667
+     ],
+     [
+      0.7,
+      2.0333
+     ]
+    ]
+   },
+   "v": [
+    0.66,
+    0.69,
+    0.93,
+    1.33,
+    1.63,
+    1.91,
+    2.22,
+    2.31,
+    2.23,
+    2.05,
+    1.74,
+    1.6,
+    1.61,
+    1.47,
+    1.15,
+    0.92,
+    0.87,
+    0.97,
+    1.3,
+    1.69,
+    1.75,
+    1.65,
+    1.69,
+    1.57,
+    1.07,
+    0.57,
+    0.34,
+    0.27,
+    0.25,
+    0.24,
+    0.07,
+    -0.14,
+    -0.11,
+    0.09,
+    0.19,
+    0.18,
+    0.15,
+    0.12,
+    0.09,
+    0.05,
+    0.01,
+    -0.02,
+    -0.03,
+    -0.06,
+    -0.07,
+    -0.07,
+    -0.08,
+    -0.1,
+    -0.11,
+    -0.1,
+    -0.09,
+    -0.1,
+    -0.11,
+    -0.11,
+    -0.09,
+    -0.09,
+    -0.1,
+    -0.11,
+    -0.1,
+    -0.09
+   ]
+  }
+ },
+ "reaver": {
+  "stagger": {
+   "dur": 2.6,
+   "loop": true,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 2.6
+  },
+  "idle_combat": {
+   "dur": 2.4,
+   "loop": true,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 2.4
+  },
+  "swim_slow": {
+   "dur": 1.4,
+   "loop": true,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 1.4
+  },
+  "swim_fast": {
+   "dur": 0.9,
+   "loop": true,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 0.9
+  },
+  "atk1": {
+   "dur": 0.8333,
+   "loop": false,
+   "hit": [
+    0.167,
+    0.433
+   ],
+   "reach": 1.592,
+   "arc_deg": 19.5,
+   "lunge": 0.9,
+   "cancel": 0.533,
+   "peak_mps": 14.0,
+   "contact": 0.2
+  },
+  "atk2": {
+   "dur": 1.0667,
+   "loop": false,
+   "hit": [
+    0.267,
+    0.467
+   ],
+   "reach": 1.826,
+   "arc_deg": 97.7,
+   "lunge": 0.5,
+   "cancel": 0.607,
+   "peak_mps": 18.0,
+   "contact": 0.3
+  },
+  "hit_front": {
+   "dur": 0.7667,
+   "loop": false,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 0.767
+  },
+  "death": {
+   "dur": 3.0,
+   "loop": false,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 3.0
+  },
+  "tell_slash": {
+   "dur": 1.4,
+   "loop": false,
+   "hit": [
+    1.133,
+    1.2
+   ],
+   "reach": 1.561,
+   "arc_deg": 91.0,
+   "lunge": 0.0,
+   "cancel": 1.32,
+   "peak_mps": 37.4,
+   "contact": 1.167
+  },
+  "tell_chop": {
+   "dur": 1.4,
+   "loop": false,
+   "hit": [
+    0.833,
+    1.0
+   ],
+   "reach": 1.81,
+   "arc_deg": 159.6,
+   "lunge": 0.0,
+   "cancel": 1.12,
+   "peak_mps": 31.8,
+   "contact": 0.9
+  },
+  "shield_guard": {
+   "dur": 1.0,
+   "loop": false,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 1.0
+  },
+  "throw": {
+   "dur": 0.5333,
+   "loop": false,
+   "hit": [
+    0.133,
+    0.2
+   ],
+   "reach": 1.784,
+   "arc_deg": 28.4,
+   "lunge": 0.0,
+   "cancel": 0.32,
+   "peak_mps": 21.3,
+   "contact": 0.133
+  },
+  "run": {
+   "dur": 0.6667,
+   "loop": true,
+   "hit": null,
+   "reach": 0.0,
+   "arc_deg": 0.0,
+   "lunge": 0.0,
+   "cancel": 0.667,
+   "speed": 4.2
+  }
+ }
+}

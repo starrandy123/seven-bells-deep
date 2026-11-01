@@ -1,0 +1,1980 @@
+{
+ "bells": {
+  "reef": {
+   "key": "dash",
+   "name": "Riptide",
+   "how": "A torpedo strike through your enemies",
+   "tip": {
+    "touch": "New button: Riptide",
+    "keys": "K for Riptide"
+   }
+  },
+  "kelp": {
+   "key": "spin",
+   "name": "Maelstrom",
+   "how": "A vortex that drags them in",
+   "tip": {
+    "touch": "New button: Maelstrom",
+    "keys": "Q for Maelstrom"
+   }
+  },
+  "gilded": {
+   "bell": "The Gilded Bell",
+   "at": {
+    "poi": "rotunda|meridon",
+    "dir": 200,
+    "dist": 10,
+    "ground": 6
+   },
+   "name": "The Gilded Bell",
+   "how": "Meridon's lamps come on, one street at a time"
+  },
+  "rime": {
+   "bell": "The Rime Bell",
+   "at": {
+    "poi": "rime_shrine|rimehold|open_blue",
+    "ground": 6
+   },
+   "name": "The Rime Bell",
+   "how": "The ice answers you now"
+  },
+  "cinder": {
+   "bell": "The Cinder Bell",
+   "at": {
+    "poi": "cinder_shrine|cindermere|wreck",
+    "dir": 60,
+    "dist": 16,
+    "ground": 6
+   },
+   "name": "The Cinder Bell",
+   "how": "The vents breathe out"
+  },
+  "deep": {
+   "key": "wave",
+   "name": "Tidal Wave",
+   "how": "A wall of force that rolls for 40 metres",
+   "tip": {
+    "touch": "New button: Wave",
+    "keys": "E for Tidal Wave"
+   }
+  },
+  "great": {
+   "bell": "The Great Bell",
+   "at": {
+    "arena": true,
+    "ground": 12
+   },
+   "name": "The Great Bell",
+   "how": "The seventh bell, three hundred and six years late"
+  }
+ },
+ "shrines": [
+  "reef_shrine",
+  "kelp_shrine",
+  "rotunda",
+  "rime_shrine",
+  "cinder_shrine",
+  "deep_shrine",
+  "sunward_harbour|sunward_east",
+  "colossus"
+ ],
+ "onboard": [
+  {
+   "id": "move",
+   "touch": "Push to swim",
+   "keys": "to swim",
+   "caps": [
+    "W",
+    "A",
+    "S",
+    "D"
+   ],
+   "on": "#stick"
+  },
+  {
+   "id": "look",
+   "touch": "Drag here to look",
+   "keys": "Move the mouse to look",
+   "zone": "right"
+  },
+  {
+   "id": "boost",
+   "touch": "Hold to race",
+   "keys": "Hold to race",
+   "caps": [
+    "Shift"
+   ],
+   "on": "#bBoost"
+  },
+  {
+   "id": "strike",
+   "touch": "Tap to strike",
+   "keys": "Click to strike",
+   "on": "#bAtk"
+  },
+  {
+   "id": "bell",
+   "touch": "Swim close, then Strike",
+   "keys": "Swim close, then click",
+   "on": "#bAtk"
+  }
+ ],
+ "story": [
+  {
+   "id": "ch1",
+   "chapter": 1,
+   "title": "Waking",
+   "place": "The Reef Shelf",
+   "blurb": "You've been a rock for a long time. Somebody noticed.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "spawn": true,
+      "dir": 25,
+      "dist": 34,
+      "ground": 3
+     },
+     "r": 12,
+     "text": "Swim to the light"
+    },
+    {
+     "type": "talk",
+     "npc": "minnow",
+     "dialogue": "minnow_first",
+     "auto": true,
+     "r": 12,
+     "text": "Someone's there"
+    },
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "shark",
+      "n": 2,
+      "at": {
+       "spawn": true,
+       "dir": 50,
+       "dist": 105,
+       "ground": 6
+      },
+      "r": 26
+     },
+     "text": "Drive off the sharks"
+    },
+    {
+     "type": "ring",
+     "bell": "reef",
+     "text": "Strike the Reef Bell"
+    },
+    {
+     "type": "use",
+     "what": "riptide",
+     "text": "Try Riptide. Nothing here can hurt you",
+     "beat": [
+      "riptide",
+      1
+     ]
+    },
+    {
+     "type": "strike",
+     "item": "coral",
+     "around": "reef_shrine|reef",
+     "n": 2,
+     "spread": 26,
+     "ground": 2,
+     "with": "riptide",
+     "reach": 2.6,
+     "text": "Break the dead coral with Riptide ({n} of {total})",
+     "beat": [
+      "riptide",
+      2
+     ]
+    },
+    {
+     "type": "dialogue",
+     "id": "minnow_bell"
+    },
+    {
+     "type": "goto",
+     "at": {
+      "poi": "sunward_harbour|sunward_east"
+     },
+     "r": 16,
+     "text": "Swim to Sunward harbour",
+     "before": [
+      {
+       "move": [
+        "minnow",
+        {
+         "poi": "sunward_harbour|sunward_east",
+         "dir": 30,
+         "dist": 7,
+         "ground": 0
+        }
+       ]
+      }
+     ],
+     "say": [
+      "minnow",
+      "Mind the pier. It's older than it looks. So are you.",
+      6
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "tamsin",
+     "dialogue": "tamsin_first",
+     "text": "Talk to Tamsin Vear"
+    }
+   ],
+   "reward": {
+    "pearls": 5
+   }
+  },
+  {
+   "id": "ch2",
+   "chapter": 2,
+   "title": "The Green Nave",
+   "place": "The Kelp Cathedral",
+   "blurb": "Boats are going missing at the edge of the kelp.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "otter_raft|long_nave",
+     "r": 26,
+     "text": "Find Bram's raft above the kelp",
+     "say": [
+      "tamsin",
+      "Bram owes me for a rope. Don't mention it. Actually, mention it.",
+      6
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "bram",
+     "dialogue": "bram_first",
+     "text": "Talk to Bram Sedge"
+    },
+    {
+     "type": "strike",
+     "item": "net",
+     "around": "long_nave|kelp",
+     "n": 3,
+     "spread": 40,
+     "ground": 7,
+     "reach": 3.2,
+     "with": "riptide",
+     "text": "These nets are too tight to cut. Hit them with Riptide ({n} of {total})",
+     "beat": [
+      "riptide",
+      3
+     ]
+    },
+    {
+     "type": "defeat",
+     "encounter": [
+      "kelp_court",
+      "kelp_sharks"
+     ],
+     "spawn": {
+      "kind": "reaver",
+      "n": 4,
+      "at": "kelp_shrine|kelp",
+      "r": 30
+     },
+     "text": "Clear the men from the Kelp Shrine",
+     "beat": [
+      "riptide",
+      4
+     ]
+    },
+    {
+     "type": "ring",
+     "bell": "kelp",
+     "text": "Strike the Kelp Bell"
+    },
+    {
+     "type": "use",
+     "what": "maelstrom",
+     "text": "Try Maelstrom. It pulls things to you",
+     "beat": [
+      "maelstrom",
+      1
+     ]
+    },
+    {
+     "type": "use",
+     "what": "geyser",
+     "text": "Try Geyser. It throws things up",
+     "beat": [
+      "geyser",
+      1
+     ]
+    },
+    {
+     "type": "drill",
+     "power": "maelstrom",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "poi": "kelp_shrine|kelp",
+       "dir": 60,
+       "dist": 20,
+       "ground": 4
+      },
+      "r": 26
+     },
+     "text": "Three more at the shrine door. Drag them in with Maelstrom ({n} of {total})",
+     "beat": [
+      "maelstrom",
+      2
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "bram",
+     "dialogue": "bram_after",
+     "text": "Go back to Bram"
+    }
+   ],
+   "reward": {
+    "pearls": 8,
+    "form": "kelp_tine"
+   }
+  },
+  {
+   "id": "ch3",
+   "chapter": 3,
+   "title": "The Gilded City",
+   "place": "Meridon",
+   "blurb": "It smells of bread down there. It shouldn't.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "meridon",
+     "r": 60,
+     "text": "Swim to Meridon",
+     "say": [
+      "bram",
+      "If it smells of bread, keep going. If it stops, come back.",
+      6
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "ferrant",
+     "dialogue": "ferrant_first",
+     "auto": true,
+     "r": 9,
+     "text": "Follow the smell of bread"
+    },
+    {
+     "type": "drill",
+     "power": "geyser",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "poi": "rotunda|meridon",
+       "dir": 120,
+       "dist": 40,
+       "ground": 4
+      },
+      "r": 28
+     },
+     "text": "Men on the bridge. Throw them with Geyser ({n} of {total})",
+     "beat": [
+      "geyser",
+      2
+     ]
+    },
+    {
+     "type": "defeat",
+     "encounter": "patrol_rotunda",
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": "rotunda|meridon",
+      "r": 30
+     },
+     "text": "The men hold the high steps. Geyser knocks them off",
+     "beat": [
+      "geyser",
+      3
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "ambry",
+     "dialogue": "ambry_first",
+     "text": "Show the tag to the Clerk"
+    },
+    {
+     "type": "strike",
+     "item": "wick",
+     "around": "rotunda|meridon",
+     "n": 3,
+     "spread": 22,
+     "ground": 6,
+     "reach": 6,
+     "with": "maelstrom",
+     "text": "The wicks have floated up. Drag them down with Maelstrom ({n} of {total})",
+     "beat": [
+      "maelstrom",
+      3
+     ]
+    },
+    {
+     "type": "ring",
+     "bell": "gilded",
+     "text": "Strike the Gilded Bell"
+    },
+    {
+     "type": "talk",
+     "npc": "ambry",
+     "dialogue": "ambry_after",
+     "text": "Report to the Clerk"
+    }
+   ],
+   "reward": {
+    "pearls": 10,
+    "outfit": "gilded"
+   }
+  },
+  {
+   "id": "ch4",
+   "chapter": 4,
+   "title": "Cold Water",
+   "place": "Rimehold",
+   "blurb": "There's a bell in the old ice. You can hear it thinking.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "frost_isle|frost_fort|crown_cove",
+     "r": 30,
+     "text": "Go north to the Frost Isle",
+     "say": [
+      "ambry",
+      "Your request for a coat has been received. It is being processed.",
+      6
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "tove",
+     "dialogue": "tove_first",
+     "text": "Talk to Tove Sael"
+    },
+    {
+     "type": "goto",
+     "at": "frost_fort|frost_isle|crown_cove",
+     "r": 24,
+     "text": "Cross the snow to the old fortress"
+    },
+    {
+     "type": "goto",
+     "at": "rime_caves|rimehold|open_blue",
+     "r": 28,
+     "text": "Go down to the Rimehold caves"
+    },
+    {
+     "type": "survive",
+     "at": "rime_caves|rimehold|open_blue",
+     "r": 44,
+     "t": 45,
+     "label": "Hold",
+     "text": "Hold the cave until the ice sets. Maelstrom keeps them off",
+     "beat": [
+      "maelstrom",
+      4
+     ],
+     "waves": [
+      {
+       "t": 0,
+       "kind": "reaver",
+       "n": 3
+      },
+      {
+       "t": 18,
+       "kind": "reaver",
+       "n": 3
+      },
+      {
+       "t": 34,
+       "kind": "mixed",
+       "n": 3
+      }
+     ]
+    },
+    {
+     "type": "boss",
+     "boss": "wyrm",
+     "at": "rime_shrine|rimehold|open_blue",
+     "r": 40,
+     "text": "Face the Frost Wyrm",
+     "else": {
+      "type": "defeat",
+      "spawn": {
+       "kind": "mixed",
+       "n": 5,
+       "at": "rime_shrine|rimehold|open_blue",
+       "r": 34
+      },
+      "text": "Clear the shrine under the ice"
+     },
+     "beat": [
+      "geyser",
+      4
+     ]
+    },
+    {
+     "type": "ring",
+     "bell": "rime",
+     "text": "Strike the Rime Bell",
+     "after": [
+      {
+       "give": {
+        "stance": "ice"
+       }
+      }
+     ]
+    },
+    {
+     "type": "use",
+     "what": "lance",
+     "text": "Switch to Ice. Try Frost Lance",
+     "beat": [
+      "lance",
+      1
+     ]
+    },
+    {
+     "type": "use",
+     "what": "guard",
+     "text": "Try Frost Guard. Parry in Ice",
+     "beat": [
+      "guard",
+      1
+     ]
+    },
+    {
+     "type": "use",
+     "what": "glacier",
+     "text": "Try Glacier. It bursts from the ground",
+     "beat": [
+      "glacier",
+      1
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "tove",
+     "dialogue": "tove_after",
+     "text": "Go up to Tove"
+    }
+   ],
+   "reward": {
+    "pearls": 12,
+    "form": "rime_fork"
+   }
+  },
+  {
+   "id": "ch5",
+   "chapter": 5,
+   "title": "Fire Below",
+   "place": "Cindermere",
+   "blurb": "A smith has kept a forge hot for three hundred years. She has things to say.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "crown_cove",
+     "r": 34,
+     "text": "Land on Crown Isle's black beach",
+     "say": [
+      "tove",
+      "If you meet the smith, don't touch anything. She'll know.",
+      6
+     ]
+    },
+    {
+     "type": "goto",
+     "at": "crown_temple|crown",
+     "r": 26,
+     "text": "Climb the temple stairs"
+    },
+    {
+     "type": "talk",
+     "npc": "rua",
+     "dialogue": "rua_first",
+     "text": "Talk to the fire-watcher"
+    },
+    {
+     "type": "goto",
+     "at": "cindermere|wreck",
+     "r": 50,
+     "text": "Dive to the Vent Fields"
+    },
+    {
+     "type": "talk",
+     "npc": "marta",
+     "dialogue": "marta_first",
+     "auto": true,
+     "r": 10,
+     "text": "Find the smith"
+    },
+    {
+     "type": "drill",
+     "power": "lance",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "poi": "cindermere|wreck",
+       "dir": 40,
+       "dist": 34,
+       "ground": 4
+      },
+      "r": 28
+     },
+     "text": "They're burning. Freeze them with Frost Lance ({n} of {total})",
+     "beat": [
+      "lance",
+      2
+     ]
+    },
+    {
+     "type": "strike",
+     "item": "shard",
+     "around": "cindermere|wreck",
+     "n": 1,
+     "spread": 24,
+     "ground": 3,
+     "reach": 12,
+     "with": "lance",
+     "text": "The vent's too hot to pass. Freeze it with Frost Lance",
+     "beat": [
+      "lance",
+      3
+     ]
+    },
+    {
+     "type": "collect",
+     "item": "ember",
+     "around": "cindermere|wreck",
+     "n": 3,
+     "spread": 60,
+     "ground": 1.6,
+     "text": "Gather heart-ember ({n} of {total})"
+    },
+    {
+     "type": "drill",
+     "power": "glacier",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 4,
+      "at": {
+       "poi": "cinder_forge|cindermere|wreck",
+       "dir": 330,
+       "dist": 34,
+       "ground": 4
+      },
+      "r": 30
+     },
+     "text": "Put the furnace crew to rest with Glacier ({n} of {total})",
+     "beat": [
+      "glacier",
+      2
+     ]
+    },
+    {
+     "type": "drill",
+     "power": "guard",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "poi": "cinder_forge|cindermere|wreck",
+       "dir": 200,
+       "dist": 36,
+       "ground": 4
+      },
+      "r": 28
+     },
+     "text": "Freeze them on the parry with Frost Guard ({n} of {total})",
+     "beat": [
+      "guard",
+      2
+     ]
+    },
+    {
+     "type": "boss",
+     "boss": "colossus",
+     "at": "cinder_shrine|cindermere|wreck",
+     "r": 44,
+     "text": "Face the Cinder Colossus",
+     "beat": [
+      "lance",
+      4
+     ],
+     "else": {
+      "type": "defeat",
+      "spawn": {
+       "kind": "mixed",
+       "n": 5,
+       "at": "cinder_shrine|cindermere|wreck",
+       "r": 34
+      },
+      "text": "Clear the vents"
+     }
+    },
+    {
+     "type": "ring",
+     "bell": "cinder",
+     "text": "Strike the Cinder Bell"
+    },
+    {
+     "type": "talk",
+     "npc": "marta",
+     "dialogue": "marta_after",
+     "text": "Bring the trident to Marta"
+    }
+   ],
+   "reward": {
+    "pearls": 14,
+    "form": "forge_fork",
+    "outfit": "ember"
+   }
+  },
+  {
+   "id": "ch6",
+   "chapter": 6,
+   "title": "The Long Dark",
+   "place": "Vesper",
+   "blurb": "Somebody has kept the lamps lit. You said you'd come back.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "trench",
+     "r": 70,
+     "text": "Go down into the Vesper Deep",
+     "say": [
+      "minnow",
+      "Gran says come back after. She says that's an order. She doesn't give orders. She gave that one.",
+      6
+     ]
+    },
+    {
+     "type": "use",
+     "what": "breath",
+     "text": "The cold keeps the dark back. Try Winter's Breath",
+     "beat": [
+      "breath",
+      1
+     ]
+    },
+    {
+     "type": "goto",
+     "at": "vesper",
+     "r": 60,
+     "text": "Follow the lamps to Vesper"
+    },
+    {
+     "type": "talk",
+     "npc": "nell",
+     "dialogue": "nell_first",
+     "auto": true,
+     "r": 10,
+     "text": "Find who kept the lamps"
+    },
+    {
+     "type": "drill",
+     "power": "breath",
+     "n": 2,
+     "spawn": {
+      "kind": "mixed",
+      "n": 3,
+      "at": "deep_shrine|vesper",
+      "r": 28
+     },
+     "text": "Slow them with Winter's Breath ({n} of {total})",
+     "beat": [
+      "breath",
+      2
+     ]
+    },
+    {
+     "type": "strike",
+     "item": "shard",
+     "around": "deep_shrine|vesper",
+     "n": 1,
+     "spread": 20,
+     "ground": 3,
+     "reach": 10,
+     "with": "glacier",
+     "text": "The dark won't cross ice. Wall off the way with Glacier",
+     "beat": [
+      "glacier",
+      3
+     ]
+    },
+    {
+     "type": "defeat",
+     "encounter": [
+      "deep_court",
+      "deep_hunters"
+     ],
+     "spawn": {
+      "kind": "mixed",
+      "n": 4,
+      "at": "deep_shrine|vesper",
+      "r": 34
+     },
+     "text": "Clear the Deep Shrine",
+     "beat": [
+      "glacier",
+      4
+     ]
+    },
+    {
+     "type": "ring",
+     "bell": "deep",
+     "text": "Strike the Deep Bell"
+    },
+    {
+     "type": "use",
+     "what": "wave",
+     "text": "Try Tidal Wave. It rolls a long way",
+     "beat": [
+      "wave",
+      1
+     ]
+    },
+    {
+     "type": "dialogue",
+     "id": "nell_bell",
+     "before": [
+      {
+       "move": [
+        "nell",
+        null
+       ]
+      }
+     ]
+    },
+    {
+     "type": "escort",
+     "who": "nell",
+     "ghost": true,
+     "speed": 10,
+     "from": "deep_shrine|vesper",
+     "to": {
+      "poi": "colossus|thalor"
+     },
+     "r": 40,
+     "text": "Lead Nell up out of the dark",
+     "beat": [
+      "breath",
+      3
+     ]
+    },
+    {
+     "type": "dialogue",
+     "id": "nell_out",
+     "after": [
+      {
+       "move": [
+        "nell",
+        {
+         "poi": "colossus|thalor",
+         "dist": 30,
+         "dir": 180,
+         "ground": 8
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "reward": {
+    "pearls": 16,
+    "power": "call"
+   }
+  },
+  {
+   "id": "ch7",
+   "chapter": 7,
+   "title": "The Sunken Arena",
+   "place": "Thalor",
+   "blurb": "The men on the gate are still on duty. So are you.",
+   "objectives": [
+    {
+     "type": "use",
+     "what": "call",
+     "text": "Hear it? Use the Call of the Deep",
+     "beat": [
+      "call",
+      1
+     ]
+    },
+    {
+     "type": "goto",
+     "at": {
+      "gate": true
+     },
+     "r": 24,
+     "text": "Go to the Arena gate",
+     "say": [
+      "nell",
+      "The lamps are all still lit back there. I checked. I always check.",
+      6
+     ]
+    },
+    {
+     "type": "drill",
+     "power": "wave",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 4,
+      "at": {
+       "gate": true,
+       "dist": 34,
+       "dir": 180
+      },
+      "r": 30
+     },
+     "text": "They won't stop. Roll them back with Tidal Wave ({n} of {total})",
+     "beat": [
+      "wave",
+      2
+     ]
+    },
+    {
+     "type": "strike",
+     "item": "net",
+     "n": 1,
+     "reach": 16,
+     "with": "wave",
+     "text": "Rescue nets across the road. Tear them down with Tidal Wave",
+     "beat": [
+      "wave",
+      3
+     ],
+     "at": {
+      "gate": true,
+      "dir": 180,
+      "dist": 14,
+      "ground": 6
+     }
+    },
+    {
+     "type": "drill",
+     "power": "guard",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "gate": true,
+       "dist": 26,
+       "dir": 205
+      },
+      "r": 26
+     },
+     "text": "They've got spears. Freeze them on the parry ({n} of {total})",
+     "beat": [
+      "guard",
+      3
+     ]
+    },
+    {
+     "type": "drill",
+     "power": "breath",
+     "n": 2,
+     "spawn": {
+      "kind": "reaver",
+      "n": 3,
+      "at": {
+       "gate": true,
+       "dist": 26,
+       "dir": 155
+      },
+      "r": 26
+     },
+     "text": "The last of the line. Slow them with Winter's Breath ({n} of {total})",
+     "beat": [
+      "breath",
+      4
+     ]
+    },
+    {
+     "type": "drill",
+     "power": "call",
+     "n": 1,
+     "spawn": {
+      "kind": "shark",
+      "n": 3,
+      "at": {
+       "gate": true,
+       "dist": 22,
+       "dir": 180
+      },
+      "r": 26
+     },
+     "text": "Send the Call of the Deep through them",
+     "beat": [
+      "call",
+      2
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "thole",
+     "dialogue": "thole_gate",
+     "auto": true,
+     "r": 12,
+     "text": "Someone stands the gate",
+     "after": [
+      {
+       "gate": true
+      }
+     ]
+    },
+    {
+     "type": "boss",
+     "boss": "leviathan",
+     "at": {
+      "arena": true
+     },
+     "r": 36,
+     "gate": true,
+     "text": "Enter the Arena. Defeat the Leviathan",
+     "after": [
+      {
+       "checkpoint": {
+        "arena": true,
+        "ground": 8
+       }
+      }
+     ],
+     "beats": [
+      [
+       "wave",
+       4
+      ],
+      [
+       "guard",
+       4
+      ],
+      [
+       "call",
+       3
+      ]
+     ]
+    },
+    {
+     "type": "ring",
+     "bell": "great",
+     "text": "Ring the bell you left"
+    },
+    {
+     "type": "talk",
+     "npc": "thole",
+     "dialogue": "thole_relieved",
+     "text": "Relieve your Captain",
+     "after": [
+      {
+       "bosses": "stand_down"
+      }
+     ]
+    }
+   ],
+   "reward": {
+    "pearls": 20,
+    "outfit": "keeper"
+   }
+  },
+  {
+   "id": "ch8",
+   "chapter": 8,
+   "title": "Thalor Wakes",
+   "place": "Sunward Hollow",
+   "blurb": "Somebody left a light on.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "poi": "sunward_harbour|sunward_east"
+     },
+     "r": 16,
+     "text": "Go home to the harbour wall",
+     "before": [
+      {
+       "move": [
+        "nell",
+        {
+         "poi": "sunward_harbour|sunward_east",
+         "dir": 340,
+         "dist": 5,
+         "ground": 0
+        }
+       ]
+      },
+      {
+       "mood": "bright"
+      }
+     ]
+    },
+    {
+     "type": "talk",
+     "npc": "tamsin",
+     "dialogue": "ending",
+     "text": "The lamp is lit",
+     "after": [
+      {
+       "credits": true
+      }
+     ]
+    }
+   ],
+   "reward": {
+    "pearls": 25
+   },
+   "card": "Home"
+  }
+ ],
+ "side": [
+  {
+   "id": "s_nets",
+   "title": "Nets to Cut",
+   "giver": "tamsin",
+   "offer": "s_nets_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "Lost nets keep fishing with nobody at the other end.",
+   "objectives": [
+    {
+     "type": "strike",
+     "item": "net",
+     "around": "reef",
+     "n": 4,
+     "spread": 70,
+     "ground": 3.4,
+     "reach": 3.2,
+     "text": "Cut the lost nets ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "tamsin",
+     "dialogue": "s_nets_done",
+     "text": "Tell Tamsin the reef is clear"
+    }
+   ],
+   "reward": {
+    "pearls": 6
+   }
+  },
+  {
+   "id": "s_divers",
+   "title": "Lost Divers",
+   "giver": "odile",
+   "offer": "s_divers_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "Two of Odile's crew went into the Old Wreck.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "poi": "wreck",
+      "ground": 3
+     },
+     "r": 14,
+     "text": "Search the Old Wreck"
+    },
+    {
+     "type": "dialogue",
+     "id": "s_divers_found"
+    },
+    {
+     "type": "escort",
+     "who": "diver",
+     "n": 2,
+     "from": {
+      "poi": "wreck",
+      "ground": 3
+     },
+     "to": "open_blue",
+     "r": 30,
+     "speed": 12,
+     "text": "Lead the divers to open water"
+    },
+    {
+     "type": "talk",
+     "npc": "odile",
+     "dialogue": "s_divers_done",
+     "text": "Go back to Odile"
+    }
+   ],
+   "reward": {
+    "pearls": 10
+   }
+  },
+  {
+   "id": "s_whale",
+   "title": "The Wounded Whale",
+   "giver": "minnow",
+   "offer": "s_whale_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "A whale on the outer reef has harpoons in her.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "poi": "sea_arch|reef",
+      "dir": 100,
+      "dist": 90,
+      "dz": -2
+     },
+     "r": 24,
+     "text": "Find the whale on the outer reef"
+    },
+    {
+     "type": "strike",
+     "item": "harpoon",
+     "around": "sea_arch|reef",
+     "n": 3,
+     "spread": 100,
+     "ground": 6,
+     "reach": 3.4,
+     "text": "Pull the harpoons ({n} of {total})"
+    },
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "shark",
+      "n": 3,
+      "at": {
+       "poi": "sea_arch|reef",
+       "dir": 100,
+       "dist": 90
+      },
+      "r": 34
+     },
+     "text": "Drive off the sharks"
+    },
+    {
+     "type": "escort",
+     "who": "whale",
+     "from": {
+      "poi": "sea_arch|reef",
+      "dir": 100,
+      "dist": 90,
+      "ground": 8
+     },
+     "to": "open_blue|crown",
+     "r": 60,
+     "speed": 8,
+     "gap": 14,
+     "text": "See her out to open water"
+    },
+    {
+     "type": "talk",
+     "npc": "minnow",
+     "dialogue": "s_whale_done",
+     "text": "Tell Minnow she's safe"
+    }
+   ],
+   "reward": {
+    "pearls": 12
+   }
+  },
+  {
+   "id": "s_bell",
+   "title": "The Stolen Bell",
+   "giver": "tamsin",
+   "offer": "s_bell_offer",
+   "requires": [
+    "ch2"
+   ],
+   "blurb": "Reavers took the dinner bell.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "crown_cove",
+     "r": 34,
+     "text": "Search Crown Cove"
+    },
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "reaver",
+      "n": 4,
+      "at": {
+       "poi": "crown_cove",
+       "dir": 250,
+       "dist": 50,
+       "ground": 4
+      },
+      "r": 34
+     },
+     "text": "Take the bell back from the Reavers"
+    },
+    {
+     "type": "collect",
+     "item": "bell_small",
+     "at": [
+      {
+       "poi": "crown_cove",
+       "dir": 250,
+       "dist": 50,
+       "ground": 1.4
+      }
+     ],
+     "reach": 4,
+     "text": "Pick up the dinner bell"
+    },
+    {
+     "type": "talk",
+     "npc": "tamsin",
+     "dialogue": "s_bell_done",
+     "text": "Bring the bell home"
+    }
+   ],
+   "reward": {
+    "pearls": 8
+   }
+  },
+  {
+   "id": "s_light",
+   "title": "The Lighthouse Lamp",
+   "giver": "jory",
+   "offer": "s_light_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "The lens is in pieces off Gull Rock.",
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "shard",
+     "around": "islet",
+     "n": 3,
+     "spread": 40,
+     "ground": 1.4,
+     "text": "Find the lens glass ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "jory",
+     "dialogue": "s_light_done",
+     "text": "Bring the glass to Jory",
+     "after": [
+      {
+       "flag": "lighthouse"
+      }
+     ]
+    }
+   ],
+   "reward": {
+    "pearls": 8,
+    "relic": "t_lamp"
+   }
+  },
+  {
+   "id": "s_chart",
+   "title": "Three Pieces of a Chart",
+   "giver": "odile",
+   "offer": "s_chart_offer",
+   "requires": [
+    "s_divers"
+   ],
+   "blurb": "A treasure hunt with a verse. Odile wants the larger half.",
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "glint",
+     "at": [
+      {
+       "poi": "sea_arch",
+       "dir": 40,
+       "dist": 10,
+       "ground": 2
+      }
+     ],
+     "text": "First mark: under the Sea Arch"
+    },
+    {
+     "type": "collect",
+     "item": "glint",
+     "at": [
+      {
+       "poi": "high_temple|thalor",
+       "dir": 200,
+       "dist": 30,
+       "ground": 2
+      }
+     ],
+     "text": "Second mark: the High Temple steps"
+    },
+    {
+     "type": "collect",
+     "item": "glint",
+     "at": [
+      {
+       "poi": "wreck",
+       "dir": 120,
+       "dist": 44,
+       "ground": 2
+      }
+     ],
+     "text": "Third mark: past the Old Wreck"
+    },
+    {
+     "type": "collect",
+     "item": "chest",
+     "at": [
+      {
+       "poi": "crown_cove",
+       "dir": 120,
+       "dist": 64,
+       "ground": 0.2
+      }
+     ],
+     "reach": 3.4,
+     "text": "The verse says Crown Cove. Dig it up"
+    },
+    {
+     "type": "talk",
+     "npc": "odile",
+     "dialogue": "s_chart_done",
+     "text": "Show Odile what you found"
+    }
+   ],
+   "reward": {
+    "pearls": 15
+   }
+  },
+  {
+   "id": "s_list",
+   "title": "Minnow's List",
+   "giver": "minnow",
+   "offer": "s_list_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "Eight creatures in the book.",
+   "objectives": [
+    {
+     "type": "count",
+     "what": "species",
+     "n": 8,
+     "text": "Swim near new creatures ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "minnow",
+     "dialogue": "s_list_done",
+     "text": "Show Minnow the book"
+    }
+   ],
+   "reward": {
+    "form": "old_fork"
+   }
+  },
+  {
+   "id": "s_loaf",
+   "title": "The Birthday Loaf",
+   "giver": "ferrant",
+   "offer": "s_loaf_offer",
+   "requires": [
+    "ch6"
+   ],
+   "blurb": "A loaf nobody ever collected.",
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "glint",
+     "at": [
+      {
+       "poi": "meridon_bakery|meridon",
+       "dir": 300,
+       "dist": 44,
+       "ground": 2.6
+      }
+     ],
+     "text": "Take the loaf from the shelf"
+    },
+    {
+     "type": "talk",
+     "npc": "nell",
+     "dialogue": "s_loaf_done",
+     "text": "Bring it to Nell while it's warm"
+    }
+   ],
+   "reward": {
+    "pearls": 10,
+    "relic": "t_register"
+   }
+  },
+  {
+   "id": "s_goat",
+   "title": "Bishop on the Rocks",
+   "giver": "hob",
+   "offer": "s_goat_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "A goat, a rock and a rising tide.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "islet",
+     "r": 26,
+     "text": "Swim out to Gull Rock"
+    },
+    {
+     "type": "escort",
+     "who": "goat",
+     "from": {
+      "poi": "islet",
+      "ground": 0.2
+     },
+     "to": "sunward_harbour|sunward_east",
+     "r": 34,
+     "speed": 10,
+     "gap": 3,
+     "text": "Bring Bishop home"
+    },
+    {
+     "type": "talk",
+     "npc": "hob",
+     "dialogue": "s_goat_done",
+     "text": "Give Hob his goat"
+    }
+   ],
+   "reward": {
+    "pearls": 6
+   }
+  },
+  {
+   "id": "s_race",
+   "title": "Beat the Tide",
+   "giver": "wick",
+   "offer": "s_race_offer",
+   "requires": [
+    "ch1"
+   ],
+   "blurb": "Harbour to the Sea Arch before the tide.",
+   "objectives": [
+    {
+     "type": "reachby",
+     "from": {
+      "poi": "sunward_harbour|sunward_east",
+      "dir": 90,
+      "dist": 30,
+      "surface": true
+     },
+     "to": "sea_arch",
+     "speed": 13,
+     "r": 26,
+     "label": "Tide",
+     "text": "Reach the Sea Arch in {time} s"
+    },
+    {
+     "type": "talk",
+     "npc": "wick",
+     "dialogue": "s_race_done",
+     "text": "Go and tell Wick"
+    }
+   ],
+   "reward": {
+    "pearls": 6
+   }
+  },
+  {
+   "id": "s_pups",
+   "title": "Otter Trouble",
+   "giver": "bram",
+   "offer": "s_pups_offer",
+   "requires": [
+    "ch2"
+   ],
+   "blurb": "Three pups out in the nave.",
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "pup",
+     "around": "long_nave|kelp",
+     "n": 3,
+     "spread": 60,
+     "ground": 10,
+     "text": "Find the otter pups ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "bram",
+     "dialogue": "s_pups_done",
+     "text": "Bring them to Bram"
+    }
+   ],
+   "reward": {
+    "pearls": 7
+   }
+  },
+  {
+   "id": "s_tax",
+   "title": "The Bell-Tax",
+   "giver": "ambry",
+   "offer": "s_tax_offer",
+   "requires": [
+    "ch3"
+   ],
+   "blurb": "Three citizens, three hundred and six years in arrears.",
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "glint",
+     "around": "meridon",
+     "n": 3,
+     "spread": 70,
+     "ground": 3,
+     "each": [
+      null,
+      "Paid? I paid in the old money!"
+     ],
+     "text": "Serve the notices ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "ambry",
+     "dialogue": "s_tax_done",
+     "text": "Report to the Clerk"
+    }
+   ],
+   "reward": {
+    "pearls": 9
+   }
+  },
+  {
+   "id": "s_ember",
+   "title": "Ember for the Ice",
+   "giver": "tove",
+   "offer": "s_ember_offer",
+   "requires": [
+    "ch5"
+   ],
+   "blurb": "A stove that's been out too long.",
+   "objectives": [
+    {
+     "type": "reachby",
+     "from": {
+      "poi": "cinder_forge|cindermere|wreck",
+      "dir": 150,
+      "dist": 32,
+      "ground": 3
+     },
+     "to": "frost_isle|frost_fort|crown_cove",
+     "speed": 13,
+     "r": 30,
+     "label": "Ember",
+     "text": "Carry the ember north in {time} s"
+    },
+    {
+     "type": "talk",
+     "npc": "tove",
+     "dialogue": "s_ember_done",
+     "text": "Light Tove's stove"
+    }
+   ],
+   "reward": {
+    "pearls": 10
+   }
+  },
+  {
+   "id": "s_stand",
+   "title": "Stand Down",
+   "giver": "thole",
+   "offer": "s_stand_offer",
+   "requires": [
+    "ch8"
+   ],
+   "blurb": "Three posts still haven't heard.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "encounter": "patrol_gate",
+      "or": "processional"
+     },
+     "r": 18,
+     "text": "The first post"
+    },
+    {
+     "type": "dialogue",
+     "id": "s_stand_post"
+    },
+    {
+     "type": "goto",
+     "at": {
+      "encounter": "patrol_west",
+      "or": "thalor"
+     },
+     "r": 18,
+     "text": "The second post"
+    },
+    {
+     "type": "dialogue",
+     "id": "s_stand_post"
+    },
+    {
+     "type": "goto",
+     "at": {
+      "encounter": "patrol_north",
+      "or": "high_temple"
+     },
+     "r": 18,
+     "text": "The third post"
+    },
+    {
+     "type": "dialogue",
+     "id": "s_stand_post"
+    },
+    {
+     "type": "talk",
+     "npc": "thole",
+     "dialogue": "s_stand_done",
+     "text": "Report to the Captain"
+    }
+   ],
+   "reward": {
+    "pearls": 12,
+    "relic": "t_order"
+   }
+  },
+  {
+   "id": "fleet1",
+   "arc": "The Drowned Fleet",
+   "title": "The Drowned Fleet",
+   "giver": "odile",
+   "offer": "fleet1_offer",
+   "requires": [
+    "ch4"
+   ],
+   "blurb": "Every boat that ever sank round here ends up at Wrackreach.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "wrackreach|wreck",
+     "r": 50,
+     "text": "Go to Wrackreach"
+    },
+    {
+     "type": "strike",
+     "item": "wick",
+     "around": "wrackreach|wreck",
+     "n": 3,
+     "spread": 44,
+     "ground": 4,
+     "reach": 3.4,
+     "text": "Relight the ghost lanterns ({n} of {total})"
+    },
+    {
+     "type": "talk",
+     "npc": "eda",
+     "dialogue": "eda_first",
+     "text": "Someone's aboard the flagship"
+    },
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "mixed",
+      "n": 4,
+      "at": {
+       "poi": "wrackreach|wreck",
+       "dir": 200,
+       "dist": 40,
+       "ground": 4
+      },
+      "r": 34
+     },
+     "text": "Hold the deck for the Bosun"
+    },
+    {
+     "type": "talk",
+     "npc": "eda",
+     "dialogue": "eda_after",
+     "text": "Talk to Bosun Marl"
+    }
+   ],
+   "reward": {
+    "pearls": 12
+   }
+  },
+  {
+   "id": "fleet2",
+   "arc": "The Drowned Fleet",
+   "title": "What Keeps the Wrecks",
+   "giver": "eda",
+   "offer": "fleet2_offer",
+   "requires": [
+    "fleet1"
+   ],
+   "blurb": "Something took the rudders that night. It's still here.",
+   "objectives": [
+    {
+     "type": "goto",
+     "at": "kraken_lair|wrackreach|wreck",
+     "r": 50,
+     "text": "Go down to the lair"
+    },
+    {
+     "type": "boss",
+     "boss": "kraken",
+     "at": "kraken_lair|wrackreach|wreck",
+     "r": 40,
+     "text": "Face what's keeping the wrecks",
+     "else": {
+      "type": "defeat",
+      "spawn": {
+       "kind": "mixed",
+       "n": 6,
+       "at": "kraken_lair|wrackreach|wreck",
+       "r": 36
+      },
+      "text": "Clear the graveyard"
+     }
+    },
+    {
+     "type": "talk",
+     "npc": "odile",
+     "dialogue": "s_kraken_done",
+     "text": "Tell Odile it's done"
+    }
+   ],
+   "reward": {
+    "pearls": 18,
+    "relic": "t_fleet"
+   }
+  }
+ ],
+ "teach": {
+  "riptide": "Reef Bell",
+  "maelstrom": "Kelp Bell",
+  "geyser": "Kelp Bell",
+  "lance": "Rime Bell",
+  "guard": "Rime Bell",
+  "glacier": "Rime Bell",
+  "breath": "The Vesper Deep",
+  "wave": "Deep Bell",
+  "call": "Chapter 6"
+ },
+ "fixtures": [
+  {
+   "item": "lamp",
+   "at": {
+    "poi": "sunward_harbour|sunward_east",
+    "dir": 352,
+    "dist": 2.5,
+    "ground": 0
+   }
+  },
+  {
+   "item": "raft",
+   "at": {
+    "poi": "otter_raft|long_nave",
+    "sea": true
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 14,
+    "dist": 16,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 38,
+    "dist": 24,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 20,
+    "dist": 48,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 58,
+    "dist": 62,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 40,
+    "dist": 78,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 66,
+    "dist": 96,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 44,
+    "dist": 128,
+    "ground": 0.2
+   }
+  },
+  {
+   "item": "coral",
+   "at": {
+    "spawn": true,
+    "dir": 62,
+    "dist": 150,
+    "ground": 0.2
+   }
+  }
+ ],
+ "reaverBarks": [
+  "Hold on! We've got you!",
+  "Take my hand!",
+  "This way! This way up!",
+  "Stay with me!",
+  "Nobody gets left. Nobody.",
+  "Don't let go!"
+ ]
+}

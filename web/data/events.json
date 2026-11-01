@@ -1,0 +1,253 @@
+{
+ "first": 120,
+ "gap": [
+  140,
+  180
+ ],
+ "list": [
+  {
+   "id": "e_raid",
+   "title": "Reaver Raid",
+   "text": "They're on the beach at Sunward. They think they're saving someone.",
+   "requires": [
+    "ch2"
+   ],
+   "dur": 135,
+   "weight": 3,
+   "cool": 540,
+   "repeat": true,
+   "passed": "The Reavers drift back to sea",
+   "reward": {
+    "pearls": 8
+   },
+   "objectives": [
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "reaver",
+      "n": 4,
+      "at": {
+       "poi": "sunward_harbour|sunward_east",
+       "dir": 90,
+       "dist": 40,
+       "ground": 3
+      },
+      "r": 38
+     },
+     "text": "Drive the Reavers off the beach"
+    }
+   ],
+   "omen": "gyre",
+   "omenAt": {
+    "poi": "sunward_harbour|sunward_east",
+    "dir": 90,
+    "dist": 40
+   }
+  },
+  {
+   "id": "e_frenzy",
+   "title": "Shark Frenzy",
+   "text": "Something has them excited out in the blue.",
+   "requires": [
+    "ch1"
+   ],
+   "dur": 135,
+   "weight": 3,
+   "cool": 480,
+   "repeat": true,
+   "passed": "The sharks scatter",
+   "reward": {
+    "pearls": 6
+   },
+   "objectives": [
+    {
+     "type": "defeat",
+     "spawn": {
+      "kind": "shark",
+      "n": 5,
+      "at": {
+       "event": true,
+       "ground": 5
+      },
+      "r": 40
+     },
+     "text": "Break up the frenzy"
+    }
+   ],
+   "omen": "gyre",
+   "roam": true
+  },
+  {
+   "id": "e_whales",
+   "title": "Whale Migration",
+   "text": "The whales are moving through. Take a fin.",
+   "requires": [
+    "ch1"
+   ],
+   "dur": 150,
+   "weight": 2,
+   "cool": 600,
+   "repeat": true,
+   "passed": "The whales have gone by",
+   "reward": {
+    "pearls": 6
+   },
+   "objectives": [
+    {
+     "type": "ride",
+     "t": 10,
+     "text": "Ride with the whales for 10 s"
+    }
+   ],
+   "omen": "wake",
+   "omenAt": "whale"
+  },
+  {
+   "id": "e_bloom",
+   "title": "The Bloom",
+   "text": "The water's lit up. It won't last.",
+   "requires": [
+    "ch1"
+   ],
+   "night": true,
+   "dur": 135,
+   "weight": 3,
+   "cool": 600,
+   "repeat": true,
+   "passed": "The Bloom goes dark",
+   "reward": {
+    "pearls": 6
+   },
+   "fx": [
+    "bloom"
+   ],
+   "objectives": [
+    {
+     "type": "collect",
+     "item": "shard",
+     "n": 5,
+     "spread": 80,
+     "ground": 4,
+     "text": "Gather the bloom-light ({n} of {total})",
+     "at": [
+      {
+       "event": true,
+       "dir": 20,
+       "dist": 20,
+       "ground": 4,
+       "water": true
+      },
+      {
+       "event": true,
+       "dir": 100,
+       "dist": 44,
+       "ground": 4,
+       "water": true
+      },
+      {
+       "event": true,
+       "dir": 170,
+       "dist": 30,
+       "ground": 4,
+       "water": true
+      },
+      {
+       "event": true,
+       "dir": 240,
+       "dist": 52,
+       "ground": 4,
+       "water": true
+      },
+      {
+       "event": true,
+       "dir": 320,
+       "dist": 36,
+       "ground": 4,
+       "water": true
+      }
+     ]
+    }
+   ],
+   "omen": "wake",
+   "roam": true
+  },
+  {
+   "id": "e_surge",
+   "title": "Storm Surge",
+   "text": "Giant waves off Sunward. Get on top of them.",
+   "requires": [
+    "ch2"
+   ],
+   "dur": 150,
+   "weight": 2,
+   "cool": 720,
+   "repeat": true,
+   "passed": "The storm blows out",
+   "reward": {
+    "pearls": 8
+   },
+   "fx": [
+    "storm"
+   ],
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "sunward_east",
+      "islet"
+     ],
+     "n": 8,
+     "surface": true,
+     "ringR": 9,
+     "label": "Surge",
+     "text": "Ride the surge through the rings ({n} of {total})"
+    }
+   ],
+   "omen": "storm",
+   "omenAt": "islet"
+  },
+  {
+   "id": "e_star",
+   "title": "A Sunken Star",
+   "text": "Something fell into the sea. You can still see it.",
+   "requires": [
+    "ch3"
+   ],
+   "dur": 135,
+   "weight": 1,
+   "cool": 900,
+   "repeat": true,
+   "passed": "The star's light goes out",
+   "reward": {
+    "pearls": 12
+   },
+   "objectives": [
+    {
+     "type": "goto",
+     "at": {
+      "event": true,
+      "ground": 4
+     },
+     "r": 30,
+     "text": "Find where the star came down"
+    },
+    {
+     "type": "collect",
+     "item": "ember",
+     "at": [
+      {
+       "event": true,
+       "dir": 40,
+       "dist": 14,
+       "ground": 1.6,
+       "water": true
+      }
+     ],
+     "text": "Take the star-iron"
+    }
+   ],
+   "omen": "star",
+   "roam": true
+  }
+ ]
+}

@@ -1,0 +1,64 @@
+{
+ "forms": [
+  {
+   "id": "tide_fork",
+   "name": "Tide Fork",
+   "note": "The trident you woke with. Marta would like a word about the state of it.",
+   "hint": ""
+  },
+  {
+   "id": "kelp_tine",
+   "name": "Kelp Tine",
+   "note": "Bram's otters found it. Light in the hand, quick to the next blow.",
+   "hint": "From the Green Nave."
+  },
+  {
+   "id": "rime_fork",
+   "name": "Rime Fork",
+   "note": "Cold to hold. Frost runs down it when you breathe out.",
+   "hint": "From under the ice."
+  },
+  {
+   "id": "forge_fork",
+   "name": "Forge Fork",
+   "note": "Reforged at the vents. Heavy. Still warm. Don't hit anything for a day.",
+   "hint": "Ask a smith."
+  },
+  {
+   "id": "old_fork",
+   "name": "The Old Fork",
+   "note": "Kept in a box in the Vear family for three hundred years, in case.",
+   "hint": "Help Minnow with her list."
+  }
+ ],
+ "outfits": [
+  {
+   "id": "warden",
+   "name": "Warden's Scale",
+   "note": "The suit you woke in. The barnacles have mostly gone.",
+   "hint": "",
+   "tint": "#ffffff"
+  },
+  {
+   "id": "gilded",
+   "name": "Gilded Harness",
+   "note": "Parade dress from Meridon's stores. The Clerk has you down for it, in triplicate.",
+   "hint": "From the Gilded City.",
+   "tint": "#f2dca0"
+  },
+  {
+   "id": "ember",
+   "name": "Cinder Mail",
+   "note": "Marta made it. She says it's for your own good.",
+   "hint": "From the vents.",
+   "tint": "#b8a4b0"
+  },
+  {
+   "id": "keeper",
+   "name": "The Keeper's Mantle",
+   "note": "What you were wearing the night you left the bell.",
+   "hint": "At the end of the story.",
+   "tint": "#c4dcf2"
+  }
+ ]
+}

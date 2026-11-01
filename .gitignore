@@ -1,0 +1,27 @@
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc
+*.blend
+*.blend1
+*.tga
+.env
+.env.*
+# study only, never shipped or shared
+reference/
+# frozen rounds and generated checks are rebuilt, not kept
+runs/
+web_check/look/
+Pipeline/world/out/
+Pipeline/world/preview/
+Pipeline/hero/out/
+Pipeline/hero/preview/
+Pipeline/hero/probe/
+Pipeline/film/unreal/logs*
+Pipeline/film/unreal/cache/
+Pipeline/film/tmp/
+# the whole video is kept as parts; rebuild it with: cat reel/takes/IMG_0633_1080p.mp4.part-* > reel/takes/IMG_0633_1080p.mp4
+reel/takes/IMG_0633_1080p.mp4
+
+# scraped pages, not ours to keep
+Pipeline/research/scratch/

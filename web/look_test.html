@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Look test</title>
+<style>html, body { margin: 0; height: 100%; background: #021018; overflow: hidden; } canvas { display: block; width: 100vw; height: 100vh; }
+#hud { position: fixed; left: 8px; top: 8px; color: #bff; font: 12px monospace; white-space: pre; text-shadow: 0 0 3px #000; pointer-events: none; }</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.min.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas><div id="hud"></div>
+<script>
+// A tally of what the card is asked to hold, before any context exists.
+(function () {
+  const P = WebGL2RenderingContext.prototype, T = window.__tally = { buf: new Map(), tex: new Map(), rb: new Map() };
+  const BYTES = { 0x8229: 1, 0x822B: 2, 0x8058: 4, 0x8C43: 4, 0x822D: 2, 0x881A: 8, 0x881B: 6, 0x81A6: 4, 0x8CAC: 4, 0x88F0: 4, 0x81A5: 2, 0x8CAD: 8, 0x8C3A: 4, 0x1908: 4, 0x1907: 3, 0x1903: 1, 0x8230: 8, 0x822F: 4 };
+  const bd = P.bufferData;
+  P.bufferData = function (t, s, u, a, b) {
+    const bound = this.getParameter(t === this.ARRAY_BUFFER ? this.ARRAY_BUFFER_BINDING : this.ELEMENT_ARRAY_BUFFER_BINDING);
+    T.buf.set(bound, typeof s === 'number' ? s : s.byteLength);
+    return a === undefined ? bd.call(this, t, s, u) : bd.call(this, t, s, u, a, b);
+  };
+  const boundTex = (gl, target) => gl.getParameter(target === gl.TEXTURE_3D ? gl.TEXTURE_BINDING_3D : target === gl.TEXTURE_2D_ARRAY ? gl.TEXTURE_BINDING_2D_ARRAY : target === gl.TEXTURE_2D ? gl.TEXTURE_BINDING_2D : gl.TEXTURE_BINDING_CUBE_MAP);
+  const add = (gl, target, fmt, w, h, d, levels) => {
+    const t = boundTex(gl, target), bpp = BYTES[fmt] || 4; let s = 0, a = w, b = h, c = d;
+    for (let i = 0; i < levels; i++) { s += a * b * c * bpp; a = Math.max(1, a >> 1); b = Math.max(1, b >> 1); if (target === gl.TEXTURE_3D) c = Math.max(1, c >> 1); }
+    if (target !== gl.TEXTURE_2D && target !== gl.TEXTURE_3D && target !== gl.TEXTURE_2D_ARRAY) s *= 6;
+    T.tex.set(t, { s, w, h, d, fmt: fmt.toString(16), levels });
+  };
+  const dt = P.deleteTexture; P.deleteTexture = function (t) { T.tex.delete(t); return dt.call(this, t); };
+  const db = P.deleteBuffer; P.deleteBuffer = function (b) { T.buf.delete(b); return db.call(this, b); };
+  const dr = P.deleteRenderbuffer; P.deleteRenderbuffer = function (b) { T.rb.delete(b); return dr.call(this, b); };
+  const ts2 = P.texStorage2D; P.texStorage2D = function (t, l, f, w, h) { add(this, t, f, w, h, 1, l); return ts2.call(this, t, l, f, w, h); };
+  const ts3 = P.texStorage3D; P.texStorage3D = function (t, l, f, w, h, d) { add(this, t, f, w, h, d, l); return ts3.call(this, t, l, f, w, h, d); };
+  const ti2 = P.texImage2D; P.texImage2D = function (t, lvl, f, w, h) { if (lvl === 0 && typeof w === 'number' && arguments.length >= 9 && t === this.TEXTURE_2D) add(this, t, f, w, h, 1, 1); return ti2.apply(this, arguments); };
+  const ti3 = P.texImage3D; P.texImage3D = function (t, lvl, f, w, h, d) { if (lvl === 0) add(this, t, f, w, h, d, 1 + Math.floor(Math.log2(Math.max(w, h)))); return ti3.apply(this, arguments); };
+  const rs = P.renderbufferStorage; P.renderbufferStorage = function (t, f, w, h) { T.rb.set(this.getParameter(this.RENDERBUFFER_BINDING), w * h * (BYTES[f] || 4)); return rs.call(this, t, f, w, h); };
+  const rm = P.renderbufferStorageMultisample; P.renderbufferStorageMultisample = function (t, n, f, w, h) { T.rb.set(this.getParameter(this.RENDERBUFFER_BINDING), w * h * Math.max(n, 1) * (BYTES[f] || 4)); return rm.call(this, t, n, f, w, h); };
+})();
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { W, pixelRatioFor } from './js/config.js';
+import { createLook } from './js/look.js';
+import { createWorld } from './js/world.js';
+import { createLife } from './js/life.js';
+import { createSky } from './js/sky.js';
+
+const q = new URLSearchParams(location.search);
+const tier = q.get('tier') || 'phone';
+let camName = q.get('cam') || 'reef';
+
+window.__look = { ready: false, error: null };
+addEventListener('error', (e) => { window.__look.error = String(e.message); });
+addEventListener('unhandledrejection', (e) => { window.__look.error = String(e.reason && e.reason.stack || e.reason); });
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !q.has('noaa'), powerPreference: 'high-performance', stencil: false, preserveDrawingBuffer: true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 1, .25, 900);
+const look = createLook({ renderer, scene, camera, tier });
+function fit() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(pixelRatioFor(tier, w, h)); renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix(); look.resize(w, h);
+}
+addEventListener('resize', fit); fit();
+
+// ?island raises a test island near the reef, so land can be judged before the real height.bin lands.
+const tweakHeight = q.has('island') ? (H, n, cell, ox, oy) => {
+  for (let y = 0, o = 0; y < n; y++) for (let x = 0; x < n; x++, o++) {
+    const wx = ox + x * cell, wy = oy + y * cell, r = Math.hypot(wx + 150, (wy + 560) * 1.3) / 150;
+    const hill = Math.exp(-r * r * 2.2) * 62 + Math.exp(-r * r * 8) * 22 * (1 + .4 * Math.sin(wx * .05) * Math.cos(wy * .043));
+    if (hill > .1) H[o] = Math.max(H[o], H[o] + hill * Math.min(1, r < 1.1 ? 1 : 1));
+  }
+} : null;
+const world = await createWorld({ renderer, scene, camera, look, tier, tweakHeight, packsNow: true });
+const sky = createSky({ scene, look, tier, clock: false });
+if (q.has('hour')) sky.setHour(+q.get('hour'), false);
+if (q.get('weather')) sky.setWeather(q.get('weather'), .01);
+if (q.has('lifetest')) {
+  // the second cast, set down near the start: world.json's life key ships with the big map
+  const g = (x, y) => world.heightAt(x, y), L = [];
+  const on = (kind, mode, x, y) => L.push({ kind, mode, pts: [0, 1, 2, 3].map(i => { const a = x + i * 2.3, b = y + (i % 2) * 2.1; return [a, b, g(a, b), i * 1.7]; }) });
+  L.push({ kind: 'hammerhead', mode: 'cruise', n: 3, x: -26, y: -500, z: -12, r: 40 }, { kind: 'anglerfish', mode: 'drift', n: 3, x: 0, y: -500, z: -12, r: 30 }, { kind: 'narwhal', mode: 'cruise', n: 2, x: 30, y: -500, z: -12, r: 40 }, { kind: 'seal', mode: 'cruise', n: 2, x: 60, y: -500, z: -10, r: 40 });
+  L.push({ kind: 'gull', mode: 'soar', n: 5, x: -180, y: -440, z: 22, r: 40 }, { kind: 'sea_otter', mode: 'raft', n: 3, x: -26, y: -470, z: 0, r: 8 });
+  on('moray', 'lurk', -26, -520); on('crab', 'crawl', -205, -445); on('giant_crab', 'crawl', 20, -490); on('goat', 'graze', -300, -420);
+  world.data.life = L;
+}
+const life = createLife({ scene, look, world, tier, camera });
+
+const d = world.data, P = (id) => d.poi.find(p => p.id === id);
+const focus = new THREE.Vector3();
+
+// Named cameras in Blender coordinates: from, then the point looked at.
+var CAMS = {
+  spawn:   () => [[d.spawn.x, d.spawn.y, d.spawn.z], [P('sea_arch').x, P('sea_arch').y, -12]],
+  reef:    () => [[-22, -392, -9], [P('sea_arch').x, P('sea_arch').y, -10]],
+  reefnear:() => [[6, -420, -12.5], [10, -408, -14]],
+  kelp:    () => [[-430, 30, -46], [-418, 44, -6]],
+  nave:    () => [[-392, 6, -42], [-300, 38, -16]],
+  kelpin:  () => [[-470, 110, -52], [-448, 124, -8]],
+  wreck:   () => [[396, 58, -82], [436, 96, -100]],
+  glow:    () => { const G = d.instances.glow_coral; return [[G[0] - 9, G[1] - 11, G[2] + 3.5], [G[0], G[1], G[2] + 1]]; },
+  isle:    () => [[-318, -300, 3], [-318, -462, 16]],
+  isle2:   () => [[-180, -420, 22], [-318, -462, 8]],
+  crown:   () => [[236, -160, 7], [405, -212, 44]],
+  shore:   () => { const b = (d.land || [])[0] || { x: -318, y: -380 }, x = b.x ?? b[0], y = b.y ?? b[1]; return [[x + 6, y + 20, 1.4], [x, y - 40, 2]]; },
+  shallows:() => [[-160, -395, -3.2], [-175, -445, 1]],
+  cross3:  () => [[-150, -440, .22], [-210, -470, 3]],
+  cross4:  () => [[-150, -440, -.14], [-210, -470, 3]],
+  cross1:  () => [[-40, -520, .35], [-40, -420, -1]],
+  cross2:  () => [[-40, -520, -.45], [-40, -420, -1]],
+  glitter: () => [[-26, -548, 3.6], [84, -668, 3]],
+  hilltop: () => [[-318, -462, 62], [-120, -300, 0]],
+  ghosts:  () => { const H = d.instances.lamp_ghost, x = H[6], y = H[7], z = H[8]; return [[x + 22, y + 26, z + 7], [x, y, z + 2]]; },
+  smokers: () => { const H = d.instances.smoker; for (let i = 0; i < H.length; i += 6) if (H[i + 2] < -80) { const x = H[i], y = H[i + 1], z = H[i + 2]; for (let a = 0; a < 6.3; a += .4) { const cx = x + Math.cos(a) * 24, cy = y + Math.sin(a) * 24; if (world.heightAt(cx, cy) < z + 6) return [[cx, cy, z + 9], [x, y, z + 7]]; } } return [[0, 0, -20], [0, 10, -20]]; },
+  v_vents: () => [[640, -560, -120], [720, -640, -128]], v_vents2: () => [[700, -690, -132], [752, -640, -140]], v_forge: () => { const x = 820, y = -716, z = -130; for (let a = 0; a < 6.3; a += .4) { const cx = x + Math.cos(a) * 95, cy = y + Math.sin(a) * 95, cz = Math.max(world.heightAt(cx, cy) + 5, z + 3); if (!world.sweep({ x: cx, y: cy, z: cz }, { x, y, z: z + 4 }, .5)) return [[cx, cy, cz], [x, y, z + 3]]; } return [[800, -772, -126], [x, y, z]]; },
+  v_wrecks: () => [[-760, 200, -66], [-830, 240, -74]], v_wrecks2: () => [[-790, 120, -74], [-826, 190, -78]], v_kraken: () => [[-866, -70, -66], [-866, 40, -130]],
+  v_fort: () => [[560, 792, 6], [452, 792, 10]], v_frost: () => [[622, 760, world.heightAt(622, 760) + 3], [706, 812, 18]],
+  v_lava: () => { const L = d.instances.lava_crack; for (let i = 0; i < L.length; i += 6) if (L[i + 2] < -60) { const x = L[i], y = L[i + 1], z = L[i + 2]; for (let a = 0; a < 6.3; a += .4) { const cx = x + Math.cos(a) * 38, cy = y + Math.sin(a) * 38; if (world.heightAt(cx, cy) < z + 7) return [[cx, cy, z + 10], [x, y, z + 5]]; } } return [[0, 0, -20], [0, 10, -20]]; },
+  v_kraken2: () => [[-742, 26, -62], [-790, 40, -82]], v_pit: () => [[-838, 6, -140], [-866, 46, -158]], v_lava2: () => { const L = d.instances.lava_crack; for (let i = 0; i < L.length; i += 6) if (L[i + 2] < -60) return [[L[i] + 7, L[i + 1] + 8, L[i + 2] + 7], [L[i], L[i + 1], L[i + 2]]]; return [[0, 0, -20], [0, 10, -20]]; },
+  plume1:  () => [[590, -150, 34], [405, -212, 112]],
+  plume2:  () => [[500, -640, 30], [640, -724, 92]],
+  beck:    () => { const r = d.rivers[0].pts, a = r[3], b = r[1]; return [[a[0] - 9, a[1] - 12, world.heightAt(a[0] - 9, a[1] - 12) + 3.2], [b[0], b[1], b[2]]]; },
+  beck2:   () => { const r = d.rivers[0].pts, a = r[6], b = r[4]; return [[a[0] - 7, a[1] + 8, Math.max(world.heightAt(a[0] - 7, a[1] + 8), .2) + 2.4], [b[0], b[1], b[2]]]; },
+  falls:   () => { const f = d.waterfalls[0]; return [[f.x + 12, f.y + 34, Math.max(world.heightAt(f.x + 12, f.y + 34), .2) + 3.5], [f.x, f.y, f.z0 * .5]]; },
+  falls2:  () => { const f = d.waterfalls[0]; return [[f.x - 5, f.y + 13, Math.max(world.heightAt(f.x - 5, f.y + 13), .1) + 1.8], [f.x, f.y, f.z0 * .4]]; },
+  arenain: () => [[6, 42, -52], [24, 84, -28]],
+  whaleup: () => { const w = life.whales[0], b = { x: w.pos.x, y: -w.pos.z, z: w.pos.y }, dd = w.dir; return [[b.x + 12 - dd.x * 6, b.y + dd.z * 6 - 16, b.z + 3], [b.x + dd.x * 4, b.y - dd.z * 4, b.z + 1]]; },
+  rocknear:() => [[-34, -348, -18], [-30, -322, -8]],
+  meridon: () => { const p = P('meridon'); return [[p.x - 150, p.y - 150, -16], [p.x, p.y, -34]]; },
+  meridon2:() => { const p = P('meridon'); return [[p.x - 70, p.y + 60, -46], [p.x + 20, p.y - 10, -22]]; },
+  vesper:  () => { const p = P('vesper'); return [[p.x - 40, p.y - 110, -118], [p.x, p.y + 10, -130]]; },
+  beach:   () => [[-150, -412, 1.8], [-210, -448, 6]],
+  meadow:  () => { const g = d.instances.grass_patch, i = 6 * 1800, x = g[i], y = g[i + 1], z = world.heightAt(x, y); return [[x, y, z + 1.9], [x + 30, y - 22, z + 2.6]]; },
+  harbour: () => { const b = P('sunward_harbour'); return [[b.x + 40, b.y + 46, 4], [b.x - 6, b.y - 4, 2]]; },
+  hollow:  () => { const b = P('sunward_hollow'), x = b.x - 40, y = b.y - 34; return [[x, y, world.heightAt(x, y) + 2.2], [b.x, b.y, world.heightAt(b.x, b.y) + 5]]; },
+  oak:     () => { const t = d.instances.tree_oak_a, x = t[0], y = t[1], z = t[2]; return [[x + 13, y - 11, world.heightAt(x + 13, y - 11) + 2], [x, y, z + 6]]; },
+  w12a:    () => { const x = 345, y = -240; return [[x, y, world.heightAt(x, y) + 1.8], [x + 22, y + 6, world.heightAt(x + 22, y + 6) + 6]]; },
+  w12b:    () => { const x = -70, y = -470; return [[x, y, world.heightAt(x, y) + 1.5], [x + 18, y + 12, world.heightAt(x + 18, y + 12) + .4]]; },
+  w12c:    () => { const x = 60, y = 455; return [[x, y, world.heightAt(x, y) + 2], [x + 24, y + 24, world.heightAt(x + 24, y + 24) + 3]]; },
+  w12d:    () => { const x = -430, y = -40; return [[x, y, world.heightAt(x, y) + 1.6], [x + 24, y + 8, world.heightAt(x + 24, y + 8) + 2]]; },
+  archfoot:() => [[-30, -352, -20], [-34, -300, -16]],
+  avenue:  () => [[20, -214, -49], [20, -96, -20]],
+  colossus:() => [[52, -165, -40], [20, -96, -18]],
+  arena:   () => [[20, 8, -6], [20, 62, -60]],
+  temple:  () => [[120, 150, -30], [152, 216, -32]],
+  trench:  () => [[60, 430, -62], [120, 530, -195]],
+  deep:    () => [[100, 540, -150], [70, 570, -190]],
+  surface: () => { const c = [-26, -470, -13], k = 40, u = look.sunW; return [c, [c[0] + u.x * k * .86, c[1] - u.z * k * .86, c[2] + u.y * k]]; },
+  surface2:() => [[-26, -470, -4.5], [-6, -456, 0]],
+  whale:   () => { const w = life.whales[0], b = { x: w.pos.x, y: -w.pos.z, z: w.pos.y }; return [[b.x - 26, b.y - 34, b.z - 24], [b.x, b.y + 4, b.z + 2]]; },
+  dolphins:() => { const w = life.pods[0], b = { x: w.pos.x, y: -w.pos.z, z: w.pos.y }; return [[b.x - 22, b.y - 20, -9], [b.x, b.y, 0]]; },
+  above:   () => [[-52, -470, 3.2], [-232, -505, 2]],
+  above2:  () => [[-26, -560, 6], [40, -440, -2]],
+};
+
+// Cameras that keep beside an animal: right, up, forward of its heading, in metres.
+const follow = (kind, right, up, fwd) => () => {
+  const h = life.herds[kind]; const a = h.agents[0], p = a.pos, d = a.dir;
+  const R = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), d).normalize();
+  const c = p.clone().addScaledVector(R, right).addScaledVector(new THREE.Vector3(0, 1, 0), up).addScaledVector(d, fwd);
+  return [[c.x, -c.z, c.y], [p.x, -p.z, p.y]];
+};
+Object.assign(CAMS, {
+  s_whale: follow('whale', 44, -6, 2), s_whale2: follow('whale', 22, -5, 5), s_whale3: follow('whale', 12, 7, -2), s_manta: follow('manta', 13, 3, 2), s_turtle: follow('turtle', 3.6, .6, .6),
+  s_shark: follow('reef_shark', 6.5, .6, 1), s_dolphin: follow('dolphin', 15, -1, 3),
+  s_hammer: follow('hammerhead', 7, .6, 1), s_angler: follow('anglerfish', 2.6, .4, .6), s_narwhal: follow('narwhal', 8, .8, 1.4), s_seal: follow('seal', 5, .5, .8), s_gull: follow('gull', 6, 1, 1.2), s_otter: follow('sea_otter', 3.4, 1.2, .8), s_moray: follow('moray', 3.4, .5, .9), s_crab: follow('crab', 1.4, .6, .5), s_bigcrab: follow('giant_crab', 5, 1.6, 1), s_goat: follow('goat', 4, 1, 1.2),
+  s_school: () => { const p = life.schoolPos(life.schools[+(q.get('school') || 0)]); return [[p.x - 7, -p.z - 3, p.y - 1.2], [p.x, -p.z, p.y]]; },
+  s_jelly: () => { const s = d.drifters[0]; return [[s.x - 20, s.y - 14, s.z - 2], [s.x, s.y, s.z]]; },
+});
+let shake = 0;
+function setCam(name) {
+  camName = name;
+  const [a, b] = CAMS[name]();
+  camera.position.copy(W(a[0], a[1], a[2]));
+  camera.up.set(0, 1, 0);
+  camera.lookAt(W(b[0], b[1], b[2]));
+  camera.updateMatrixWorld();
+  focus.copy(camera.position);
+}
+function frame(dt) {
+  look.update(dt, camera.position);
+  world.update(dt, camera, focus);
+  life.update(dt, focus);
+  sky.update(dt, camera);
+  look.render();
+}
+// every named place on the map, from a little off and above it
+for (const p of d.poi || []) CAMS['poi_' + p.id] = () => { const x = p.x - 28, y = p.y - 34, g = world.heightAt(x, y), under = p.z < -2; return [[x, y, under ? Math.min(Math.max(p.z + 8, g + 3), -3) : Math.max(p.z + 14, g + 4)], [p.x, p.y, p.z]]; };
+setCam(CAMS[camName] ? camName : 'reef');
+if (q.get('mood')) look.setMood(q.get('mood'), .01);
+if (q.get('setlook')) look.setLook(q.get('setlook'), .01);
+if (q.get('lamps')) world.setLampsLit(+q.get('lamps'));
+
+const gl = renderer.getContext();
+function memory() {
+  const T = window.__tally; let buf = 0, tex = 0, rb = 0;
+  for (const v of T.buf.values()) buf += v; for (const v of T.tex.values()) tex += v.s; for (const v of T.rb.values()) rb += v;
+  const canvasBytes = gl.drawingBufferWidth * gl.drawingBufferHeight * 4 * 2 * 4;
+  const big = [...T.tex.values()].sort((a, b) => b.s - a.s).slice(0, 8).map(t => `${t.w}x${t.h}${t.d > 1 ? 'x' + t.d : ''} ${t.fmt} ${(t.s / 1048576).toFixed(1)}MB`);
+  return { buffersMB: +(buf / 1048576).toFixed(1), texturesMB: +(tex / 1048576).toFixed(1), renderbuffersMB: +(rb / 1048576).toFixed(1), canvasMB: +(canvasBytes / 1048576).toFixed(1), totalMB: +((buf + tex + rb + canvasBytes) / 1048576).toFixed(1), big };
+}
+// L4: shimmer. A slow dolly past the scene; the second difference of each pixel in time, in 1/255ths. Flicker scores high, smooth change near zero.
+async function shimmer(n = 14) {
+  const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, cw = 256, ch = 256, x0 = (w - cw) >> 1, y0 = (h - ch) >> 2;
+  const frames = [], px = () => { const b = new Uint8Array(cw * ch * 4); gl.readPixels(x0, y0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, b); return b; };
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+  for (let i = 0; i < n; i++) { camera.position.addScaledVector(dir, .05); camera.updateMatrixWorld(); frame(0); frames.push(px()); }   // time stands still: only aliasing moves
+  let sum = 0, top = 0, c = 0;
+  for (let i = 1; i < n - 1; i++) { const a = frames[i - 1], b = frames[i], d = frames[i + 1]; for (let k = 0; k < a.length; k += 4) { const v = Math.abs(a[k + 1] - 2 * b[k + 1] + d[k + 1]); sum += v; if (v > 24) top++; c++; } }
+  return { cam: camName, mean: +(sum / c).toFixed(2), flickerPct: +(100 * top / c).toFixed(3) };
+}
+// L1's wall: flip the look over and over; programs, textures, geometries and materials must not grow.
+async function flips(n = 20) {
+  const read = () => ({ programs: renderer.info.programs.length, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries, heap: performance.memory ? performance.memory.usedJSHeapSize : 0 });
+  for (const n of ['painted', 'painted_day', 'real']) { look.setLook(n, .01); for (let i = 0; i < 5; i++) frame(1 / 30); }
+  const a = read();
+  for (let i = 0; i < n; i++) { look.setLook(['painted', 'real', 'painted_day'][i % 3], .05); for (let k = 0; k < 4; k++) frame(1 / 30); }
+  look.setLook('real', .01); for (let i = 0; i < 5; i++) frame(1 / 30);
+  const b = read();
+  return { before: a, after: b, lookNow: look.lookName, grew: b.programs - a.programs + b.textures - a.textures + b.geometries - a.geometries };
+}
+async function measure(n = 40) {
+  const px = new Uint8Array(4), times = [];
+  for (let i = 0; i < n; i++) {
+    const t0 = performance.now();
+    frame(1 / 60);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    times.push(performance.now() - t0);
+    await new Promise(r => requestAnimationFrame(r));
+  }
+  times.sort((a, b) => a - b);
+  return { avgMs: +(times.reduce((s, t) => s + t, 0) / n).toFixed(1), p95Ms: +times[Math.floor(n * .95)].toFixed(1), worstMs: +times[n - 1].toFixed(1) };
+}
+// Super speed: the camera runs the map at 48 m/s, one real frame at a time, with the GPU waited on.
+async function flight(seconds = 14, speed = 48) {
+  const route = [[-26, -548, -6], [-34, -322, -14], [20, -200, -45], [20, 40, -44], [-200, 30, -42], [-430, 30, -46], [-300, 300, -60], [100, 500, -120], [440, 100, -60], [300, -300, -20]].map(p => W(p[0], p[1], p[2]));
+  const curve = new THREE.CatmullRomCurve3(route), len = curve.getLength();
+  const px = new Uint8Array(4), times = [], dt = 1 / 60, slow = [];
+  let u = 0;
+  const n = Math.round(seconds * 60);
+  for (let i = 0; i < n; i++) {
+    u = (u + dt * speed / len) % 1;
+    curve.getPointAt(u, camera.position);
+    const t = curve.getTangentAt(u);
+    camera.position.y = Math.max(camera.position.y, world.heightAt(camera.position.x, -camera.position.z) + 3);
+    camera.lookAt(camera.position.x + t.x * 10, camera.position.y + t.y * 10, camera.position.z + t.z * 10);
+    camera.updateMatrixWorld(); focus.copy(camera.position);
+    const t0 = performance.now(), pr0 = renderer.info.programs.length, tx0 = renderer.info.memory.textures, ge0 = renderer.info.memory.geometries;
+    frame(dt);
+    const t1 = performance.now();
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const t2 = performance.now();
+    times.push(t2 - t0);
+    if (t2 - t0 > 16.7) slow.push({ i, ms: +(t2 - t0).toFixed(1), js: +(t1 - t0).toFixed(1), gpu: +(t2 - t1).toFixed(1), programs: renderer.info.programs.length - pr0, textures: renderer.info.memory.textures - tx0, geometries: renderer.info.memory.geometries - ge0, at: [camera.position.x | 0, camera.position.z | 0] });
+    await new Promise(r => requestAnimationFrame(r));
+  }
+  const sorted = times.slice().sort((a, b) => a - b), long = times.filter(t => t > 16.7).length;
+  return { frames: n, avgMs: +(times.reduce((s, t) => s + t, 0) / n).toFixed(2), p95Ms: +sorted[Math.floor(n * .95)].toFixed(2), p99Ms: +sorted[Math.floor(n * .99)].toFixed(2), worstMs: +sorted[n - 1].toFixed(2), worstFrame: times.indexOf(sorted[n - 1]), longPct: +(100 * long / n).toFixed(2), calls: look.stats().calls, slow: slow.slice(0, 6) };
+}
+function stats() {
+  const i = renderer.info;
+  const ls = look.stats();
+  return { cam: camName, tier, buffer: [gl.drawingBufferWidth, gl.drawingBufferHeight], calls: ls.calls, triangles: ls.triangles, points: ls.points, tris: world.tris(), textures: i.memory.textures, geometries: i.memory.geometries, programs: i.programs.length, world: world.stats() };
+}
+
+if (q.has('powers')) {
+  const P = new THREE.Group(); scene.add(P);
+  const water = new THREE.Mesh(new THREE.TorusKnotGeometry(1.1, .42, 180, 24, 2, 3), look.waterMat()), ice = new THREE.Group(), iceM = look.iceMat();
+  for (let i = 0; i < 9; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(.28 + i * .03, 1.6 + (i % 4) * .7, 5), iceM); c.position.set(Math.cos(i * 2.4) * .9, .4, Math.sin(i * 2.4) * .9); c.rotation.set(Math.sin(i) * .4, i, Math.cos(i * 1.7) * .4); ice.add(c); }
+  ice.position.x = 2.4; water.position.x = -1.6; P.add(water, ice); window.__powers = { P, water, ice };
+  P.position.copy(camera.position).addScaledVector(camera.getWorldDirection(new THREE.Vector3()), 8);
+}
+let auto = !q.has('still');
+function loop(t) { if (auto) frame(1 / 60); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+
+Object.assign(window.__look, {
+  three: THREE, scene, camera, look, world, sky, life, renderer, setCam, frame, stats, memory, measure, flight, flips, shimmer, cams: Object.keys(CAMS),
+  step(n, dt = 1 / 30) { for (let i = 0; i < n; i++) frame(dt); },
+  pause(v) { auto = !v; },
+  shot() { return canvas.toDataURL('image/jpeg', .93); },
+  ready: true,
+});
+if (window.__MOSA_BOOT) window.__MOSA_BOOT.ok = true;
+</script>
+</body>
+</html>

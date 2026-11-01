@@ -1,0 +1,163 @@
+{
+ "cost": [
+  {
+   "pearls": 5
+  },
+  {
+   "pearls": 11
+  },
+  {
+   "pearls": 19,
+   "relics": 1
+  }
+ ],
+ "list": [
+  {
+   "id": "health",
+   "name": "Health",
+   "levels": [
+    "More health",
+    "More again",
+    "As much as a Warden has"
+   ]
+  },
+  {
+   "id": "tide",
+   "name": "Tide",
+   "levels": [
+    "A deeper pool of tide",
+    "Deeper",
+    "It refills while you fight"
+   ]
+  },
+  {
+   "id": "speed",
+   "name": "Speed",
+   "levels": [
+    "Cruise faster",
+    "Boost faster",
+    "Super speed sooner"
+   ]
+  },
+  {
+   "id": "riptide",
+   "name": "Riptide",
+   "needs": "dash",
+   "levels": [
+    "Hits harder",
+    "Reaches further",
+    "Goes through them twice"
+   ]
+  },
+  {
+   "id": "maelstrom",
+   "name": "Maelstrom",
+   "needs": "spin",
+   "levels": [
+    "A wider pull",
+    "Holds them longer",
+    "Throws them when it ends"
+   ]
+  },
+  {
+   "id": "wave",
+   "name": "Tidal Wave",
+   "needs": "wave",
+   "levels": [
+    "A taller wave",
+    "Rolls further",
+    "Leaves them soaked"
+   ]
+  },
+  {
+   "id": "whip",
+   "name": "Water Whip",
+   "needs": "whip",
+   "levels": [
+    "Reaches further",
+    "Pulls harder",
+    "Grabs two"
+   ]
+  },
+  {
+   "id": "geyser",
+   "name": "Geyser",
+   "needs": "geyser",
+   "levels": [
+    "Throws them higher",
+    "Costs less",
+    "Bursts twice"
+   ]
+  },
+  {
+   "id": "lance",
+   "name": "Frost Lance",
+   "needs": "lance",
+   "levels": [
+    "Freezes longer",
+    "Pierces one more",
+    "Shatters on impact"
+   ]
+  },
+  {
+   "id": "glacier",
+   "name": "Glacier",
+   "needs": "glacier",
+   "levels": [
+    "A longer line",
+    "Taller spikes",
+    "Stays standing"
+   ]
+  },
+  {
+   "id": "breath",
+   "name": "Winter's Breath",
+   "needs": "breath",
+   "levels": [
+    "A wider cone",
+    "Slows harder",
+    "Freezes faster"
+   ]
+  },
+  {
+   "id": "icepath",
+   "name": "Ice Path",
+   "needs": "icepath",
+   "levels": [
+    "Holds longer",
+    "Wider ice",
+    "Skate faster"
+   ]
+  },
+  {
+   "id": "guard",
+   "name": "Frost Guard",
+   "needs": "guard",
+   "levels": [
+    "A longer window",
+    "Freezes them longer",
+    "Costs nothing on a perfect parry"
+   ]
+  },
+  {
+   "id": "shoalsong",
+   "name": "Shoalsong",
+   "needs": "dash",
+   "levels": [
+    "The ring reaches further",
+    "They stay longer",
+    "More of them follow"
+   ]
+  },
+  {
+   "id": "cast",
+   "name": "Homeward Cast",
+   "needs": "spin",
+   "levels": [
+    "Hits harder coming home",
+    "Flies further",
+    "Bends through more of them"
+   ]
+  }
+ ]
+}

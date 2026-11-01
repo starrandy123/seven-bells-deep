@@ -1,0 +1,6 @@
+m021_body_color.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_body_color.tga
+m021_body_normal.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_body_normal.tga
+m021_body_specular.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_body_specular.tga
+m021_head_color.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_head_color.tga
+m021_head_normal.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_head_normal.tga
+m021_head_specular.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Sports_Male_01/Textures/m021_head_specular.tga

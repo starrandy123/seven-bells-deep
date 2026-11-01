@@ -1,0 +1,244 @@
+{
+ "list": [
+  {
+   "id": "t_slate",
+   "title": "A child's slate",
+   "text": "Today we learned the seven bells. Reef, Kelp, Gilded, Rime, Cinder, Deep, Great. Mistress says if I forget them I clean the ink.",
+   "at": {
+    "poi": "reef",
+    "dir": 120,
+    "dist": 70,
+    "ground": 1.1
+   },
+   "hint": "Somewhere on the Reef Shelf."
+  },
+  {
+   "id": "t_fine",
+   "title": "A harbour fine",
+   "text": "Fined one silver: for mooring across the fish steps. Again. You know who you are, Orrin.",
+   "at": {
+    "poi": "sea_arch",
+    "dir": 300,
+    "dist": 34,
+    "ground": 1.1
+   },
+   "hint": "Near the Sea Arch."
+  },
+  {
+   "id": "t_ledger",
+   "title": "A baker's ledger",
+   "text": "Sold, forty loaves. Owed, sixty. Ferrant says people will pay when they're ready. His wife says that is not how bread works.",
+   "at": {
+    "poi": "meridon",
+    "dir": 140,
+    "dist": 60,
+    "ground": 1.1
+   },
+   "hint": "In Meridon."
+  },
+  {
+   "id": "t_note",
+   "title": "A folded note, carved",
+   "text": "Meet me on the Processional when the sixth bell's done. Bring the good bread. Not Ferrant's Tuesday bread.",
+   "at": {
+    "poi": "processional",
+    "dir": 40,
+    "dist": 16,
+    "ground": 1.1
+   },
+   "hint": "On the Processional Way."
+  },
+  {
+   "id": "t_rota",
+   "title": "The bell-ringers' rota",
+   "text": "Reef: Hanno. Kelp: the Sisters. Gilded: the Clerk's office, in triplicate. Rime: whoever lost the draw. Great: the Warden, and nobody else, ever.",
+   "at": {
+    "poi": "thalor",
+    "dir": 200,
+    "dist": 90,
+    "ground": 1.1
+   },
+   "hint": "In Thalor."
+  },
+  {
+   "id": "t_fleet",
+   "title": "A rescue fleet's muster",
+   "text": "Forty boats out at the first bell. Bring back who you can. Don't wait for orders. There won't be any.",
+   "at": {
+    "poi": "wrackreach|wreck",
+    "dir": 300,
+    "dist": 60,
+    "ground": 1.1
+   },
+   "hint": "At Wrackreach."
+  },
+  {
+   "id": "t_tide",
+   "title": "A tide table",
+   "text": "High water at the third bell. Someone has drawn a fish on it. The fish has a hat.",
+   "at": {
+    "poi": "reef_shrine|reef",
+    "dir": 30,
+    "dist": 46,
+    "ground": 1.1
+   },
+   "hint": "By the Reef Shrine."
+  },
+  {
+   "id": "t_invoice",
+   "title": "A smith's invoice",
+   "text": "One trident, reforged. Paid in promises. Still owed. M. Clinker.",
+   "at": {
+    "poi": "cinder_forge|cindermere|wreck",
+    "dir": 260,
+    "dist": 38,
+    "ground": 1.1
+   },
+   "hint": "Where the sea runs hot."
+  },
+  {
+   "id": "t_carve",
+   "title": "Carved on a pillar",
+   "text": "Hanno loves nobody and is very happy.",
+   "at": {
+    "poi": "long_nave|kelp",
+    "dir": 70,
+    "dist": 30,
+    "ground": 1.1
+   },
+   "hint": "In the Long Nave."
+  },
+  {
+   "id": "t_notice",
+   "title": "A temple notice",
+   "text": "Please do not feed the Colossus.",
+   "at": {
+    "poi": "colossus",
+    "dir": 150,
+    "dist": 24,
+    "ground": 1.1
+   },
+   "hint": "By the Colossus."
+  },
+  {
+   "id": "t_diary",
+   "title": "A diary page",
+   "text": "The floor of the arena hummed again this morning. The Warden says it's nothing. He said it the way you say it to children.",
+   "at": {
+    "poi": "arena",
+    "dir": 20,
+    "dist": 70,
+    "ground": 1.1
+   },
+   "hint": "Near the Arena."
+  },
+  {
+   "id": "t_report",
+   "title": "An engineer's report",
+   "text": "Cracks under the Great Bell, widening. Recommend somebody read this report.",
+   "at": {
+    "poi": "high_temple|thalor",
+    "dir": 310,
+    "dist": 32,
+    "ground": 1.1
+   },
+   "hint": "At the High Temple."
+  },
+  {
+   "id": "t_ration",
+   "title": "A garrison stores list",
+   "text": "Rescue nets, forty. Men, thirty-eight. Somebody keeps taking the nets home to fish with. Thole.",
+   "at": {
+    "poi": "kelp_shrine|kelp",
+    "dir": 200,
+    "dist": 30,
+    "ground": 1.1
+   },
+   "hint": "By the Kelp Shrine."
+  },
+  {
+   "id": "t_mother",
+   "title": "A mother's letter",
+   "text": "If you are ever lost, stay by a lamp. Somebody always comes for the lamp.",
+   "at": {
+    "poi": "terraces|vesper",
+    "dir": 240,
+    "dist": 44,
+    "ground": 1.1
+   },
+   "hint": "At Vesper."
+  },
+  {
+   "id": "t_ringer",
+   "title": "The last ringer's mark",
+   "text": "Sixth bell rung. The seventh has stopped. Where is he? Where is he?",
+   "at": {
+    "poi": "deep_shrine|vesper",
+    "dir": 110,
+    "dist": 30,
+    "ground": 1.1
+   },
+   "hint": "By the Deep Shrine."
+  },
+  {
+   "id": "t_boat",
+   "title": "Cut into a boat's rib",
+   "text": "We pulled them from the water, forty-one, the big man handing them up. He went back down.",
+   "at": {
+    "poi": "wreck",
+    "dir": 200,
+    "dist": 26,
+    "ground": 1.1
+   },
+   "hint": "In the Old Wreck."
+  },
+  {
+   "id": "t_ice",
+   "title": "A cutter's tally",
+   "text": "The floe sang all night. My mother says it's the bell. My mother says a lot of things. We've moved the hut.",
+   "at": {
+    "poi": "rime_caves|rimehold|open_blue",
+    "dir": 150,
+    "dist": 40,
+    "ground": 1.1
+   },
+   "hint": "Under the ice."
+  },
+  {
+   "id": "t_lamp",
+   "title": "A lamp-keeper's rule",
+   "text": "Trim it. Fill it. Light it. It isn't your business who it's for.",
+   "at": {
+    "poi": "sunward_lighthouse|sunward_south",
+    "dir": 300,
+    "dist": 30,
+    "ground": 0.4
+   },
+   "hint": "Jory might know."
+  },
+  {
+   "id": "t_register",
+   "title": "The lower school register",
+   "text": "Forty-two pupils. Forty-one names have been ticked in a hurry. The last says: Tallow, N. Sent back for her lamp.",
+   "at": {
+    "poi": "trench",
+    "dir": 60,
+    "dist": 90,
+    "ground": 1.1
+   },
+   "hint": "In the Vesper Deep."
+  },
+  {
+   "id": "t_order",
+   "title": "The Warden's last order",
+   "text": "Hold the line. Let nothing through. I will relieve you myself.",
+   "at": {
+    "gate": true,
+    "dist": 14,
+    "dir": 90,
+    "ground": 1.1
+   },
+   "hint": "At the Arena gate."
+  }
+ ]
+}

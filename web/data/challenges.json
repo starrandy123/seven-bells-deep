@@ -1,0 +1,167 @@
+{
+ "list": [
+  {
+   "id": "c_reef",
+   "title": "Reef Sprint",
+   "blurb": "Super speed, through the rings on the Reef Shelf.",
+   "requires": [
+    "ch1"
+   ],
+   "repeat": true,
+   "start": "reef",
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "reef",
+      "sea_arch"
+     ],
+     "n": 12,
+     "ringR": 7,
+     "label": "Run",
+     "text": "Through the rings ({n} of {total})"
+    }
+   ]
+  },
+  {
+   "id": "c_nave",
+   "title": "The Long Nave",
+   "blurb": "Between the kelp pillars at full speed.",
+   "requires": [
+    "ch2"
+   ],
+   "repeat": true,
+   "start": "long_nave",
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "long_nave",
+      "kelp_shrine"
+     ],
+     "n": 12,
+     "ringR": 7,
+     "label": "Run",
+     "text": "Through the rings ({n} of {total})"
+    }
+   ]
+  },
+  {
+   "id": "c_way",
+   "title": "The Processional",
+   "blurb": "Down the marble avenue, past the Colossus.",
+   "requires": [
+    "ch3"
+   ],
+   "repeat": true,
+   "start": "processional",
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "processional",
+      "colossus",
+      "arena"
+     ],
+     "n": 14,
+     "ringR": 7,
+     "over": 12,
+     "label": "Run",
+     "text": "Through the rings ({n} of {total})"
+    }
+   ]
+  },
+  {
+   "id": "c_swell",
+   "title": "Sunward Swell",
+   "blurb": "A surf run on the swell off the beach.",
+   "requires": [
+    "ch1"
+   ],
+   "repeat": true,
+   "start": "sunward_east",
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "sunward_east",
+      "islet"
+     ],
+     "n": 10,
+     "surface": true,
+     "ringR": 9,
+     "label": "Surf",
+     "text": "Surf the rings ({n} of {total})"
+    }
+   ]
+  },
+  {
+   "id": "c_line",
+   "title": "The Storm Line",
+   "blurb": "The long run from the Cove to the Open Blue.",
+   "requires": [
+    "ch4"
+   ],
+   "repeat": true,
+   "start": "crown_cove",
+   "objectives": [
+    {
+     "type": "rings",
+     "via": [
+      "crown_cove",
+      "open_blue"
+     ],
+     "n": 10,
+     "surface": true,
+     "ringR": 9,
+     "label": "Surf",
+     "text": "Surf the rings ({n} of {total})"
+    }
+   ]
+  },
+  {
+   "id": "c_pit",
+   "title": "The Pit",
+   "blurb": "Wave after wave in the Arena. Time is everything.",
+   "requires": [
+    "ch7"
+   ],
+   "repeat": true,
+   "start": {
+    "gate": true
+   },
+   "objectives": [
+    {
+     "type": "waves",
+     "at": {
+      "arena": true
+     },
+     "r": 46,
+     "text": "Clear the waves ({n} of {total})",
+     "list": [
+      {
+       "kind": "reaver",
+       "n": 3
+      },
+      {
+       "kind": "shark",
+       "n": 4
+      },
+      {
+       "kind": "mixed",
+       "n": 5
+      },
+      {
+       "kind": "reaver",
+       "n": 6
+      },
+      {
+       "kind": "mixed",
+       "n": 7
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,114 @@
+// The game's start and its loop: a fixed 60 Hz step for the rules, one draw a frame.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { TITLE, FLAG, W, TOUCH, detectTier, pixelRatioFor } from './config.js';
+import { createLook } from './look.js';
+import { createWorld } from './world.js';
+import { createLife } from './life.js';
+import { createSky } from './sky.js';
+import { createHero } from './hero.js';
+import { createFx } from './fx.js';
+import { createEnemies } from './enemies.js';
+import { createBoss } from './boss.js';
+import { createQuest } from './quest.js';
+import { createUI } from './ui.js';
+import { createAudio } from './audio.js';
+import { createBot } from './bot.js';
+import { clock, advance, alpha as blendOf } from './formulas/step.js';
+
+const STEP = 1 / 60;
+const G = window.__game = { time: 0, hitstop: 0, paused: false, started: false, playing: false, film: FLAG.film, tier: detectTier(), camYaw: 0, camPitch: 0, stats: { frames: 0 } };
+
+async function boot() {
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.25, 900);
+  Object.assign(G, { renderer, scene, camera, audio: createAudio() });
+  G.ui = createUI(G);
+
+  const look = G.look = createLook({ renderer, scene, camera, tier: G.tier });
+  function fit() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setPixelRatio(pixelRatioFor(G.tier, w, h)); renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix(); look.resize && look.resize(w, h);
+  }
+  addEventListener('resize', fit); fit();
+
+  G.ui.setLoad(0.1, 'Filling the sea');
+  G.world = await createWorld({ renderer, scene, camera, look, tier: G.tier, onProgress: (f) => G.ui.setLoad(0.1 + f * 0.45, 'Raising the drowned city') });
+
+  const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+  const pick = async (url, had) => { const out = {}; try { const g = had || await loader.loadAsync(url); g.scene.updateMatrixWorld(true); g.scene.traverse((o) => { if (o.isMesh) { const m = o.material; if (m && !m.__patched && url.includes('props')) { look.patch(m, {}); m.__patched = true; } out[/^mesh_\d+/.test(o.name) && o.parent ? o.parent.name : o.name] = o; } }); } catch (e) { console.warn(url, e); } return out; };
+  G.props = await pick('assets/props.glb', G.world.glbs && G.world.glbs.props); G.creatures = await pick('assets/creatures.glb', G.world.glbs && G.world.glbs.creatures);
+  G.ui.setLoad(0.65, 'Waking the Warden');
+
+  G.sky = createSky({ scene, look, tier: G.tier });
+  G.life = createLife({ scene, look, world: G.world, tier: G.tier, camera });
+  G.fx = createFx(G);
+  if (look.onCross) look.onCross((dir, speed, strength) => { G.audio.setUnder(dir === 'down'); if (strength > 0.25) G.audio.splash(); });
+  await createHero(G);
+  G.ui.setLoad(0.85, 'Calling the Reavers');
+  G.enemies = await createEnemies(G);
+  createBoss(G);
+  G.quest = createQuest(G);
+  if (FLAG.demo) G.bot = createBot(G);
+  // every program the game can ask for is built now, the pooled and hidden ones too, so a first shark can't stall a frame
+  const hidden = []; scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  await look.precompile(); for (const o of hidden) o.visible = false; G.fx.prewarm();
+
+  const sp = G.world.data.spawn, h = G.hero;
+  h.pos.copy(W(sp.x, sp.y, sp.z)); h.heading = G.camYaw = sp.yaw || 0;
+  camera.position.copy(h.pos).add(new THREE.Vector3(-Math.sin(G.camYaw) * 5, 1.4, -Math.cos(G.camYaw) * 5));
+  if (FLAG.qa) { try { await import('./qa.js').then((m) => m.install(G)); } catch (e) { console.warn('no qa', e); } }
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.started) G.ui.setPause(true); });
+  G.ui.setLoad(1, 'Ready');
+  G.ui.ready(() => { G.started = true; G.playing = true; });
+  if (FLAG.demo || FLAG.film) { document.getElementById('title').classList.remove('on'); document.getElementById('hud').classList.add('on'); G.started = true; G.playing = true; }
+
+  G.frame = frame;
+  let last = performance.now(), booted = false;
+  function tick(now) {
+    requestAnimationFrame(tick);
+    if (!FLAG.film) { const dt = Math.min(0.1, (now - last) / 1000); last = now; frame(dt); }
+    if (!booted) { booted = true; if (window.__MOSA_BOOT) window.__MOSA_BOOT.ok = true; G.booted = true; }
+  }
+  requestAnimationFrame(tick);
+}
+
+const C = clock(STEP, 5);
+function step(dt) {
+  G.time += dt;
+  let scale = 1; if (G.hitstop > 0) { G.hitstop -= dt; scale = 0.1; }
+  if (G.slowT > 0) { G.slowT -= dt; scale = Math.min(scale, G.slowK || 0.28); }
+  const d = dt * scale;
+  G.hero.prev.copy(G.hero.pos); G.enemies.keep();
+  if (G.bot) { const u = G.ui.input; const s = G.ui.sample; G.ui.sample = () => { const v = s(); G.bot.drive(v, dt); return v; }; G.hero.step(d); G.ui.sample = s; } else G.hero.step(d);
+  G.enemies.step(d); G.boss.step(d); G.quest.step(dt);
+}
+
+function frame(dt) {
+  const { hero, camera, look } = G;
+  if (G.paused) { look.render(); return; }
+  if (G.started) {
+    advance(C, dt, step);
+  } else {
+    G.time += dt; G.camYaw += dt * 0.03;     // the title: the camera drifts round him
+  }
+  // the rules tick at 60 Hz, the screen at whatever it likes: every moving thing is drawn between its last two steps
+  const alpha = G.started ? blendOf(C) : 1;
+  hero.drawPos.lerpVectors(hero.prev, hero.pos, alpha); G.enemies.blend(alpha);
+  hero.animate(dt); G.enemies.animate(dt); G.boss.draw();
+  if (G.filmCam) G.filmCam(dt); else if (!(G.quest.cineOn && G.quest.cineOn())) hero.camera(dt);
+  G.quest.draw(G.time);
+  look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.life.update(dt, hero.pos); G.sky.update(dt, camera); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
+  G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);
+  G.ui.update(dt);
+  look.render();
+  G.stats.frames++;
+}
+
+boot().catch((e) => { console.error(e); const s = document.querySelector('#load small'); if (s) s.textContent = 'Something broke: ' + e.message; });

@@ -1,0 +1,31 @@
+{
+ "schema": "mosa.rights.v1",
+ "searched": "The files: every file in this build. Our own index.html, js/*.js and the assets written by our own scripts in DrownedCity/Pipeline (Blender and numpy, seeded); assets/hero.glb and assets/reaver.glb start from two Microsoft Rocketbox avatars, changed by our scripts; vendor/three. Rocketbox's licence file is carried in licenses/.",
+ "mine": "The game's code, rules, shaders, HUD and all its sound (Web Audio, no sound files); the world of Thalor: its seabed, coral, kelp, rock, ruins, statue, arena, shrines and bells; the whale, sharks, rays, turtles, jellies, fish, dolphins and the Leviathan (modelled by our Blender scripts); the Warden's armour, trident and mantle, the Reavers' armour and spears, and every swim and fight move (keyed by our Python scripts). The Warden and Thalor are original: not a comic-book character, not a famous game.",
+ "others": [
+  {
+   "what": "three.js r185, the 3D library, carried in vendor/three",
+   "by": "mrdoob and the three.js authors",
+   "license": "MIT",
+   "from": "https://github.com/mrdoob/three.js"
+  },
+  {
+   "what": "meshoptimizer's decoder, which unpacks the compressed models, carried in vendor/three/examples/jsm/libs",
+   "by": "Arseny Kapoulkine",
+   "license": "MIT",
+   "from": "https://github.com/zeux/meshoptimizer"
+  },
+  {
+   "what": "The Warden's body and face, changed and dressed by us in assets/hero.glb and assets/hero_phone.glb: Microsoft Rocketbox avatar Sports_Male_01. The Reavers' bodies, changed in assets/reaver.glb and assets/reaver_phone.glb: avatar Military_Male_02",
+   "by": "Microsoft",
+   "license": "MIT",
+   "from": "https://github.com/microsoft/Microsoft-Rocketbox"
+  },
+  {
+   "what": "NotesMosaic port kit (mosa-port.js): saves that follow the player to another device",
+   "by": "NotesMosaic",
+   "license": "MIT-0",
+   "from": "https://notesmosaic.com/mcp/port-kit.js"
+  }
+ ]
+}

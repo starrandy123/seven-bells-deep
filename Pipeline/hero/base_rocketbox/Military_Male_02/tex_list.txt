@@ -1,0 +1,6 @@
+sm024_body_color_acu.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_body_color_acu.tga
+sm024_body_normal.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_body_normal.tga
+sm024_body_specular.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_body_specular.tga
+sm024_head_color_acu.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_head_color_acu.tga
+sm024_head_normal.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_head_normal.tga
+sm024_head_specular.tga	12582956	https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/Avatars/Professions/Military_Male_02/Textures/sm024_head_specular.tga

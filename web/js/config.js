@@ -1,0 +1,28 @@
+// Shared by every module. The title lives here and nowhere else until a name passes the check.
+import * as THREE from 'three';
+
+export const TITLE = 'Seven Bells Deep';
+
+// Blender metres (x, y, z up, sea level 0) to three.js and back. All json is in Blender coordinates.
+export const W = (x, y, z) => new THREE.Vector3(x, z, -y);
+export const toB = (v) => ({ x: v.x, y: -v.z, z: v.y });
+
+const q = new URLSearchParams(location.search);
+export const FLAG = {
+  demo: q.has('demo'), film: q.has('film'), qa: q.has('qa'), fly: q.has('fly'), fresh: q.has('fresh'), tier: q.get('tier'),
+};
+
+export const TOUCH = !!(window.__MOSA_DEVICE && window.__MOSA_DEVICE.touch) || matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+// phone: no composer, about one megapixel. desktop: the fuller look.
+export function detectTier() {
+  if (FLAG.tier === 'phone' || FLAG.tier === 'desktop') return FLAG.tier;
+  return TOUCH || Math.min(innerWidth, innerHeight) < 500 ? 'phone' : 'desktop';
+}
+
+// Pixels are capped, never the ratio alone: a 3x phone draws about 1.3 megapixels.
+export function pixelRatioFor(tier, w, h) {
+  const real = window.devicePixelRatio || 1;
+  const cap = tier === 'phone' ? 1.3e6 : 2.4e6;
+  return Math.max(1, Math.min(real, Math.sqrt(cap / Math.max(1, w * h))));
+}

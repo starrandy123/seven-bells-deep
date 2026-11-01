@@ -1,0 +1,323 @@
+{
+ "list": [
+  {
+   "id": "fish_a",
+   "name": "Reef Sprat",
+   "note": "Lots of them. All one idea. If you go left they all go left.",
+   "kinds": [
+    "fish_a"
+   ],
+   "hint": "Small fish, in crowds, on the reef."
+  },
+  {
+   "id": "fish_b",
+   "name": "Blue Wrasse",
+   "note": "Very busy. Looks like it's late for something.",
+   "kinds": [
+    "fish_b"
+   ],
+   "hint": "Busy blue fish over the coral."
+  },
+  {
+   "id": "fish_c",
+   "name": "Banded Snapper",
+   "note": "Does not like to be looked at. I looked at it.",
+   "kinds": [
+    "fish_c"
+   ],
+   "hint": "Bigger fish in deep schools."
+  },
+  {
+   "id": "turtle",
+   "name": "Green Turtle",
+   "note": "Rows with its front arms. Doesn't care about you.",
+   "kinds": [
+    "turtle"
+   ],
+   "near": 18,
+   "hint": "Slow, by the reef."
+  },
+  {
+   "id": "manta",
+   "name": "Manta Ray",
+   "note": "Flies. In water. Nobody said it could.",
+   "kinds": [
+    "manta"
+   ],
+   "near": 24,
+   "hint": "Out over the blue."
+  },
+  {
+   "id": "reef_shark",
+   "name": "Reef Shark",
+   "note": "Rude. Smaller than it thinks.",
+   "kinds": [
+    "reef_shark"
+   ],
+   "near": 20,
+   "hint": "Round the reef."
+  },
+  {
+   "id": "shark",
+   "name": "Blue Shark",
+   "note": "Gran says leave them alone. They should be told the same.",
+   "kinds": [
+    "shark"
+   ],
+   "near": 20,
+   "hint": "Out in open water."
+  },
+  {
+   "id": "dolphin",
+   "name": "Dolphin",
+   "note": "Laughing at something. Probably me.",
+   "kinds": [
+    "dolphin"
+   ],
+   "near": 28,
+   "hint": "In a pod at the surface."
+  },
+  {
+   "id": "whale",
+   "name": "Whale",
+   "note": "Too big for the page. I had to use two pages. Sings the same bit if you listen.",
+   "kinds": [
+    "whale"
+   ],
+   "near": 40,
+   "hint": "You can't miss her."
+  },
+  {
+   "id": "jelly",
+   "name": "Moon Jelly",
+   "note": "No bones, no brain, no problems.",
+   "kinds": [
+    "jelly"
+   ],
+   "near": 14,
+   "hint": "In the deep dark, lit up."
+  },
+  {
+   "id": "reaver",
+   "name": "Reaver",
+   "note": "Not a fish. Gran says don't write them down. I'm writing them down.",
+   "kinds": [
+    "reaver"
+   ],
+   "near": 20,
+   "hint": "You'll meet them."
+  },
+  {
+   "id": "otter",
+   "name": "Sea Otter",
+   "note": "They hold hands asleep so nobody floats away. Bram says I can't have one.",
+   "kinds": [
+    "otter"
+   ],
+   "near": 24,
+   "hint": "At the top of the kelp."
+  },
+  {
+   "id": "seal",
+   "name": "Grey Seal",
+   "note": "Fat. Happy. Would like your fish.",
+   "kinds": [
+    "seal"
+   ],
+   "near": 24,
+   "hint": "Round the Frost Isle."
+  },
+  {
+   "id": "narwhal",
+   "name": "Narwhal",
+   "note": "A whale with a spear. I want one. I want to be one.",
+   "kinds": [
+    "narwhal"
+   ],
+   "near": 30,
+   "hint": "Under the ice."
+  },
+  {
+   "id": "angler",
+   "name": "Anglerfish",
+   "note": "Don't follow the small light. I'm told.",
+   "kinds": [
+    "angler",
+    "anglerfish"
+   ],
+   "near": 16,
+   "hint": "Where it's dark."
+  },
+  {
+   "id": "moray",
+   "name": "Moray Eel",
+   "note": "Lives in a hole. Comes out angry.",
+   "kinds": [
+    "moray"
+   ],
+   "near": 14,
+   "hint": "Holes in old walls."
+  },
+  {
+   "id": "hammerhead",
+   "name": "Hammerhead",
+   "note": "Whoever made this was in a hurry.",
+   "kinds": [
+    "hammerhead"
+   ],
+   "near": 20,
+   "hint": "In pairs, in deep water."
+  },
+  {
+   "id": "crab",
+   "name": "Giant Crab",
+   "note": "Bigger than our table. Would not be good at our table.",
+   "kinds": [
+    "crab",
+    "giant_crab"
+   ],
+   "near": 14,
+   "hint": "On the bottom."
+  },
+  {
+   "id": "gull",
+   "name": "Herring Gull",
+   "note": "Stole my lunch. Not in the sea but it goes in the book.",
+   "kinds": [
+    "gull"
+   ],
+   "near": 30,
+   "hint": "Over the harbour."
+  },
+  {
+   "id": "goat",
+   "name": "Goat",
+   "note": "Bishop. Not a sea creature. He'd like you to think he is.",
+   "kinds": [
+    "goat"
+   ],
+   "near": 16,
+   "hint": "On the meadows."
+  },
+  {
+   "id": "deer",
+   "name": "Hill Deer",
+   "note": "Only comes down when the bell rings. Used to not come at all.",
+   "kinds": [
+    "deer"
+   ],
+   "near": 24,
+   "hint": "On the meadows at dusk."
+  },
+  {
+   "id": "crab_small",
+   "name": "Shore Crab",
+   "note": "Sideways. I tried it. It's harder than it looks.",
+   "kinds": [
+    "crab_small"
+   ],
+   "near": 8,
+   "hint": "On the beaches."
+  },
+  {
+   "id": "flying_fish",
+   "name": "Flying Fish",
+   "note": "It's a fish. It flies. The whole sea is showing off.",
+   "kinds": [
+    "flying_fish"
+   ],
+   "near": 24,
+   "hint": "Skipping at the surface."
+  },
+  {
+   "id": "swordfish",
+   "name": "Swordfish",
+   "note": "Like a narwhal that went to fencing school.",
+   "kinds": [
+    "swordfish"
+   ],
+   "near": 24,
+   "hint": "Fast, out in the blue."
+  },
+  {
+   "id": "captain",
+   "name": "Reaver Captain",
+   "note": "Still giving orders. Somebody should tell him the war's over. Nobody's offered.",
+   "kinds": [
+    "captain"
+   ],
+   "near": 16,
+   "hint": "Where Reavers stand in a line."
+  },
+  {
+   "id": "archer",
+   "name": "Reaver Archer",
+   "note": "Throws a harpoon a long way. Gran says move.",
+   "kinds": [
+    "archer"
+   ],
+   "near": 20,
+   "hint": "Behind the others."
+  },
+  {
+   "id": "siren",
+   "name": "Siren",
+   "note": "It sings. I put wax in my ears. It did nothing. I was under water.",
+   "kinds": [
+    "siren"
+   ],
+   "near": 18,
+   "hint": "Deep, and only if you listen."
+  },
+  {
+   "id": "frost_wight",
+   "name": "Frost Wight",
+   "note": "Cold enough to make the water creak. Tove says they were sailors once. She doesn't say whose.",
+   "kinds": [
+    "frost_wight"
+   ],
+   "near": 16,
+   "hint": "Under the ice."
+  },
+  {
+   "id": "magma_husk",
+   "name": "Magma Husk",
+   "note": "A shell of slag with something still walking about inside. Marta calls it the bad batch.",
+   "kinds": [
+    "magma_husk"
+   ],
+   "near": 16,
+   "hint": "By the vents."
+  },
+  {
+   "id": "duelist",
+   "name": "Duelist",
+   "note": "Bows first. Then it's all a bit quick.",
+   "kinds": [
+    "duelist"
+   ],
+   "near": 16,
+   "hint": "Alone, on the old roads."
+  },
+  {
+   "id": "thornback",
+   "name": "Thornback",
+   "note": "Don't pet it. I'm writing this one-handed.",
+   "kinds": [
+    "thornback"
+   ],
+   "near": 14,
+   "hint": "On the bottom, looking like a rock."
+  },
+  {
+   "id": "leviathan",
+   "name": "The Leviathan",
+   "note": "I didn't see this one. He told me. I drew it from what he said. It took all the pages.",
+   "kinds": [
+    "leviathan"
+   ],
+   "near": 60,
+   "hint": "It waits under the Arena."
+  }
+ ]
+}

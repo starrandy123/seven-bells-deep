@@ -1,0 +1,87 @@
+{
+ "_doc": "S2a and S2b: what was searched for each public name, and when. g_data.mjs reads this: a person's name with no row here fails. The trademark register is still owed by a person.",
+ "searched_on": "2026-11-01",
+ "title": {
+  "chosen": "Seven Bells Deep",
+  "status": "working title, pending the owner's word and a trademark search by a person"
+ },
+ "register": {
+  "status": "owed by a person",
+  "where": [
+   "tmsearch.uspto.gov",
+   "EUIPO eSearch"
+  ],
+  "tried": "USPTO's search answered 405 to a direct call and Justia answered 403, so no register was read for any title. A general web search is not a register search."
+ },
+ "weaker": "CrazyGames' and Roblox's search pages are script-only and Poki has no search URL, so those three rest on site-limited web search, which is weaker than a store's own search. Bellwake passed Steam and Apple and was still on itch.io, so a store's own search isn't enough alone.",
+ "titles": [
+  {
+   "name": "Seven Bells Deep",
+   "verdict": "chosen",
+   "steam": "the phrase: 20 results, none matches",
+   "appstore": "store API: 8 results, none matches",
+   "googleplay": "No results",
+   "itch": "site-limited web search: no exact title; near it, jam-sized Seventh Bell and 7 Carol Bells",
+   "poki": "site-limited web search: no exact title",
+   "crazygames": "site-limited web search: no exact title",
+   "roblox": "site-limited web search: no exact title",
+   "web": "no exact title; School of Seven Bells is a band"
+  },
+  {
+   "name": "The Tolling Deep",
+   "verdict": "proposed",
+   "steam": "68 matches, none exact in the 50 shown",
+   "appstore": "9 results, none matches",
+   "googleplay": "site-limited web search: no exact title",
+   "itch": "itch.io search: none",
+   "poki": "site-limited web search: no exact title",
+   "crazygames": "site-limited web search: no exact title",
+   "roblox": "site-limited web search: no exact title",
+   "web": "none; nearest is a public-domain book, The Deep Sea's Toll"
+  },
+  {
+   "name": "Saltwarden",
+   "verdict": "proposed",
+   "steam": "0 results",
+   "appstore": "10 results, none matches",
+   "googleplay": "nothing",
+   "itch": "none",
+   "poki": "site-limited web search: no exact title",
+   "crazygames": "site-limited web search: no exact title",
+   "roblox": "site-limited web search: no exact title; a user StalwartWarden",
+   "web": "nearest are Saltborn and Salt and Sanctuary"
+  }
+ ],
+ "rejected": {
+  "Bellwake": "a demo on itch.io by Kyogrim, about a bell-ringer",
+  "Tidewake": "on Steam, due 2026",
+  "Tidewarden": "too close to Tideward, on the App Store Feb 2027",
+  "Undertoll": "too close to Undertale, and a fan project Undertold on itch.io",
+  "Fathombell": "Google Play's result page showed an app listed under that name",
+  "Inkle": "a game studio; the clerk's first surname, dropped"
+ },
+ "people": [
+  "Tamsin Vear",
+  "Minnow Vear",
+  "Orrin Thole",
+  "Nell Tallow",
+  "Marta Clinker",
+  "Tove Sael",
+  "Odile Brask",
+  "Jory Kettle",
+  "Bram Sedge",
+  "Ferrant",
+  "Perpetua Ambry",
+  "Rua Cairn",
+  "Eda Marl",
+  "Wick Pender",
+  "Hob Tarrant"
+ ],
+ "people_search": "one web search each: no known character",
+ "places": [
+  "Wrackreach",
+  "Cindermere",
+  "Rimehold"
+ ],
+ "places_search": "one web search each: no known game place. The other places in world.json are the world owner's to search."
+}
