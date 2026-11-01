@@ -271,17 +271,23 @@ export async function createHero(G) {
     const storm = G.sky && G.sky.weather === 'storm', onLand = !!s.land;
     const target = u.my < -0.4 ? SURF_OFF - 2 : onLand ? (u.boost ? LAND_SURF_TOP : SURF_OFF - 3) : u.boost ? SURF_TOP : storm ? SURF_STORM : SURF_RIDE;
     s.v = Math.min(onLand ? LAND_SURF_TOP + 6 : SURF_TOP, s.v + clamp(target - s.v, -11 * dt, (onLand ? 7 : 10) * dt));
+    if (!onLand) {     // at sea the water's own slope pulls the ride (down a face, faster); on a breaker's face the wave carries him shoreward with it
+      const sn = Math.sin(h.heading), cn = Math.cos(h.heading), w0 = waveY(h.pos.x, h.pos.z), sl = (waveY(h.pos.x + sn * 1.5, h.pos.z + cn * 1.5) - w0) / 1.5;
+      s.v = Math.max(0, s.v - 9.81 * 0.85 * sl * dt);
+      const bk = G.sky && G.sky.breakAt ? G.sky.breakAt(h.pos.x, h.pos.z) : null;
+      if (bk && bk.face > 0.02) { s.cx = bk.cx * bk.face; s.cz = bk.cz * bk.face; s.onFace = bk.face; s.v = Math.min(SURF_TOP + 6, s.v + 4 * bk.face * dt); } else { s.cx = s.cz = 0; s.onFace = 0; }
+    }
     if (onLand) {      // the slope pulls along the ride: faster downhill, slower up
       const sn = Math.sin(h.heading), cn = Math.cos(h.heading), g0 = terrain(h.pos.x, h.pos.z), sl = (terrain(h.pos.x + sn * 1.2, h.pos.z + cn * 1.2) - g0) / 1.2;
       s.v = Math.max(0, s.v - 9.81 * SLOPE_PULL * (sl / Math.sqrt(1 + sl * sl)) * dt);
       if (sl > TAN_WALL) { s.v = 0; }
     }
-    h.vel.set(Math.sin(h.heading) * s.v, 0, Math.cos(h.heading) * s.v);
+    h.vel.set(Math.sin(h.heading) * s.v + (onLand ? 0 : s.cx || 0), 0, Math.cos(h.heading) * s.v + (onLand ? 0 : s.cz || 0));      // (the wave's carry goes through the same collisions)
     // something in the way: the ride glances off it along the way it was pushed, keeping most of its speed; only a hit near head-on costs it (seen in the game: a
     // rock at the shore stopped a 19 m/s ride dead)
     const px = h.pos.x, pz = h.pos.z;
     if (slide(h.vel.x * dt, 0, h.vel.z * dt, 0.62, true)) {
-      const mx = h.pos.x - px, mz = h.pos.z - pz, real = Math.hypot(mx, mz) / Math.max(dt, 1e-4), keep = real / Math.max(s.v, 1e-3);
+      const mx = h.pos.x - px, mz = h.pos.z - pz, real = Math.hypot(mx, mz) / Math.max(dt, 1e-4), keep = real / Math.max(Math.hypot(h.vel.x, h.vel.z), 1e-3);
       if (keep > 0.15) { h.heading = wrap(h.heading + wrap(Math.atan2(mx, mz) - h.heading) * 0.6); s.v = Math.max(real, s.v * (0.55 + 0.4 * keep)); }
       else { s.v *= 0.35; h.heading = wrap(h.heading + (carve >= 0 ? -1 : 1) * 1.2); G.shake(0.2); G.audio.splash(); }      // near head-on: thrown aside, a third of the speed
     }

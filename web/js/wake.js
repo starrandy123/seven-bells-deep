@@ -26,11 +26,11 @@ export function createWake(G, h, mesh) {
     void main() {
       float r = length(vP);
       float n = vn(vP * 5.0 + vec2(0.0, uT * 3.2)) * 0.6 + vn(vP * 11.0 - vec2(uT * 1.7, uT * 4.1)) * 0.4;
-      float crest = smoothstep(0.35, 0.85, vP.y) * smoothstep(1.0, 0.55, r) * smoothstep(0.45, 0.7, n + 0.25 * vP.y);
+      float crest = smoothstep(0.35, 0.85, vP.y) * (1.0 - smoothstep(0.55, 1.0, r)) * smoothstep(0.45, 0.7, n + 0.25 * vP.y);
       float sheen = pow(smoothstep(0.15, 0.95, vH), 1.6) * (0.55 + 0.45 * n);
       vec3 c = mix(uLow, uTop, sheen);
       c = mix(c, vec3(0.96, 0.99, 1.0), crest);
-      float a = smoothstep(1.0, 0.62 + 0.12 * n, r) * uA * mix(0.55, 0.95, max(sheen, crest));
+      float a = (1.0 - smoothstep(0.62 + 0.12 * n, 1.0, r)) * uA * mix(0.55, 0.95, max(sheen, crest));
       gl_FragColor = vec4(c, a);
     }`;
   const swM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uTop: { value: new THREE.Color(0.82, 0.97, 0.98) }, uLow: { value: new THREE.Color(0.06, 0.36, 0.44) }, uA: { value: 0 }, uT: { value: 0 } },

@@ -2,6 +2,7 @@
 // From below: a wobbling Snell's window with the sun's glare, total internal reflection beyond it.
 // From above: real waves, sky and sun. The dome behind everything is the deep water, or the sky when the camera is in the air.
 import * as THREE from 'three';
+import { breakerAt, BREAK_K, BREAK_W } from './surf.js';
 
 const AIR_GLSL = /* glsl */`
 uniform vec3 ocSkyZ, ocSkyH, ocGlowC, ocCloudL, ocCloudM, ocCloudS, ocSeaS, ocSeaD, ocMoon, ocSkyL, ocSkyLC;
@@ -102,6 +103,30 @@ vec2 ocWaveD(vec2 p, float t) {
        + uW3.xy*uW3.w*cos(dot(p, uW3.xy) + t*uW3.z) + uW4.xy*uW4.w*cos(dot(p, uW4.xy) + t*uW4.z);
 }`;
 
+// The breakers (Randy, 1 Nov: "we need waves too we can surf"): surf.js breakerAt, the same formula line for line, so the CPU rides the water the GPU draws.
+// Each break: A = waterline x, z and the way out to sea; B = half its width along the shore, how far out the swell builds, its height, its phase. Swell sets
+// come and go (36 s); it shoals by Green's law from 10 m deep, steepens its shoreward face, and breaks when it stands taller than 0.78 of its depth.
+const BREAK_GLSL = /* glsl */`
+uniform vec4 ocBrkA[6], ocBrkB[6]; uniform vec2 ocBrkK; uniform float ocBrkN;
+float ocBreak(vec2 p, float depth, float t, out float foam) {
+  float y = 0.0; foam = 0.0;
+  for (int i = 0; i < 6; i++) {
+    if (float(i) >= ocBrkN) break;
+    vec4 A = ocBrkA[i], B = ocBrkB[i];
+    vec2 r = p - A.xy; float o = dot(r, A.zw), l = -r.x*A.w + r.y*A.z;
+    if (o < -4.0 || o > B.y + 10.0 || abs(l) > B.x + 14.0) continue;
+    float e = (1.0 - smoothstep(B.x - 18.0, B.x + 12.0, abs(l)))*(1.0 - smoothstep(B.y - 22.0, B.y + 8.0, o))*smoothstep(-3.0, 6.0, o);
+    if (e <= 0.0) continue;
+    float h = max(depth, .4), set = .42 + .58*pow(.5 + .5*sin(t*.1745 + B.w), 2.0);
+    float ash = B.z*set*pow(10.0/max(h, 1.2), .25), Aw = min(ash, .39*h), sig = min(ash/max(.39*h, 1e-3), 1.4), s1 = min(sig, 1.0);
+    float phi = ocBrkK.x*o + ocBrkK.y*t + B.w*7.0, g = phi - .7*s1*(1.0 - cos(phi)), f = pow(.5 + .5*cos(g), 1.0 + 2.0*s1);
+    y += e*Aw*(2.0*f - .8);
+    foam += e*smoothstep(.82, 1.05, sig)*smoothstep(.35, .8, f);
+  }
+  foam = min(foam, 1.0);
+  return y;
+}`;
+
 // The camera's lens as a sheet of glass a metre out, so a crossing fills the frame for a beat. >0: that point of the glass is in the air.
 const LENS_GLSL = /* glsl */`
 uniform float uLensOn;
@@ -187,8 +212,9 @@ function* paintClouds(sunAz, scale) {
 export function createSky({ scene, look, tier = 'phone', clock = true }) {
   const phone = tier === 'phone';
   const WV = { uW1: { value: wave(18, 41, .36) }, uW2: { value: wave(-33, 23, .22) }, uW3: { value: wave(71, 13, .11) }, uW4: { value: wave(-64, 7.5, .05) } };
+  const BRK = { ocBrkA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkK: { value: new THREE.Vector2(BREAK_K, BREAK_W) }, ocBrkN: { value: 0 } };
   const U = {
-    ...look.uniforms, ...WV, uAbove: { value: 0 }, uLensOn: { value: 0 },
+    ...look.uniforms, ...WV, ...BRK, uAbove: { value: 0 }, uLensOn: { value: 0 },
     tOcClouds: { value: null }, ocCloudIn: { value: 1 },
     uCamF: { value: new THREE.Vector3(0, 0, -1) }, uCamR: { value: new THREE.Vector3(1, 0, 0) }, uCamU: { value: new THREE.Vector3(0, 1, 0) },
   };
@@ -253,13 +279,22 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     uniform float ocTime;
     uniform highp sampler2D tOcHeight; uniform vec4 ocMap;
     ${WAVE_GLSL}
-    varying vec3 vP; varying vec4 vClip;
+    ${BREAK_GLSL}
+    varying vec3 vP; varying vec4 vClip; varying vec3 vBrk;
+    float ocBedAt(vec2 q) { return texture(tOcHeight, (vec2(q.x - ocMap.x, -q.y - ocMap.y)/ocMap.z + .5)/ocMap.w).r; }
     void main() {
       vec3 p = position + vec3(cameraPosition.x, 0.0, cameraPosition.z);
       float fade = 1.0 - smoothstep(120.0, 620.0, length(position.xz));
-      float bed = texture(tOcHeight, (vec2(p.x - ocMap.x, -p.z - ocMap.y)/ocMap.z + .5)/ocMap.w).r;
+      float bed = ocBedAt(p.xz);
       fade *= smoothstep(.0, 5.0, -bed);
       p.y = ocWave(p.xz, ocTime)*fade + .10*sin(ocTime*.55 + p.x*.021 + p.z*.017)*(1.0 - fade) + .05*sin(ocTime*.91 - p.x*.043)*(1.0 - fade);
+      // the breakers, and their slope a metre over each way (the bed read again there) for the light, and their foam
+      vBrk = vec3(0.0);
+      if (ocBrkN > 0.0) {
+        float near = 1.0 - smoothstep(320.0, 620.0, length(position.xz)), f0, f1, f2;
+        float b0 = ocBreak(p.xz, -bed, ocTime, f0), b1 = ocBreak(p.xz + vec2(1.0, 0.0), -ocBedAt(p.xz + vec2(1.0, 0.0)), ocTime, f1), b2 = ocBreak(p.xz + vec2(0.0, 1.0), -ocBedAt(p.xz + vec2(0.0, 1.0)), ocTime, f2);
+        p.y += b0*near; vBrk = vec3(f0, b1 - b0, b2 - b0)*near;
+      }
       vP = p;
       gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
       gl_Position.z = min(gl_Position.z, gl_Position.w*.99999);    // the sea runs on past the camera's far plane
@@ -267,9 +302,10 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     }`;
   const SURF_N = /* glsl */`
     ${WAVE_GLSL}
+    varying vec3 vBrk;
     // The surface's normal: swells from the waves, ripples from two drifting layers of the noise tile; flatter with distance.
     vec3 ocSurfN(vec2 p, float dist, float gain) {
-      vec2 s = ocWaveD(p, ocTime)*(1.0 - smoothstep(120.0, 620.0, dist));
+      vec2 s = ocWaveD(p, ocTime)*(1.0 - smoothstep(120.0, 620.0, dist)) + vBrk.yz;      // the swell's slope, and the breakers'
       vec2 a = texture(tOcNoise, p*.0610 + ocTime*vec2(.0092, .0061)).rg - .5;
       vec2 b = texture(tOcNoise, p.yx*.1730 + ocTime*vec2(-.0139, .0116)).rg - .5;
       vec2 c = texture(tOcNoise, p*.4100 + ocTime*vec2(.0220, -.0240)).rg - .5;
@@ -406,6 +442,13 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
           float foam = sh*smoothstep(.40, .78, n2*.6 + n1*.4 + band*.42 - (1.0 - sh)*.6);
           c = mix(c, mix(vec3(1.25, 1.26, 1.24)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), vec3(.24, 1.05, 1.20), ocBio), foam);
           a = max(a, foam*.96);
+        }
+        if (vBrk.x > .01) {      // a breaker's white water: torn at its edges by the noise, carried with the wave
+          vec2 fq = vP.xz*.33;
+          float w1 = texture(tOcNoise, fq + ocTime*vec2(.021, .013)).b, w2 = texture(tOcNoise, fq*2.6 - ocTime*vec2(.034, .022)).a;
+          float bf = smoothstep(.22, .66, vBrk.x*1.2 + (w1*.6 + w2*.4 - .5)*.85);
+          c = mix(c, vec3(1.22, 1.24, 1.22)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), bf);
+          a = max(a, bf*.97);
         }
         if (ocBio > 0.0) {
           // the sea lit from within: broad slow drifts, two turned layers so no tile shows, and fine sparks close by where the ripples catch
@@ -601,10 +644,25 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
 
   // Sea level under a point, for a breach or a splash.
   const W = [WV.uW1.value, WV.uW2.value, WV.uW3.value, WV.uW4.value], W0 = W.map(v => v.w);
+  // the CPU's water is the GPU's: the swell flattening over a shallow bed as the vertex shader does it, and the breakers by the same formula
+  let breaks = [], bedAt = null;
+  const smooth01 = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   function waveAt(x, z) {
     const t = look.uniforms.ocTime.value; let y = 0;
     for (const w of W) y += w.w * Math.sin(x * w.x + z * w.y + t * w.z);
+    if (!bedAt) return y;
+    const depth = -bedAt(x, -z);
+    y *= smooth01(0, 5, depth);
+    if (breaks.length) y += breakerAt(breaks, x, z, depth, t);
     return y;
+  }
+  // for the hero on a board: the face here (0-1), the wave's shoreward speed, its foam
+  const brkOut = { foam: 0, face: 0, cx: 0, cz: 0 };
+  function breakAt(x, z) { if (!breaks.length || !bedAt) { brkOut.face = brkOut.foam = 0; return brkOut; } breakerAt(breaks, x, z, -bedAt(x, -z), look.uniforms.ocTime.value, brkOut); return brkOut; }
+  function setBreakers(list, heightAt) {
+    breaks = list || []; bedAt = heightAt || null;
+    for (let i = 0; i < 6; i++) { const b = breaks[i]; if (b) { BRK.ocBrkA.value[i].set(b.x, b.z, b.ox, b.oz); BRK.ocBrkB.value[i].set(b.half, b.band, b.amp, b.phase); } }
+    BRK.ocBrkN.value = Math.min(6, breaks.length);
   }
 
   // The crossing: which side the eye is on, how fast it went through, and what the lens does about it.
@@ -711,6 +769,6 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   function testCross(up, speed = 12) { tUp = tDown = 9; crossed(up, speed); }
 
   look.waveAt = waveAt;                                                // for what floats
-  const api = { update, waveAt, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
+  const api = { update, waveAt, breakAt, setBreakers, get breaks() { return breaks; }, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
   return api;
 }

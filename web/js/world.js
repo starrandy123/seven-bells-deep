@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { planCities } from './city.js';
+import { CITY_VERTEX_DECL, CITY_VERTEX_BEND, CITY_PARS, CITY_ALBEDO, CITY_POST, CITY_GLOW } from './city_glsl.js';
 
 const GRID = 16;                                  // quads along a patch's side
 const LEVELS = 6;                                 // 20, 40, 80, 160, 320, 640 m patches
@@ -611,21 +612,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       glow: /* glsl */`ocGlow = pow(vColor.rgb, vec3(1.5))*vec3(.70, 1.5, 1.15)*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .35*ocPulse);`,
     }),
     // the cities' buildings (city.js): weathered stone and weed like the old kit, and their windows glow warm when the lamps are lit and at night
+    // the cities' buildings (city.js massing, city_glsl.js drawing): every surface drawn from its aFac in comic ink, hatched where it turns from the sun,
+    // its windows lit warm (cold in the deep) when the lamps are lit, at night, and always below 18 m
     city: () => look.patch(lit({ vertexColors: true }), {
-      key: 'city',
-      albedo: /* glsl */`{ float ocN1 = texture(tOcNoise, vOcP.xz*.037 + vOcP.y*vec2(.021, -.013)).a, ocN2 = texture(tOcNoise, vOcP.zx*.17 + vOcP.y*vec2(.09, .07)).b;
-        float ocWin = smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b));
-        float ocAl = smoothstep(.40, .68, ocN1*.72 + ocN2*.28)*smoothstep(1.2, -.6, vOcP.y)*(1.0 - ocWin);
-        diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.7);
-        // comic line work in the stone: courses every 0.9 m, joints staggered course by course, drawn as ink a pixel or so wide at any distance
-        float ocCy = vOcP.y/.9, ocRow = floor(ocCy), ocJx = (vOcP.x + vOcP.z)/1.7 + ocRow*.5;
-        float ocWc = fwidth(ocCy)*1.2, ocWj = fwidth(ocJx)*1.2;
-        float ocLine = max(1.0 - smoothstep(0.0, ocWc, min(fract(ocCy), 1.0 - fract(ocCy))), (1.0 - smoothstep(0.0, ocWj, min(fract(ocJx), 1.0 - fract(ocJx))))*.8);
-        float ocFar = 1.0 - smoothstep(60.0, 150.0, distance(vOcP, cameraPosition));
-        diffuseColor.rgb *= 1.0 - ocLine*.55*ocFar*(1.0 - ocWin);
-        // a window's frame: the ring of its glow is ink, so each pane reads as a drawn window
-        diffuseColor.rgb *= 1.0 - .7*smoothstep(.05, .45, ocWin)*(1.0 - smoothstep(.55, .95, ocWin)); }`,
-      glow: /* glsl */`ocGlow = pow(vColor.rgb, vec3(1.5))*vec3(2.2)*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*.55)*2.4;`,
+      key: 'city2', vertexDecl: CITY_VERTEX_DECL, vertexBend: CITY_VERTEX_BEND, fragmentPars: CITY_PARS, albedo: CITY_ALBEDO, fragmentPost: CITY_POST, glow: CITY_GLOW,
     }),
     lamp: () => look.patch(lit({ vertexColors: true }), {
       key: 'lamp',
@@ -718,6 +708,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
     return t;
   }
+  // the cities (city.js): planned here, before any instance is drawn, lit or collided with, because each city clears its footprint of the clutter it replaces
+  const cityPlan = planCities(data, heightAt, { phone });
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;
   // Cards scattered over a mesh's foliage (its green corners), in real metres; `normal` points out from the canopy, so the mass lights as one.
   function leafCards(G, want) {
@@ -1456,18 +1448,22 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // what a phone can't give. data.colliders is a view of the store, made only if something asks (the walls do; the game reads the store).
   // Most solids are copies per instance, so world.json can hold a kind's shape once. The arena gate is the world's: its solids and mesh stand until setGateOpen(true), then it sinks into the sand.
   const G8 = data.arena && data.arena.gate;
-  // the cities' streets and buildings (city.js), planned now so their solids are the world's own
-  const cityPlan = planCities(data, heightAt, { phone });
+  // the cities' solids join the world's own (planned above, before any instance was drawn)
   data.colliders = (data.colliders || []).concat(cityPlan.colliders);
   // the cities' ink: the hull pushed out a constant 1.6 px on the screen near, thinning to nothing by 170 m so a far city never turns black in the haze
   const cityInk = new THREE.MeshBasicMaterial({ color: 0x0a1820, side: THREE.BackSide });
   cityInk.onBeforeCompile = (sh) => {
     sh.uniforms.ocInkH = U.ocInkH;
+    // a basic material has no objectNormal of its own (only a skinned one does): the hull's normal, turned by its instance, then by the view
     sh.vertexShader = 'uniform float ocInkH;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
-      { vec3 nv = normalize(normalMatrix*objectNormal); float d = max(-mvPosition.z, .1), perM = projectionMatrix[1][1]*ocInkH*.5/d;
+      { vec3 ocN = normal;
+        #ifdef USE_INSTANCING
+          ocN = mat3(instanceMatrix)*ocN;
+        #endif
+        vec3 nv = normalize(normalMatrix*ocN); float d = max(-mvPosition.z, .1), perM = projectionMatrix[1][1]*ocInkH*.5/d;
         mvPosition.xyz += nv*1.6*(1.0 - smoothstep(90.0, 170.0, d))/perM; gl_Position = projectionMatrix*mvPosition; }`);
   };
-  cityInk.customProgramCacheKey = () => 'cityInk1';
+  cityInk.customProgramCacheKey = () => 'cityInk2';
   cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;

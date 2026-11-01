@@ -7,6 +7,7 @@ import { createLook } from './look.js';
 import { createWorld } from './world.js';
 import { createLife } from './life.js';
 import { createSky } from './sky.js';
+import { findBreaks } from './surf.js';
 import { createHero } from './hero.js';
 import { createFx } from './fx.js';
 import { createEnemies } from './enemies.js';
@@ -46,6 +47,8 @@ async function boot() {
   G.ui.setLoad(0.65, 'Waking the Warden');
 
   G.sky = createSky({ scene, look, tier: G.tier });
+  // the surf: breaks found on the world's own beaches, drawn by the sea and ridden by the hero from the same formula (surf.js)
+  G.sky.setBreakers(findBreaks(G.world.data, G.world.heightAt), G.world.heightAt);
   G.life = createLife({ scene, look, world: G.world, tier: G.tier, camera });
   G.fx = createFx(G);
   if (look.onCross) look.onCross((dir, speed, strength) => { G.audio.setUnder(dir === 'down'); if (strength > 0.25) G.audio.splash(); });
