@@ -4,10 +4,10 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 
 | ID | What | Status | Check |
 |---|---|---|---|
-| M1 | Stride match: planted feet don't slide. A foot on the ground m | check green | move_walls M1, M1_90, M1_120, M1_144, M1b, M1c |
-| M2 | Foot placement on terrain: two-bone IK plants the feet on the  | check green | move_walls M2, M2b, M2c |
-| M3 | Pose changes never pop: inertialization on every switch (Bollo | check green | move_walls M3, M3c, M3m |
-| M4 | Starts, stops, pivots: a start lean, a stop with a settle, a p | check green | move_walls M4, M4f, M4p, M4l, M4b, M4c |
+| M1 | Stride match: planted feet don't slide. A foot on the ground m | building | land now real capture, live 07:56; move_walls M1 family red, 4.6 cm a frame (limit 3); M1b, M1c red; see Pipeline/wip/movement/NOTES.md |
+| M2 | Foot placement on terrain: two-bone IK plants the feet on the  | building | move_walls M2 red, 3.1 cm (limit 3); M2b, M2c green |
+| M3 | Pose changes never pop: inertialization on every switch (Bollo | building | move_walls M3, M3m red on the capture legs; fix for the double-jump flip private, unrun; M3c green |
+| M4 | Starts, stops, pivots: a start lean, a stop with a settle, a p | building | move_walls M4c red; real starts and stops private, M4s and M4t written, unrun |
 | M5 | The jump: real anticipation, height set by press length, coyot | check green | move_walls M5a-j, M5g2 |
 | M6 | Super sprint reads right: no legs running in slow motion at 36 | building | move_walls M6a, M6b; blur and M6c judge owed |
 | M7 | Slopes: the Warden climbs what looks climbable and nothing els | check green | move_walls M7, M7b, M7c, M7d; rates A7, A7s |

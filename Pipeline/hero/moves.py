@@ -386,7 +386,7 @@ def blow_window(sk, c, first):
     while b < len(sp) - 1 and sp[b + 1] > 0.55 * top: b += 1
     return a, b, peak, sp, pts
 
-ELBOW_MOST, KNEE_MOST = 150.0, 148.0
+ELBOW_MOST, KNEE_MOST = 149.5, 148.0
 def hinge_turn(q, h):
     """The part of q about the hinge h, degrees."""
     a = 2 * math.degrees(math.atan2(dot((q[1], q[2], q[3]), h), q[0])); return (a + 180.0) % 360.0 - 180.0
