@@ -811,6 +811,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     }
     return out;
   }
+  const LIST0 = 48;                                                      // copies a batch's list holds to begin with (ours)
   const UP3 = new THREE.Vector3(0, 1, 0), X3 = new THREE.Vector3(1, 0, 0), leanN = new THREE.Vector3(), leanQ = new THREE.Quaternion(), yawQ = new THREE.Quaternion();
   for (const [k, sd] of [['slab_a', 7141], ['slab_b', 90127], ['slab_c', 31337]]) geoms[k] = { geometry: slabGeometry(sd), node: IDENTITY };
   for (const name of Object.keys(data.instances)) {
@@ -882,8 +883,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       if (family === 'rock' && FG !== G) smoothNormals(FG.geometry);
       const sameNode = FG.node.equals(G.node), MF = sameNode ? M : new Float32Array(count * 16), a = new THREE.Matrix4(), ib = new THREE.Matrix4().copy(G.node).invert();
       if (!sameNode) for (let k = 0; k < count; k++) { a.fromArray(M, k * 16).multiply(ib).multiply(FG.node).toArray(MF, k * 16); }
-      const fm = new THREE.InstancedMesh(FG.geometry, familyMat(family), count);
-      fm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      const fm = new THREE.InstancedMesh(FG.geometry, familyMat(family), Math.min(count, LIST0));
+      fm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.min(count, LIST0) * 3), 3);
       fm.instanceMatrix.setUsage(THREE.DynamicDrawUsage); fm.instanceColor.setUsage(THREE.DynamicDrawUsage);
       fm.frustumCulled = false; fm.count = 0; fm.visible = false; fm.name = name + '__far';
       scene.add(fm); far = { mesh: fm, M: MF, range: ((data.lod && data.lod[name]) || FAR_RANGE) * (phone ? .7 : 1) };
@@ -894,15 +895,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       if (cg) {
         const plain = G.node.equals(IDENTITY), MC = plain ? M : new Float32Array(count * 16), a = new THREE.Matrix4(), ib = new THREE.Matrix4().copy(G.node).invert();
         if (!plain) for (let k = 0; k < count; k++) a.fromArray(M, k * 16).multiply(ib).toArray(MC, k * 16);
-        const cm = new THREE.InstancedMesh(cg, familyMat('leaves'), count);
-        cm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+        const cm = new THREE.InstancedMesh(cg, familyMat('leaves'), Math.min(count, LIST0));
+        cm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.min(count, LIST0) * 3), 3);
         cm.instanceMatrix.setUsage(THREE.DynamicDrawUsage); cm.instanceColor.setUsage(THREE.DynamicDrawUsage);
         cm.frustumCulled = false; cm.count = 0; cm.visible = false; cm.name = name + '_leaves';
         scene.add(cm); cards = { mesh: cm, M: MC };
       }
     }
-    const mesh = new THREE.InstancedMesh(G.geometry, familyMat(family), count);
-    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+    const mesh = new THREE.InstancedMesh(G.geometry, familyMat(family), Math.min(count, LIST0));
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.min(count, LIST0) * 3), 3);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false; mesh.count = 0; mesh.name = name; mesh.visible = false;
     if (!(G.geometry.attributes.color)) mesh.material = familyMat(family);
@@ -1376,25 +1377,35 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
 
   let cursor = 0;
   const lastCam = new THREE.Vector3(1e9, 0, 0), lastDir = new THREE.Vector3(), dirNow = new THREE.Vector3();
+  // A batch's list on the GPU holds what's in view, not the whole world's copies of a kind: it starts short and grows the first time a view asks for more (1 Nov: every list at full
+  // size was 3.7 MB once all of them had been drawn). The old list is handed back, and a grown one keeps a margin so a kind doesn't grow every few steps.
+  function roomFor(m, need, most) {
+    if (need <= m.instanceMatrix.count) return;
+    const n = Math.min(most, Math.ceil(need * 1.5)), a = new THREE.InstancedBufferAttribute(new Float32Array(n * 16), 16), c = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+    a.setUsage(THREE.DynamicDrawUsage); c.setUsage(THREE.DynamicDrawUsage); a.array.set(m.instanceMatrix.array); c.array.set(m.instanceColor.array);
+    m.dispose(); m.instanceMatrix = a; m.instanceColor = c;
+  }
   function refill(b, cam) {
-    const am = b.mesh.instanceMatrix, ac = b.mesh.instanceColor; let w = 0, wf = 0;
-    const fm = b.far ? b.far.mesh : null, fa = fm ? fm.instanceMatrix : null, fc = fm ? fm.instanceColor : null;
+    let w = 0, wf = 0;
+    const fm = b.far ? b.far.mesh : null;
     let wc = 0; const cm = b.cards ? b.cards.mesh : null;
     for (const c of b.cells) {
       const d = c.center.distanceTo(cam) - c.sphere.radius;
       if (d > b.reach || !frustum.intersectsSphere(c.sphere)) continue;
-      if (cm) { cm.instanceMatrix.array.set(b.cards.M.subarray(c.start * 16, (c.start + c.count) * 16), wc * 16); cm.instanceColor.array.set(b.C.subarray(c.start * 3, (c.start + c.count) * 3), wc * 3); wc += c.count; }
+      if (cm) { roomFor(cm, wc + c.count, b.count); cm.instanceMatrix.array.set(b.cards.M.subarray(c.start * 16, (c.start + c.count) * 16), wc * 16); cm.instanceColor.array.set(b.C.subarray(c.start * 3, (c.start + c.count) * 3), wc * 3); wc += c.count; }
       if (fm) c.farOn = c.farOn ? d > b.far.range - 6 : d > b.far.range + 6;
       if (fm && c.farOn) {
-        fa.array.set(b.far.M.subarray(c.start * 16, (c.start + c.count) * 16), wf * 16);
-        fc.array.set(b.C.subarray(c.start * 3, (c.start + c.count) * 3), wf * 3);
+        roomFor(fm, wf + c.count, b.count);
+        fm.instanceMatrix.array.set(b.far.M.subarray(c.start * 16, (c.start + c.count) * 16), wf * 16);
+        fm.instanceColor.array.set(b.C.subarray(c.start * 3, (c.start + c.count) * 3), wf * 3);
         wf += c.count;
         continue;
       }
       const thin = b.family === 'meadow' || b.family === 'flowers' ? Math.ceil(c.count * (d < 14 ? 1 : d < 30 ? .55 : .28)) : 0;
       const n = thin || (d > (phone ? 24 : 80) && c.base ? c.base : c.count);
-      am.array.set(b.M.subarray(c.start * 16, (c.start + n) * 16), w * 16);
-      ac.array.set(b.C.subarray(c.start * 3, (c.start + n) * 3), w * 3);
+      roomFor(b.mesh, w + n, b.count);
+      b.mesh.instanceMatrix.array.set(b.M.subarray(c.start * 16, (c.start + n) * 16), w * 16);
+      b.mesh.instanceColor.array.set(b.C.subarray(c.start * 3, (c.start + n) * 3), w * 3);
       w += n;
     }
     if (cm) {
@@ -1403,10 +1414,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     }
     if (fm) {
       fm.count = wf; fm.visible = wf > 0;
-      if (wf) { fa.clearUpdateRanges(); fa.addUpdateRange(0, wf * 16); fa.needsUpdate = true; fc.clearUpdateRanges(); fc.addUpdateRange(0, wf * 3); fc.needsUpdate = true; }
+      if (wf) { const fa = fm.instanceMatrix, fc = fm.instanceColor; fa.clearUpdateRanges(); fa.addUpdateRange(0, wf * 16); fa.needsUpdate = true; fc.clearUpdateRanges(); fc.addUpdateRange(0, wf * 3); fc.needsUpdate = true; }
     }
     b.mesh.count = w; b.mesh.visible = w > 0;
-    if (w) { am.clearUpdateRanges(); am.addUpdateRange(0, w * 16); am.needsUpdate = true; ac.clearUpdateRanges(); ac.addUpdateRange(0, w * 3); ac.needsUpdate = true; }
+    if (w) { const am = b.mesh.instanceMatrix, ac = b.mesh.instanceColor; am.clearUpdateRanges(); am.addUpdateRange(0, w * 16); am.needsUpdate = true; ac.clearUpdateRanges(); ac.addUpdateRange(0, w * 3); ac.needsUpdate = true; }
   }
   function updateInstances(camera) {
     camera.getWorldDirection(dirNow);

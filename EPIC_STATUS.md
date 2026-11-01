@@ -10,10 +10,10 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | M4 | Starts, stops, pivots: a start lean, a stop with a settle, a p | check green | move_walls M4, M4f, M4p, M4l, M4r, M4b, M4c 1.9 cm, M4s, M4t, M4w; Chromium and WebKit. Real starts and stops are live. Turns still use no `m_turn_*` clip. His acceptance owed |
 | M5 | The jump: real anticipation, height set by press length, coyot | check green | move_walls M5a-j, M5g2 |
 | M6 | Super sprint reads right: no legs running in slow motion at 36 | building | move_walls M6a, M6b; blur and M6c judge owed |
-| M7 | Slopes: the Warden climbs what looks climbable and nothing els | check green | move_walls M7, M7b, M7c, M7d; rates A7, A7s |
+| M7 | Slopes: the Warden climbs what looks climbable and nothing els | building | move_walls M7, M7b, M7c, M7d; rates A7, A7s | Re-opened 1 Nov: red on `move_walls` before and after Phase 1 (CR-39).
 | M8 | Wade and shore: deep water → wading (slowed, splash at the kne | check green | move_walls M8, M8b; splash judge owed |
 | M9 | The surface: treading, breaching, diving in. See TRANS | building | move_walls M9a, M9d green; M9b, M9c look_shots --cross are look |
-| M10 | Surf: ride the sea on a rising wave (a state of its own, with  | check green | move_walls M10a-d, M10f, M10g; M10e looked at, modest |
+| M10 | Surf: ride the sea on a rising wave (a state of its own, with  | building | move_walls M10a-d, M10f, M10g; M10e looked at, modest | Re-opened 1 Nov: red on `move_walls` before and after Phase 1 (CR-39).
 | M11 | Ride a whale or a dolphin, with a real grip pose | check green | move_walls M11a, M11b; ride film looked at, camera reworked |
 | M12 | Swim is smooth at every speed: no pops between tread, slow, fa | check green | move_walls M12a 1,467°/s, M12b, M12c on the CMU crawl; Chromium and WebKit. Strokes switch through the inertial blend. His acceptance owed |
 | M13 | Camera: spring arm with second-order followers, never inside a | building | move_walls M13d, M13e; judged J3, J3c, J4, J5 green; play A5 13 frames left before the leap, not reread since |

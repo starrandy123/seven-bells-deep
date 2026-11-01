@@ -23,5 +23,5 @@ export const STACK_HTML = `
 <h3>Build yours</h3>
 <p>You can make something like this. Connect your AI to NotesMosaic, tell it what you want, and it can write the game, put it on your phone to play, and publish it when you say so. No build tools to set up and no server to run. A laptop like this one is enough.</p>
 <h3>Credits</h3>
-<p>three.js (MIT). meshoptimizer and gltfpack (MIT). The Warden's and the Reavers' bodies start from Microsoft Rocketbox avatars (MIT), rebuilt and dressed for this game. Blender was the tool (GPL). NotesMosaic's port kit carries the saves (MIT-0). Everything else in this game was made for it.</p>
+<p>three.js (MIT). meshoptimizer and gltfpack (MIT). The Warden's and the Reavers' bodies start from Microsoft Rocketbox avatars (MIT), rebuilt and dressed for this game. His land motion is Rocketbox capture too; his front crawl is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu, funded by NSF EIA-0196217). Blender was the tool (GPL). NotesMosaic's port kit carries the saves (MIT-0). Everything else in this game was made for it.</p>
 `;
