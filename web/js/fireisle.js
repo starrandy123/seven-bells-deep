@@ -13,7 +13,7 @@ const edge = (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) / (ISLE.R * shore(Math
 // the ground here: a low plain, a shore that falls away, and the volcano, its crater open at the top
 export function isleZ(x, y, bed) {
   const r = edge(x, y); if (r >= 1.4) return bed;
-  const land = 1 - smooth((r - 0.8) / 0.2); let z = -2.4 + land * (8.4 + rough(x, y) * 0.8);
+  const land = 1 - smooth((r - 0.8) / 0.2), town = 1 - smooth((Math.hypot(x - CITY.x, y - CITY.y) - CITY.r) / 40); let z = -2.4 + land * (8.4 + rough(x, y) * 0.8 * (1 - town * 0.92));      // level under the streets, or every kerb is a wall
   const d = Math.hypot(x - FIRE_HILL.x, y - FIRE_HILL.y); z += land * (68 * Math.exp(-Math.pow(d / 54, 1.5)) - 22 * Math.exp(-Math.pow(d / 12, 2)));
   return r <= 1 ? z : Math.min(z + (bed - z) * smooth((r - 1) / 0.4), z);
 }

@@ -129,9 +129,11 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
-| V13 | The all-fire super mode | building | CR-44 |
-| V10 | Fire cities | todo | his words logged, what he sees is asked before building |
-| V11 | Sky fortresses | todo | his words logged, what he sees is asked before building |
+| V15 | Water or fire, chosen on the home screen, switched later | building | CR-45 |
+| V14 | Enemies for the fire elemental | todo | CR-45: the other side raids whoever he plays |
+| V13 | The all-fire super mode | building | CR-44, `wall_ember` E10-E12 |
+| V10 | Fire cities | building | the Ash City on the Burnt Isle (`fireisle.js`, CR-46): streets walked, ring of fire; his eye owed |
+| V11 | Sky fortresses | building | the High City on its burning rock; walked at 87 m, reached by the ring; his eye owed |
 | V12 | Clips of the two sides fighting | todo | the aim of the first Emberkin step; how to film it is his |
 | M20 | Swim up waterfalls | building | from inside the pool by the stick: lip reached in about 3 s, Chromium, driven; his thumb owed |
 | M21 | Sprint and climb uphill | building | read 1 Nov 18:22, driven with Boost held on Sunward's hill, Chromium phone tier: rolls into the ride in 1.5 s, 36 to 56 m up in 4 s at 19 m/s, no stop. The plain sprint uphill not read apart from the ride |

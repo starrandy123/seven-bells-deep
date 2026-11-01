@@ -424,7 +424,7 @@ export function createQuest(G) {
       G.ui.fade(false);
     }
     if (st.travelAt && G.time >= st.travelAt) {
-      st.travelAt = 0; h.respawn(st.travelTo, h.heading); footing(); h.prev.copy(h.pos); h.drawPos.copy(h.pos); G.enemies.reset(); G.ui.fade(false);
+      st.travelAt = 0; h.respawn(st.travelTo, h.heading); footing(); if (st.liftZ) { h.land = true; h.grounded = true; h.air = false; h.pos.y = st.liftZ + 0.92; st.liftZ = 0; } h.prev.copy(h.pos); h.drawPos.copy(h.pos); G.enemies.reset(); G.ui.fade(false);
       for (const f of things.followers.list) f.pos.copy(h.pos).add(new THREE.Vector3(2, 0, 2));
     }
     if (st.panelAt && G.time >= st.panelAt) { st.panelAt = 0; G.ui.showPanel(true); }
@@ -469,7 +469,7 @@ export function createQuest(G) {
       const pl = startOf(def); if (pl && pl.p.distanceTo(h.pos) < 12) return { label: 'Run', go: () => missions.start(def.id) };
     }
     // a ring of fire on each city's square of the Burnt Isle: it carries him between the ground and the city in the sky
-    { const L = G.world.lifts || []; for (let i = 0; i < L.length; i++) { const a = L[i]; if (Math.hypot(a.x - h.pos.x, a.y + h.pos.z, (a.z - h.pos.y) * 0.5) < 5) { const b = L[(i + 1) % L.length]; return { label: b.z > a.z ? 'Rise' : 'Descend', go: () => { G.ui.fade(true); st.travelAt = G.time + 0.75; st.travelTo = W(b.x + 3, b.y, b.z + 1.2); } }; } } }
+    { const L = G.world.lifts || []; for (let i = 0; i < L.length; i++) { const a = L[i]; if (Math.hypot(a.x - h.pos.x, a.y + h.pos.z, (a.z - h.pos.y) * 0.5) < 5) { const b = L[(i + 1) % L.length]; return { label: b.z > a.z ? 'Rise' : 'Descend', go: () => { G.ui.fade(true); st.travelAt = G.time + 0.75; st.travelTo = W(b.x + 4.5, b.y, b.z + 1.2); st.liftZ = b.z; } }; } } }
     return null;
   }
   const startOf = (def) => (def.start ? places.resolve(def.start) : null);
