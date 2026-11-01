@@ -130,17 +130,17 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
 | M20 | Swim up waterfalls | building | from inside the pool by the stick: lip reached in about 3 s, Chromium, driven; his thumb owed |
-| M21 | Sprint and climb uphill | building | read 1 Nov 18:25, driven with Boost held on Sunward's hill, Chromium phone tier: rolls into the ride in 1.5 s, 36 to 56 m up in 4 s at 19 m/s, no stop. The plain sprint uphill not read apart from the ride |
-| M22 | Land ride, and the water it leaves | building | re-opened 18:25: the ride holds 19 m/s for 5.8 s; looking back straight after and 20 s later the water can't be seen, his ask isn't met |
-| M23 | Surf real waves | building | re-opened 18:25: from 60 m out he's on a ride by 34 m, past the waterline 1.5 s later and on up the beach at 19 m/s. Rideable, not surfing: no lock to the face |
+| M21 | Sprint and climb uphill | building | read 1 Nov 18:22, driven with Boost held on Sunward's hill, Chromium phone tier: rolls into the ride in 1.5 s, 36 to 56 m up in 4 s at 19 m/s, no stop. The plain sprint uphill not read apart from the ride |
+| M22 | Land ride, and the water it leaves | building | re-opened 18:22: the ride holds 19 m/s for 5.8 s; looking back straight after and 20 s later the water can't be seen, his ask isn't met |
+| M23 | Surf real waves | building | re-opened 18:22: from 60 m out he's on a ride by 34 m, past the waterline 1.5 s later and on up the beach at 19 m/s. Rideable, not surfing: no lock to the face |
 | W23 | Falls and streams meet the land | building | `falls.js` layered fall on the free-fall arc, `rivers.js` width and fan, river surface along the current; read in `falls_shots.mjs` on the Mac's GPU; his eye owed |
-| W24 | Real cities | building | looked at 18:25 at phone size from a swimmer's height: Thalor 79 draws 336k, Meridon 83 and 320k, Vesper 66 and 450k, Sunward town 71 and 330k. Streets and towers read; an olive wedge beside the Processional unexplained; his eye owed |
+| W24 | Real cities | building | looked at 18:22 at phone size from a swimmer's height: Thalor 79 draws 336k, Meridon 83 and 320k, Vesper 66 and 450k, Sunward town 71 and 330k. Streets and towers read; an olive wedge beside the Processional unexplained; his eye owed |
 | W25 | Ocean environment pass | todo | |
 | W26 | Natural cliffs and mountain edges | building | `cliffs.js`: columned slabs on faces over 45°, crest and foot plants, by rule, on every island (Crown Falls shown to him first); his eye owed |
 | G13 | His phone HUD | check green | CR-36: `g_hud` G7h and `input` C1t 21 of 21 in WebKit. `ui` C3 (hotbar 5 px apart) and E1h (labels 14 px) stay red, his call |
 | G14 | One line at a time | building | in `ui.js`; a wall owed |
 
-## The "not yet checked" commits, read (Phase 0, 1 Nov 18:25)
+## The "not yet checked" commits, read (Phase 0, 1 Nov 18:22)
 
 | Commit | What it said | Now |
 |---|---|---|
