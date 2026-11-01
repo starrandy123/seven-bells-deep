@@ -6,7 +6,7 @@
 // the hero meets them with the same physics as any rock. build(scene, mat) then makes one instanced draw per building type per city.
 // Coordinates: data is Blender's (x, y on the ground, z up); the scene is (x, z, -y).
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ------------------------------------------------------------------------------------------------ the cities
 // kind: 'sea' (domes, spires, terraced towers in weathered stone) or 'land' (houses with pitched roofs). block: metres from street centre to street centre.
@@ -198,6 +198,13 @@ export function planCities(data, heightAt, opts = {}) {
   }
   const count = cities.reduce((n, c) => n + Object.values(c.inst).reduce((m, L) => m + L.length, 0), 0);
 
+  // the ink line (Randy, 1 Nov: "look out of a comic book"): each building drawn a second time inside out, pushed out along smooth normals
+  const hulls = new Map();
+  function hullOf(geo) {
+    if (hulls.has(geo)) return hulls.get(geo);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', geo.attributes.position.clone());
+    const w = mergeVertices(g, 1e-3); w.computeVertexNormals(); hulls.set(geo, w); return w;
+  }
   function build(scene, matFor) {
     const meshes = [], m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3(), col = new THREE.Color();
     for (const c of cities) {
@@ -213,6 +220,7 @@ export function planCities(data, heightAt, opts = {}) {
         });
         im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.frustumCulled = false; im.name = 'city_' + c.def.id + '_' + type;
         group.add(im); meshes.push(im);
+        const ink = matFor('ink'); if (ink) { const om = new THREE.InstancedMesh(hullOf(A.geo), ink, L.length); om.instanceMatrix.copy(im.instanceMatrix); om.frustumCulled = false; om.name = im.name + '_ink'; om.renderOrder = 1; group.add(om); }
       }
     }
     return meshes;

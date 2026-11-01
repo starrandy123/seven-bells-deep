@@ -616,7 +616,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       albedo: /* glsl */`{ float ocN1 = texture(tOcNoise, vOcP.xz*.037 + vOcP.y*vec2(.021, -.013)).a, ocN2 = texture(tOcNoise, vOcP.zx*.17 + vOcP.y*vec2(.09, .07)).b;
         float ocWin = smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b));
         float ocAl = smoothstep(.40, .68, ocN1*.72 + ocN2*.28)*smoothstep(1.2, -.6, vOcP.y)*(1.0 - ocWin);
-        diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.7); }`,
+        diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.7);
+        // comic line work in the stone: courses every 0.9 m, joints staggered course by course, drawn as ink a pixel or so wide at any distance
+        float ocCy = vOcP.y/.9, ocRow = floor(ocCy), ocJx = (vOcP.x + vOcP.z)/1.7 + ocRow*.5;
+        float ocWc = fwidth(ocCy)*1.2, ocWj = fwidth(ocJx)*1.2;
+        float ocLine = max(1.0 - smoothstep(0.0, ocWc, min(fract(ocCy), 1.0 - fract(ocCy))), (1.0 - smoothstep(0.0, ocWj, min(fract(ocJx), 1.0 - fract(ocJx))))*.8);
+        float ocFar = 1.0 - smoothstep(60.0, 150.0, distance(vOcP, cameraPosition));
+        diffuseColor.rgb *= 1.0 - ocLine*.55*ocFar*(1.0 - ocWin);
+        // a window's frame: the ring of its glow is ink, so each pane reads as a drawn window
+        diffuseColor.rgb *= 1.0 - .7*smoothstep(.05, .45, ocWin)*(1.0 - smoothstep(.55, .95, ocWin)); }`,
       glow: /* glsl */`ocGlow = pow(vColor.rgb, vec3(1.5))*vec3(2.2)*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*max(max(ocLamps, ocNight), step(vOcP.y, -18.0)*.55)*2.4;`,
     }),
     lamp: () => look.patch(lit({ vertexColors: true }), {
@@ -1060,7 +1068,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       }
       for (let k = 0; k < SEG; k++) idx.push(pbase, pbase + SEG + k, pbase + SEG + (k + 1) % SEG);
       for (let i = 1; i < RINGS; i++) for (let k = 0; k < SEG; k++) { const a = pbase + i * SEG + k, b = pbase + i * SEG + (k + 1) % SEG, a2 = a + SEG, b2 = b + SEG; idx.push(a, a2, b, b, a2, b2); }
-      fallsMist.push({ x: footX - sn * .5, y: footY - c * .5, z: f.z1 + .2, r: hwAt(1) * .55, h: Math.min(9, h * .45), puffs: 12, deep: 2 });
+      fallsMist.push({ x: footX - sn * .5, y: footY - c * .5, z: f.z1 + .2, r: hwAt(1) * .38, h: Math.min(7, h * .35), puffs: 10, deep: 2 });
     }
     const make = (P, A, I, fall, wet) => {
       if (!I.length) return null;
@@ -1173,7 +1181,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           c = c*(.25 + .75*ocSunGain) + vec3(1.2, .42, .10)*(1.0 - smoothstep(.0, .16, vT))*.5;
           if (vD > 1.5) {                                                // a fall's mist: white, lit by the sky, thin
             c = mix(ocHaze*1.05, vec3(.92, .96, 1.0), .45 + .35*lit)*(.45 + .55*ocSunGain);
-            a *= .42;
+            a *= .2*smoothstep(4.0, 14.0, distance(vP, cameraPosition));
           } else if (vD > .5) {                                          // black smoke, the fire's red on its underside, fading up the column
             float n2 = texture(tOcNoise, vQ*.9 + vec2(vS*5.0, vT*1.3)).b*.6 + texture(tOcNoise, vQ*2.3 - vec2(vT*.9, vS*3.0)).a*.4;
             a = (1.0 - smoothstep(.25, 1.0, r + (n2 - .5)*1.3))*(1.0 - smoothstep(.55, 1.0, vT))*smoothstep(.0, .05, vT)*.86;
@@ -1451,7 +1459,16 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // the cities' streets and buildings (city.js), planned now so their solids are the world's own
   const cityPlan = planCities(data, heightAt, { phone });
   data.colliders = (data.colliders || []).concat(cityPlan.colliders);
-  cityPlan.build(scene, () => familyMat('city'));
+  // the cities' ink: the hull pushed out a constant 1.6 px on the screen near, thinning to nothing by 170 m so a far city never turns black in the haze
+  const cityInk = new THREE.MeshBasicMaterial({ color: 0x0a1820, side: THREE.BackSide });
+  cityInk.onBeforeCompile = (sh) => {
+    sh.uniforms.ocInkH = U.ocInkH;
+    sh.vertexShader = 'uniform float ocInkH;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      { vec3 nv = normalize(normalMatrix*objectNormal); float d = max(-mvPosition.z, .1), perM = projectionMatrix[1][1]*ocInkH*.5/d;
+        mvPosition.xyz += nv*1.6*(1.0 - smoothstep(90.0, 170.0, d))/perM; gl_Position = projectionMatrix*mvPosition; }`);
+  };
+  cityInk.customProgramCacheKey = () => 'cityInk1';
+  cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
   for (const name in kinds) { const I = data.instances[name]; if (I) NS += (I.length / 6 | 0) * kinds[name].length; }
