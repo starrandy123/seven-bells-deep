@@ -174,11 +174,12 @@ export function createUI(G) {
     if (b) { bPow.textContent = b.textContent; bPow.setAttribute('aria-label', b.getAttribute('aria-label') || b.textContent); bPow.classList.toggle('out', b.classList.contains('call')); }
     declareControls();
   }
-  function equip(name) { equipped = name; paintPow(); }
-  // the equipped slot stays if it is still open; otherwise the first open one
+  let chosen = false;                                                   // the player picked a slot: it stays equipped while it is open
+  function equip(name) { equipped = name; chosen = true; paintPow(); }
+  // the player's pick stays while it is open; otherwise the first open slot, the powers before Cast and Call
   function reEquip() {
-    if (equipped && buttonOf[equipped].classList.contains('show')) { paintPow(); return; }
-    equipped = POWERS.find((n) => buttonOf[n].classList.contains('show')) || null; paintPow();
+    if (chosen && equipped && buttonOf[equipped].classList.contains('show')) { paintPow(); return; }
+    chosen = false; equipped = POWERS.find((n) => buttonOf[n].classList.contains('show')) || null; paintPow();
   }
   // what the phone passes read (PUBLISHING.md §3): only what is on the screen right now, each with its key
   const KEYNAME = { Space: ' ', Shift: 'Shift' };
