@@ -17,6 +17,7 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 9.1, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
 // The jump, in the numbers a designer chooses (DESIGN.md §Movement): height and time; gravity and speed follow. One gravity for every jump, so the air always feels the same.
+const LAND_SWELL = 0.13;      // m: what's left of the water under him at the end of a land ride: where he stands, at STAND
 const WALK_TOP = 2.6, WALK_EASE = 2.4;      // m/s, m/s²: the speed below which he's walking, and how hard a walk starts and stops
 const LAND_SURF_IN = 0.35, LAND_SURF_TOP = 19, LAND_SURF_CRUISE = 14, SLOPE_PULL = 0.62;      // Randy, 1 Nov: Boost on land rides the water: a held sprint this long rolls into it; its top and cruise; how much of gravity along the slope he feels
 const SURF_RIDE = 14, SURF_TOP = 26, SURF_OFF = 6, SURF_STORM = 20, SWELL_STORM = 1.7, SURF_TURN = 2.2, SURF_SWELL = 0.75, SURF_START = 9, SURF_SHALLOW = -1.0;      // the surf: speeds, how fast the stick carves, the swell's height, what it takes to get up on one
@@ -294,7 +295,7 @@ export async function createHero(G) {
       if (keep > 0.15) { h.heading = wrap(h.heading + wrap(Math.atan2(mx, mz) - h.heading) * 0.6); s.v = Math.max(real, s.v * (0.55 + 0.4 * keep)); }
       else { s.v *= 0.35; h.heading = wrap(h.heading + (carve >= 0 ? -1 : 1) * 1.2); G.shake(0.2); G.audio.splash(); }      // near head-on: thrown aside, a third of the speed
     }
-    const y = chase(swellF, swellS, SURF_SWELL * (storm && !onLand ? SWELL_STORM : 1) * clamp((s.v - SURF_OFF + 1) / 3, 0, 1), dt);
+    const y = chase(swellF, swellS, onLand ? LAND_SWELL + (SURF_SWELL - LAND_SWELL) * clamp((s.v - SURF_OFF - 1) / 4, 0, 1) : SURF_SWELL * (storm ? SWELL_STORM : 1) * clamp((s.v - SURF_OFF + 1) / 3, 0, 1), dt);      // on land the water runs down to the height of his feet as the ride dies, so there's nothing left to fall from
     const g = groundAt(h.pos.x, h.pos.z);
     // the shore both ways: a land ride runs on out over the sea, a sea ride runs on up the beach while Boost is held
     if (onLand && g < SURF_SHALLOW) s.land = false;

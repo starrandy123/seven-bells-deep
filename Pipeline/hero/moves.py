@@ -900,7 +900,7 @@ def idle_tread(ph):
     a = 2 * math.pi * ph; s, c = math.sin(a), math.cos(a); s2, c2 = math.sin(2 * a), math.cos(2 * a); s3 = math.sin(3 * a)
     def leg(q, base):
         b = 2 * a + q + 0.4 * s
-        return base + 6 * math.sin(b) + 2 * s3, -40 - 11 * math.sin(b + 1.2), -58 - 9 * math.sin(b - 0.8)      # thigh, knee, foot: slow, small, the foot following the knee
+        return base + 11 * math.sin(b) + 2 * s3, -44 - 17 * math.sin(b + 1.2), -56 - 12 * math.sin(b - 0.8)      # thigh, knee, foot: a slow pedal, the foot following the knee
     r, l = leg(0.0, 30.0), leg(2.2, 22.0)
     def arm(sd, q):
         b = 3 * a + q                                                    # the scull: small, from the forearm, three to the loop
@@ -1169,7 +1169,15 @@ def cap_rest(sk, m, clip, n, fade):
     offs.append(offs[0]); return {'n': n, 'q': tracks, 'off': offs}
 
 # swimming: CMU subjects 125 and 126, lying on a stool, read by eye and by how the arms and legs move together. 125_06 a front crawl, 126_06 a butterfly. The body comes up to stand in his own space: the game lays him down
-CAP_SWIM = {}
+CAP_SWIM = {'swim_slow': ('126_02', 180, 74), 'swim_fast': ('126_02', 180, 74)}        # one full crawl, read by how the motion repeats: 74 frames, a stroke of each arm in it (right at 201, left at 238) and a real flutter kick
+HAND_TWIST = 70.0
+def limit_twist(tr, ax, most=HAND_TWIST, tap=3):
+    """A hand turns about its forearm only so far: its twist is held within that and smoothed round the loop, what it does the other ways is left alone."""
+    n = len(tr); sw = []; tw = []
+    for q in tr:
+        v = (q[1], q[2], q[3]); d = dot(v, ax); a = 2 * math.degrees(math.atan2(d, q[0])); a = (a + 180.0) % 360.0 - 180.0; t = qaxis(ax, a); sw.append(qmul(q, qconj(t))); tw.append(clamp(a, -most, most))
+    for i in range(n):
+        a = sum(tw[(i + k) % n] for k in range(-tap, tap + 1)) / (2.0 * tap + 1.0); tr[i] = qmul(sw[i], qaxis(ax, a))
 def cap_swim(sk, take, start, n, fade=10):
     import mocap_cmu
     S = mocap_cmu.trial(sk, take)[start:start + n + fade]
@@ -1191,11 +1199,36 @@ def cap_swim(sk, take, start, n, fade=10):
         if k < fade:
             t = k / float(fade); t = t * t * (3 - 2 * t); Q1 = S[k + n]; Q = {b: qslerp(tuple(-x for x in Q1[b]) if qdot(Q1[b], Q[b]) < 0 else Q1[b], Q[b], t) for b in KEYED}
         for b in KEYED: tracks[b].append(qmul(fix, Q[b]) if b == 'hips' else Q[b])
+    # the left wrist's markers are lost in this take: its hand winds a whole turn about the forearm and the arm jumps with it. A crawl is the same stroke each side, half a cycle apart, so the left arm is the right arm's capture, mirrored
+    for b in ('clav', 'arm', 'fore', 'hand'):
+        src = tracks[b + '_R']; tracks[b + '_L'] = [(src[(k + n // 2) % n][0], src[(k + n // 2) % n][1], -src[(k + n // 2) % n][2], -src[(k + n // 2) % n][3]) for k in range(n)]
+    for s in 'RL': limit_twist(tracks['hand_' + s], unit(sk.off['hand_' + s]))
+    stops(sk, tracks)
     for b in KEYED:
         tracks[b].append(tracks[b][0])
         for i in range(1, n + 1):
             if qdot(tracks[b][i - 1], tracks[b][i]) < 0: tracks[b][i] = tuple(-x for x in tracks[b][i])
     return {'n': n, 'q': tracks, 'off': [(0.0, 0.0, 0.0)] * (n + 1), 'loop': True, 'miss': 0.0}
+
+# treading water. There's no tread in any take, so the upper body is a real man at rest, the same take as `stand`: his weight, his breathing, the small turns of his head. In the water the arms float out from his sides and the hands scull in and out, which is what holds a body up;
+# the legs pedal slowly under him. Three sculls and two turns of the legs to the five-second loop, so no two parts keep time
+TREAD_OUT, TREAD_FWD, TREAD_ELBOW, TREAD_SCULL = 21.0, 16.0, 34.0, 15.0
+def cap_tread(sk, m, proc, n=150, fade=40):
+    up = cap_rest(sk, m, 'm_idle_neutral_01', n, fade); low = ('hips', 'leg_R', 'shin_R', 'foot_R', 'toe_R', 'leg_L', 'shin_L', 'foot_L', 'toe_L'); tracks = {}
+    for b in KEYED: tracks[b] = list(proc['q'][b]) if b in low else list(up['q'][b])
+    for k in range(n + 1):
+        a = 2 * math.pi * (k % n) / n
+        for s, sd, q in (('R', 1.0, 0.0), ('L', -1.0, 1.7)):
+            b = 3 * a + q; sc = math.sin(b); out = TREAD_OUT + 4.0 * math.sin(a + q); fwd = TREAD_FWD + 3.0 * math.sin(2 * a + q)
+            float_ = qmul(qaxis((0.0, 1.0, 0.0), sd * out), qaxis((1.0, 0.0, 0.0), -fwd)); sweep = qaxis((0.0, 0.0, 1.0), sd * TREAD_SCULL * sc)       # the upper arm turns about its own length: the forearm sweeps in and out
+            tracks['arm_' + s][k] = qmul(qmul(float_, sweep), tracks['arm_' + s][k])
+            h = sk.arm[s]['hinge']; tracks['fore_' + s][k] = qmul(qaxis(h, TREAD_ELBOW + 7.0 * math.sin(b + 0.9)), tracks['fore_' + s][k])
+            ax = unit(sk.off['hand_' + s]); tracks['hand_' + s][k] = qmul(tracks['hand_' + s][k], qaxis(ax, sd * 24.0 * math.cos(b)))        # the palm turns with the sweep, leading it
+    stops(sk, tracks)
+    for b in KEYED:
+        for i in range(1, n + 1):
+            if qdot(tracks[b][i - 1], tracks[b][i]) < 0: tracks[b][i] = tuple(-x for x in tracks[b][i])
+    return {'n': n, 'q': tracks, 'off': proc['off'], 'loop': True, 'miss': 0.0}
 
 # a start and a stop, each with which frames each foot is down, read by eye from the feet in the files
 CAP_ONCE = {'run_start': ('m_run_start', {'R': [(0, 8), (14, 20)], 'L': [(0, 16)]}), 'run_stop': ('m_run_stop', {'R': [(0, 3), (14, 39)], 'L': [(6, 13), (24, 39)]}),
@@ -1249,6 +1282,7 @@ def bake(data, names=None):
         c = bake_proc(sk, (lambda ph, f=e[0], free=(not names and name in FREE_HANDS): (no_shaft(f(sk, ph)) if free else f(sk, ph))), e[1]); c['loop'] = True; c['miss'] = IK_MISS[0]; out[name] = c
     if not names:
         for name, (take, start, n) in CAP_SWIM.items(): out[name] = cap_swim(sk, take, start, n)
+        if cap: out['idle_tread'] = cap_tread(sk, cap, out['idle_tread'])
     if not names and cap:
         for name, (clip, win) in CAP_ONCE.items():
             out[name] = cap_once(sk, cap, clip, win, False); out[name + '_m'] = cap_once(sk, cap, clip, win, True)

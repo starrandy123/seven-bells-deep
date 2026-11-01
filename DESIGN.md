@@ -174,8 +174,14 @@ Between two gaits the stride is the blend of theirs and T = stride / speed, so a
 | `S.bt`, `warp` | the clip's share × (clip's ground speed / his) | derived | past the fastest clip a foot's time on the ground shortens as a real sprinter's does [Weyand00]; each leg runs the stance at the ground's speed and takes the rest for its swing |
 | `MATCH`, `SEEN` | 9.2, 7 m/s | (ours) | past `MATCH` a stride can't follow the ground. The feet are carried on with him and stop being held at all by `MATCH` + 2 m/s: the legs are the clip's, and blur, dust and afterimages take over (M6b) |
 | `MAX_DROP` | 0.26 m | (ours) | how far the hips go down to reach a planted foot, on a slope; a foot pushing off never pulls him down |
-| stance release | last 40 % of the stance, at most 2.2 cm a 60 Hz frame | (ours), under M1's 3 cm | what the hold has taken up goes back to the clip before the foot leaves |
+| stance release | last 40 % of the stance, at most 1.9 cm a 60 Hz frame | (ours), under M1's 3 cm | what the hold has taken up goes back to the clip before the foot leaves |
 | soft reach | the last 3.3 % of a leg | (ours) | a knee coming out of straight turns fastest of all, so nothing asks for the very end of it |
+| `REACH_OFF` | 0.965 of the leg | (ours), the soft reach's start | a foot well into its stance comes up when the leg has run out of reach, as a real foot does. Held on, the reach read 1.108 of the leg: the foot dragged and the knee snapped at 2,129°/s against the capture's 1,160 |
+| `KNEE_RATE`, `TOE_RATE` | 24.4 and 24 rad/s, about 1,400°/s | (ours), under M3's 1,500 | a knee has a top speed: a foot in the air gives along the line from the hip. The toe is the capture's without its noise, which reads 1,576°/s at `RATE` on a joint that small |
+| `ONCE_MOST`, `ONCE_SLOPE` | 2.4 m/s, 0.27 (15°) | (ours) | a capture of a start begins at a stand on the flat. He lands from a run, wades ashore or comes off the land ride already going, and on a hill the stride does it |
+| `SLOPE_STRIDE` | 0.45, from 0.2 of slope to 0.7 | (ours) | the most a hill shortens his steps, up, down or across, read from the ground's own steepness 0.8 m around him; they quicken to match, so the ground's speed is the same. On the flat stride a 32° descent had both feet off the ground at a walk and the hips stepping 30 cm a frame. M2h |
+| Hips on a hill | start down at 25 % of a swing, all of it by 90 %, over 0.1-0.3 slope | (ours) | they lead the foot that's coming instead of dropping when it lands |
+| Foot to the slope | 35-95 % of a swing | (ours) | the ankle sets the foot to the ground it's about to land on: it no longer flies level and snaps on contact, which read 3,500°/s. M2j |
 
 A real start and a real stop (`run_start`, `run_stop`, `walk_start`, `walk_stop`, and each off the other foot, `_m`) play at `RATE`, with the frames each foot is down read by eye from the files. Out of a fight only: in a fight footwork stays on the stride.
 
@@ -187,9 +193,10 @@ A real start and a real stop (`run_start`, `run_stop`, `walk_start`, `walk_stop`
 | `LAND_RUN`, `LAND_SPRINT`, `LAND_SUPER` | 5.9, 9.1, 36 m/s | the first two from the clips | the fastest capture at `RATE`, and what a stride holds with its stance shortened; super kept from the game before |
 | Speed up | 6.5 m/s² below 2.5, 11 to 6, 14 to 9.5, 22 above | read from the captures, at `RATE` | a real start leans and gathers before it goes; super is a release |
 | Slow down | 9 m/s² below 9.5, 20 to 14, 24 above | read from `m_run_stop`, at `RATE` | he stops the way the capture stops: about 1.9 m from a run |
+| `WALK_TOP`, `WALK_EASE` | 2.6 m/s, 2.4 m/s² | read from `m_walk_start`, `m_walk_stop`, at `RATE` | a walk's start and stop take the time the captures do: at the run's rate the body left the planted foot behind |
 | Turn | at most 24 / v rad/s, 11 at walking | (ours) | a lateral 24 m/s², about 2.4 g, a hero's carve. A goal swings to the stick at that rate and the heading follows it critically damped, so a turn lands with no overshoot (M4f) |
 | Pivot | stick over 120° from his heading above 2.6 m/s | (ours), M4c's 120° | |
-| `TAN_CLIMB` | tan 42° | (ours) | steepest walkable, inside A7's 35-45°, read both along his way and as the bank's own steepness, so a steep face can't be climbed slantwise |
+| `TAN_CLIMB`, `TAN_WALL` | tan 50°, tan 68° | (ours), the cloud session on his "I can't sprint or climb uphill" | he walks up to 50°, slowing, scrambles to 68°, and only a real cliff stops him. Past A7's 35-45°: M7, M7c and M7d still read the old limit, and a change record has to settle them |
 | `STEP_UP` | 0.52 m | (ours), derived | the top he stands on with no jump. His sphere is 0.42 m, centred 0.92 up, so it clears anything under 0.50; A7 wants 0.40 to pass and 0.60 to refuse |
 | `SLOPE_READ` | 0.6 m | (ours), derived from A7 | the slope is read over this: a 0.40 m step reads 34°, a 0.60 m step 45°, so one passes and one refuses; a frame's own run would read any step as a cliff at a walk |
 | Slow on a hill | to 45 % at the limit | (ours) | M7d |
@@ -213,6 +220,10 @@ A real start and a real stop (`run_start`, `run_stop`, `walk_start`, `walk_stop`
 | `SURF_SWELL` | 0.75 m | (ours) | the swell under him: enough to read as a wave on the phone |
 | `SURF_START` | 9 m/s | (ours) | boost along the surface over this for 0.2 s puts him up on a swell |
 | `SURF_SHALLOW` | -1.0 m | (ours) | ground this close to the sea ends the ride on the beach |
+| Crawl | `126_02` frames 180-254, 74 frames at 30 Hz, a stroke of each arm | CMU, read by how the motion repeats (the sharpest repeat, 14° a bone, is at 74) | the left wrist's markers are lost in this take, so the left arm is the right arm's capture, mirrored, half a cycle later. A hand turns at most 70° about its forearm. It plays at 0.9 + v / 8 times as run: a 1.3 s cycle at cruise, the most the arm's 779°/s allows under M12a |
+| Strokes | tread under 0.8 m/s (out at 1.3), crawl, long kick from 12 m/s (back at 10.5) | (ours) | a crawl's arm can be half a turn from the tread's or the long kick's, and a blend across that whips the arm round at 5,800°/s. Each change of stroke is a switch through the inertial blend |
+| Tread | `m_idle_neutral_01` above the hips; arms out 21° and forward 16°, elbows 34°, a 15° scull three times in five seconds; legs a slow pedal | Rocketbox (MIT) and (ours) | no take has a tread: the upper body is a real man at rest, floated |
+| Tidepulse's beat | each arm stroke, two to the cycle | (ours) | it was one wrap of the old kick |
 | `TIDE_TIERS` | 15.5, 20, 25 m/s | (ours) | Tidepulse's tiers; the first is `BOOST`; all under super, which stays a release. Each tier: more bubbles, a lens 0.1 m lower, an arm 0.25 m longer, 1.5° more field (M15d) |
 | `TIDE_WINDOW`, `TIDE_HOLD` | 0.14 s, 1.8 s | (ours) | how far from a kick a press still counts, and how long a tier lasts unrenewed |
 | `HOLD_SHARE`, `HOLD_RATE` | 55 % of the half frame, 4 rad/s | (ours) | in a fight the look turns toward a target further off centre than this: M13e |

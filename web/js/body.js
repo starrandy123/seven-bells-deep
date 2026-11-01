@@ -21,8 +21,10 @@ const ONCE_RATE = 1.25, ONCE_END = { run_start: 0.17, walk_start: 0.25 }, ONCE_C
 // a capture of a start begins at a stand on the flat: he lands from a run, wades ashore or comes off the land ride already going, and on a hill the stride does it
 const ONCE_MOST = 2.4, ONCE_SLOPE = 0.27;
 const REACH_OFF = 0.965;      // how much of a leg's length a foot on the ground can be from the hip before it comes up
+const STROKES = 2;           // arm strokes in one cycle of the crawl
 const SLOPE_STRIDE = 0.45;     // the most a hill shortens his steps, up or down, and they quicken to match: the same speed on the ground, on legs that reach it
 const KNEE_RATE = 24.4;      // rad/s, 1,400°/s: a knee has a top speed. Past the capture's it's the solver's, near the straight, where a small move of the ankle is a big turn of the knee
+const FOOT_RATE = 24;        // rad/s: and the foot's. A handover can leave a foot in the air with no swing left to get flat in
 const TOE_RATE = 24;         // rad/s: the toe joint is the capture's, without the capture's noise, 1,576°/s at his rate on a joint this small
 const HOVER_OUT = 1.5;     // m/s: a hard landing's feet come the last of the way to the ground at this
 const CLIP_LEGS = new Set(['death', 'jump', 'jump2', 'leap_super', 'surf_jump', 'glacier_stomp', 'dodge_land', 'atk_dash_land']);      // a land dodge goes off at 18 m/s in a frame or two, Riptide at 34: no foot could stay planted, and the slide's in the clip
@@ -130,7 +132,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   const IDLE = { R: { f: 0.02, l: -0.125 }, L: { f: 0.10, l: 0.145 } };   // where the feet stand at ease: the `stand` clip's own places, read below
   const S = {}; let phase = 0, gaitOn = false, landed = false, loco = null;
   const onNow = (w, t) => w.some((x) => t >= x[0] && t < x[1]), nextOn = (w, t, end) => { for (const x of w) if (x[0] > t) return x[0]; return end; };
-  const steep = () => Math.abs(h.groundAt(body[0] + fwd[0] * 0.8, body[2] + fwd[2] * 0.8) - h.groundAt(body[0] - fwd[0] * 0.8, body[2] - fwd[2] * 0.8)) / 1.6;
+  const steep = () => Math.hypot(h.groundAt(body[0] + 0.8, body[2]) - h.groundAt(body[0] - 0.8, body[2]), h.groundAt(body[0], body[2] + 0.8) - h.groundAt(body[0], body[2] - 0.8)) / 1.6;      // the ground's own steepness, whichever way he's going on it: across a hill the feet are at different heights just the same
   const onceOf = (base, mirror) => { const name = base + (mirror ? '_m' : ''), m = moves && moves[name]; return CL[name] && m && m.once ? { name, base, on: m.once.on, mirror, t: 0, dur: CL[name].dur } : null; };
   // the legs as the clips have them: his own joints under the sampled turns, in the model's space (he faces +z, his left is +x), before any foot is held or the body leans. held: the pose the walk or run gave, whatever a blow is doing above it
   const legOff = {}, held = new Float64Array(N * 4); let heldP = hipsRestP.slice();
@@ -171,7 +173,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   // the gait: which clips, and how far through them. First in the frame, so the pose is this frame's
   function advance(dt, full) {
     const eased = chase(P.stride, F.stride, full, dt); stride(eased, full, S);
-    { const k = 1 - SLOPE_STRIDE * smooth(0.12, 0.7, chase(P.slope, F.slope, steep(), dt)); S.T *= k; S.k *= k; }
+    { const k = 1 - SLOPE_STRIDE * smooth(0.2, 0.7, chase(P.slope, F.slope, steep(), dt)); S.T *= k; S.k *= k; }
     // past the match limit what a stride can't take is carried: the feet go on with him at the difference, and from here on they see MATCH
     const speed = seenAt(full), share = full > 0 ? speed / full : 1, cx = vel[0] * (1 - share) * dt, cz = vel[2] * (1 - share) * dt; seen[0] = vel[0] * share; seen[2] = vel[2] * share;
     if (cx || cz) for (const l of legs) { l.G[0] += cx; l.G[2] += cz; l.G[1] += clamp(h.groundAt(l.G[0], l.G[2]) - l.G[1], -0.05, 0.05); if (l.down) l.A = ankleOn(l); }
@@ -196,7 +198,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       const dir = speed > 0.05 ? [seen[0] / speed, 0, seen[2] / speed] : fwd, back = (l) => (l.G[0] - body[0]) * dir[0] + (l.G[2] - body[2]) * dir[2];
       const a = back(legs[0]) < back(legs[1]) ? legs[0] : legs[1];
       // the other foot stays down: past the speed where a stance is under half the cycle, that puts this one mid-way through its swing. And a new phase is a new pose of the arms: it goes through the blend
-      const was = phase; phase = a.s === 'L' ? (Math.max(S.bt, 1 - S.onL) + 0.001 + S.onL) % 1 : Math.max(S.bt, S.onL) + 0.001; gaitOn = true; if (Math.abs(((phase - was + 1.5) % 1) - 0.5) > 0.04) pendingA = 0.16;
+      const was = phase; phase = a.s === 'L' ? (Math.max(S.bt, 1 - S.onL) + 0.001 + S.onL) % 1 : Math.max(S.bt, S.onL) + 0.001; gaitOn = true; if (Math.abs(((phase - was + 1.5) % 1) - 0.5) > 0.04) { if (speed > ONCE_MOST) inertia(0.16); else pendingA = 0.16; }       // landing at a run the legs take the blend as well: the feet have only just come down, and a new phase turns the thigh in its socket
     }
     if (!want && !swinging && !loco) gaitOn = false;
     if (gaitOn && !loco) phase = (phase + dt / S.T) % 1;
@@ -207,7 +209,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   function stepLegs(dt, full) {
     const speed = seenAt(full), dir = speed > 0.05 ? [seen[0] / speed, 0, seen[2] / speed] : fwd, hold = 1 - smooth(MATCH, MATCH + 2, full);
     for (const l of legs) {
-      const prev = l.ph, wantDown = loco ? onNow(loco.on[l.s], loco.t) : false; l.ph = (phase - (l.s === 'L' ? S.onL : 0) + 1) % 1;
+      const prev = l.ph, wantDown = loco ? onNow(loco.on[l.s], loco.t) : false, fwP = l.fw, nwP = l.nw; l.ph = (phase - (l.s === 'L' ? S.onL : 0) + 1) % 1;
       // the leg the clip wants, where he is: the foot's way ahead goes the way he's going, by the stride the ground asks for
       const c = l.c = clipLeg(l), ahead = c.A[2] * (loco ? 1 : S.k), fwW = l.cfw = toWorld(c.fw), nwW = l.cnw = toWorld(c.nw); l.toe = toeTo(l, c.toe, dt);
       l.cA = [body[0] + left[0] * c.A[0] + dir[0] * ahead, body[1] + c.A[1], body[2] + left[2] * c.A[0] + dir[2] * ahead];
@@ -228,13 +230,13 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
           const most = lerp(7, 16, smooth(1.5, 7, speed)) * dt;
           l.rock += clamp(c.rock - l.rock, -most, most);
           // and over the end of the stance it's given back to the clip, no faster than a foot on the ground can go unseen, so the leg doesn't have to catch up with the capture in the air
-          const A = ankleOn(l), share = gaitOn && !loco && !l.keep ? smooth(0.6, 1, l.ph / Math.max(S.bt, 0.01)) : 0, room = 0.022 * dt * 60, gnd = h.groundAt(A[0], A[2]) - body[1];
+          const A = ankleOn(l), share = gaitOn && !loco && !l.keep ? smooth(0.6, 1, l.ph / Math.max(S.bt, 0.01)) : 0, room = 0.019 * dt * 60, gnd = h.groundAt(A[0], A[2]) - body[1];
           l.rel = l.rel || [0, 0, 0];
           { const d = [0, 1, 2].map((k) => share * (l.cA[k] + (k === 1 ? gnd : 0) - A[k]) - l.rel[k]), m = Math.hypot(d[0], d[1], d[2]), g = m > room ? room / m : 1; for (let k = 0; k < 3; k++) { l.rel[k] += d[k] * g; A[k] += l.rel[k]; } }
-          if (l.err) { const e = Math.exp(-dt * 26); l.err = K.scale(l.err, e); if (K.len(l.err) < 1e-3) l.err = null; else { A[0] += l.err[0]; A[1] += l.err[1]; A[2] += l.err[2]; } }
+          if (l.err) { const e = Math.exp(-dt * 40); l.err = K.scale(l.err, e); if (K.len(l.err) < 1e-3) l.err = null; else { A[0] += l.err[0]; A[1] += l.err[1]; A[2] += l.err[2]; } }
           l.A = A;
           // and it comes up when the leg has run out of reach, as a real foot does: held on past that he'd need a longer leg, the foot would drag and the knee would snap when it let go
-          const spent = (l.reach || 0) > REACH_OFF && (loco ? l.rock < -0.35 : gaitOn && gaitWant && l.ph > S.bt * 0.6);
+          const spent = (l.reach || 0) > REACH_OFF && (loco ? l.rock < -0.35 : gaitOn && gaitWant && l.ph > S.bt * 0.6) && (speed > 3.2 || legs.every((o) => o === l || o.down));      // and a walk keeps a foot on the ground
           if (loco ? !wantDown || spent : (gaitOn && gaitWant && l.ph >= S.bt) || spent) { if (loco && wantDown) l.early = true; lift(l); } else continue;
         }
       }
@@ -243,7 +245,9 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       if (wrapped || !gaitOn) {
         // it's down: this is the place on the ground that puts the foot where it came to, and what's left over goes in a moment
         const a = l.rock = clamp(c.rock, -0.35, 0.6), flat = [fwW[0], 0, fwW[2]], f = K.len(flat) > 0.4 && K.dot(flat, fwd) > 0 ? K.unit(flat) : fwd, up = l.nw, A = [l.cA[0], l.cA[1] + l.gy, l.cA[2]], off = a >= 0 ? K.add(K.scale(f, FT.heel), K.scale(l.fw, -FT.heel)) : K.add(K.scale(f, -FT.ball), K.scale(l.fw, FT.ball)), Gx = A[0] + off[0] - up[0] * FT.h, Gz = A[2] + off[2] - up[2] * FT.h;
-        plantAt(l, [Gx, h.groundAt(Gx, Gz), Gz], a, f); const on = ankleOn(l); l.err = K.len(K.sub(A, on)) < 0.2 ? K.sub(A, on) : null; l.rel = null; l.A = K.add(on, l.err || [0, 0, 0]); continue;
+        plantAt(l, [Gx, h.groundAt(Gx, Gz), Gz], a, f); l.rock = clamp(Math.atan2(K.dot(fwP, l.n), K.dot(fwP, l.f)), a - 0.3, a + 0.3);       // it comes down at the angle it has: the roll takes it to the clip's from there
+        const on = ankleOn(l); l.err = K.len(K.sub(A, on)) < 0.2 ? K.sub(A, on) : null; if (l.err) { const m = K.len(l.err); if (m > 0.022) l.err = K.scale(l.err, 0.022 / m); } l.rel = null;       // the sole never carries on sunk in the ground or over it: the impact takes that up
+        l.A = K.add(on, l.err || [0, 0, 0]); continue;
       }
       // in the air it's the capture's foot. What it left the ground with dies away early in the swing, and it stays that high over whatever ground is under it
       const s = loco && l.t1 !== undefined ? clamp((loco.t - l.t0) / Math.max(l.t1 - l.t0, 0.02), 0, 1) : clamp((l.ph - l.pL) / Math.max(1 - l.pL, 1e-3), 0, 1), fade = 1 - smooth(0, 0.7, s), x = l.cA[0] + l.D0[0] * fade, z = l.cA[2] + l.D0[2] * fade, g = h.groundAt(x, z); l.sw = s;
@@ -253,7 +257,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       l.A = [x, y, z]; const k2 = smooth(0, 1, fade);
       l.fw = K.unit([fwW[0] + (l.fw0[0] - fwW[0]) * k2, fwW[1] + (l.fw0[1] - fwW[1]) * k2, fwW[2] + (l.fw0[2] - fwW[2]) * k2]); l.nw = K.unit([nwW[0] + (l.nw0[0] - nwW[0]) * k2, nwW[1] + (l.nw0[1] - nwW[1]) * k2, nwW[2] + (l.nw0[2] - nwW[2]) * k2]);
       // on a hill the ankle sets the foot to the ground it's about to land on, over the second half of the swing: it doesn't fly level and snap to the slope on contact
-      if (F.slope.y > 0.06 && s > 0.35) { const n = groundN(x, z, [0, 1, 0]), k3 = smooth(0.35, 0.95, s), q = K.arc([0, 1, 0], K.unit([n[0] * k3, 1 + (n[1] - 1) * k3, n[2] * k3])); l.fw = K.qrot(q, l.fw); l.nw = K.qrot(q, l.nw); }
+      if (F.slope.y > 0.2 && s > 0.35) { const n = groundN(x, z, [0, 1, 0]), k3 = smooth(0.35, 0.95, s), q = K.arc([0, 1, 0], K.unit([n[0] * k3, 1 + (n[1] - 1) * k3, n[2] * k3])); l.fw = K.qrot(q, l.fw); l.nw = K.qrot(q, l.nw); }
+      { const T = K.turn(K.frame(fwP, nwP), K.frame(l.fw, l.nw)), sg = T[3] < 0 ? -1 : 1, ang = 2 * Math.acos(Math.min(1, T[3] * sg)), most = FOOT_RATE * dt; if (ang > most) { const q = K.qaxis([T[0] * sg, T[1] * sg, T[2] * sg], most); l.fw = K.qrot(q, fwP); l.nw = K.qrot(q, nwP); } }
     }
     // past what a stride can follow nothing holds them: the legs are the clip's, and the wake and the ghosts show the rest
     if (hold < 1) { const k = 1 - hold, mixed = (a, b) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; for (const l of legs) { l.A = mixed(l.A, l.cA); l.fw = K.unit(mixed(l.fw, l.cfw)); l.nw = K.unit(mixed(l.nw, l.cnw)); } }
@@ -297,7 +302,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     pace: second({ f: 1.5, z: 1 }), leanF: second({ f: 2.2, z: 0.75, r: 0.4 }), leanS: second({ f: 2.0, z: 0.8, r: 0.4 }), look: second({ f: 1.6, z: 1 }),
   };
   const F = { stride: follower(0), slope: follower(0), yaw: follower(0), ground: follower(0), drop: follower(0), rise: follower(0), pace: follower(0), leanF: follower(0), leanS: follower(0), look: follower(0) };
-  const gripRel = new THREE.Vector3(), tv2 = new THREE.Vector3(); let gaitWant = false, yawNow = 0, surfT = 0, gripShare = 0, rideT = 0, facing = 0, ready = false, lastSpeed = 0, lastYaw = 0, swimPh = 0, treadT = 0, standT = 0, airT = 0, mode = 'water', legClip = true;
+  const gripRel = new THREE.Vector3(), tv2 = new THREE.Vector3(); let stroke = 'tread', gaitWant = false, yawNow = 0, surfT = 0, gripShare = 0, rideT = 0, facing = 0, ready = false, lastSpeed = 0, lastYaw = 0, swimPh = 0, treadT = 0, standT = 0, airT = 0, mode = 'water', legClip = true;
 
   // ---------------------------------------------------------------- mantle and hair: free swing, wind from his own motion
   const chain = [];
@@ -433,12 +438,14 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     else if (h.ride && CL.ride_grip) { rideT = (rideT + dc) % CL.ride_grip.dur; sample('ride_grip', rideT, 1); }
     else {
       treadT = (treadT + dc) % (CL.idle_tread ? CL.idle_tread.dur : 3);
-      const sp2 = h.speed, a = smooth(0.8, 3.2, sp2), b = smooth(4, 8.5, sp2), c = smooth(10, 15.5, sp2), hy = has('super') ? h.surge : 0;
-      const tr = (1 - a) * (1 - hy), sl = a * (1 - b) * (1 - hy), fa = a * b * (1 - c) * (1 - hy), bo = a * b * c * (1 - hy);
-      const rate = sl * (0.7 + sp2 / 5) / (CL.swim_slow ? CL.swim_slow.dur : 1.4) + fa * (0.7 + sp2 / 9) / (CL.swim_fast ? CL.swim_fast.dur : 0.9) + bo * Math.min(2.4, 0.8 + sp2 / 18) / (CL.boost ? CL.boost.dur : 0.6) + hy / (CL.super ? CL.super.dur : 0.33);
-      const was = swimPh; swimPh = (swimPh + (rate + tr * 0.4) * dc) % 1; h.beatAgo = swimPh < was ? 0 : (h.beatAgo ?? 0) + dc; h.beatEvery = 1 / Math.max(rate + tr * 0.4, 0.2);
+      // the tread, the crawl and the long kick are different ways of holding the arms, up to half a turn apart: nothing can be blended across that without the arm whipping round. Each change of stroke is a switch, and it goes through the inertial blend
+      const sp2 = h.speed, hy = has('super') ? h.surge : 0, next = sp2 < (stroke === 'tread' ? 1.3 : 0.8) && hy < 0.02 ? 'tread' : sp2 < (stroke === 'boost' ? 10.5 : 12) && hy < 0.02 ? 'crawl' : 'boost';
+      if (next !== stroke) { stroke = next; inertia(0.3); }
+      const tr = stroke === 'tread' ? 1 - hy : 0, cr = stroke === 'crawl' ? 1 - hy : 0, bo = stroke === 'boost' ? 1 - hy : 0, d = CL.swim_fast ? CL.swim_fast.dur : 1;
+      const rate = cr * (0.9 + sp2 / 8) / d + bo * Math.min(2.4, 0.8 + sp2 / 18) / (CL.boost ? CL.boost.dur : 0.6) + hy / (CL.super ? CL.super.dur : 0.33);
+      const was = swimPh; swimPh = (swimPh + (rate + tr * 0.4) * dc) % 1; h.beatAgo = Math.floor(swimPh * STROKES) !== Math.floor(was * STROKES) ? 0 : (h.beatAgo ?? 0) + dc; h.beatEvery = 1 / (STROKES * Math.max(rate + tr * 0.4, 0.2));      // Tidepulse keeps time with each arm's stroke
       if (sheath.k < 0.995 && CL.idle_combat) { guardT = (guardT + dc) % CL.idle_combat.dur; sample('idle_tread', treadT, tr * (0.5 + 0.5 * sheath.k)); sample('idle_combat', guardT, tr * 0.5 * (1 - sheath.k)); } else sample('idle_tread', treadT, tr);
-      for (const [n, w] of [['swim_slow', sl], ['swim_fast', fa], ['boost', bo], ['super', hy]]) if (CL[n]) sample(n, swimPh * CL[n].dur, w);
+      for (const [n, w] of [['swim_fast', cr], ['boost', bo], ['super', hy]]) if (CL[n]) sample(n, swimPh * CL[n].dur, w);
     }
     if (shot || m !== 'land') settle();
     if (m === 'land' && !(shot && CLIP_LEGS.has(shot.name))) for (const i of groupB) { const o = i * 4; for (let k = 0; k < 4; k++) pose[o + k] = held[o + k]; }

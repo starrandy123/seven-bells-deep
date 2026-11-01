@@ -6,7 +6,7 @@ from mathutils.bvhtree import BVHTree
 import moves
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GP = os.path.join(HERE, '..', 'node_modules', 'gltfpack', 'cli.js')
+GP = os.environ.get('GLTFPACK_CLI') or os.path.join(HERE, '..', 'node_modules', 'gltfpack', 'cli.js')       # node_modules is a relative link: a git worktree sits too deep for it, and names the tool here
 
 def bone_list():
     return list(moves.ORDER) + ['weapon_tip'] + ['cape_%d' % i for i in range(1, 6)] + ['hair_%d' % i for i in range(1, 4)]

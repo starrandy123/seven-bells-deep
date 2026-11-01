@@ -28,10 +28,16 @@
    "from": "https://notesmosaic.com/mcp/port-kit.js"
   },
   {
-   "what": "The Warden's walk, jog, run, sprint and standing motion in assets/hero.glb and assets/hero_phone.glb: Microsoft Rocketbox animations m_walk_neutral_01, m_run_neutral_01, m_run_fast_01, m_idle_neutral_01, m_run_start, m_run_stop, m_walk_start, m_walk_stop",
+   "what": "The Warden's walk, jog, run, sprint and standing motion, and his upper body treading water, in assets/hero.glb and assets/hero_phone.glb: Microsoft Rocketbox animations m_walk_neutral_01, m_run_neutral_01, m_run_fast_01, m_idle_neutral_01, m_run_start, m_run_stop, m_walk_start, m_walk_stop",
    "by": "Microsoft",
    "license": "MIT",
    "from": "https://github.com/microsoft/Microsoft-Rocketbox"
+  },
+  {
+   "what": "The Warden's swimming in assets/hero.glb and assets/hero_phone.glb: motion capture of a front crawl, trial 126_02. The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.",
+   "by": "Carnegie Mellon University Graphics Lab",
+   "license": "CMU Graphics Lab Motion Capture Database terms: the data may be copied, modified or redistributed without permission",
+   "from": "http://mocap.cs.cmu.edu"
   }
  ]
 }

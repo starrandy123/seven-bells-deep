@@ -31,6 +31,17 @@ const S = {
   flowland: { at: 'flat', steps: [ { s: 1.6, set: { my: 1 }, name: 'run' }, { s: 0.8, set: { my: 1, atk: true }, name: 'strike' }, { s: 0.9, set: { my: 1, dash: true }, name: 'dash' }, { s: 1.6, set: { my: 0 }, name: 'stop' } ] },
   cmp: { at: 'long', cam: 'near', label: 'in the game', steps: [ { s: 0.9, set: { my: 0.22 }, name: 'a' }, { s: 2.4, set: { my: 0.22 }, name: 'walk' }, { s: 0.8, set: { my: 0.66 }, name: 'b' }, { s: 2.4, set: { my: 0.66 }, name: 'jog' }, { s: 0.8, set: { my: 1 }, name: 'c' }, { s: 2.4, set: { my: 1 }, name: 'run' } ] },
   cmpraw: { at: 'long', cam: 'near', raw: 1, label: 'the raw capture on his body', steps: [ { s: 0.9, set: { my: 0.22 }, name: 'a' }, { s: 2.4, set: { my: 0.22 }, name: 'walk' }, { s: 0.8, set: { my: 0.66 }, name: 'b' }, { s: 2.4, set: { my: 0.66 }, name: 'jog' }, { s: 0.8, set: { my: 1 }, name: 'c' }, { s: 2.4, set: { my: 1 }, name: 'run' } ] },
+  // on a made floor over open water: nothing in front of his legs, for the side-by-side with the raw clip
+  cleanrun: { at: 'sea', floor: 6, cam: 'near', steps: [ { s: 0.5, set: { my: 0 }, name: 'idle' }, { s: 2.2, set: { my: 1 }, name: 'start' }, { s: 1.4, set: { my: 0 }, name: 'stop' } ] },
+  cleanrunraw: { at: 'sea', floor: 6, cam: 'near', raw: 1, steps: [ { s: 0.5, set: { my: 0 }, name: 'idle' }, { s: 2.2, set: { my: 1 }, name: 'start' }, { s: 1.4, set: { my: 0 }, name: 'stop' } ] },
+  cleanwalk: { at: 'sea', floor: 6, cam: 'near', steps: [ { s: 0.5, set: { my: 0 }, name: 'idle' }, { s: 2.6, set: { my: 0.22 }, name: 'start' }, { s: 1.8, set: { my: 0 }, name: 'stop' } ] },
+  cleanback: { at: 'sea', floor: 6, cam: 'back', steps: [ { s: 0.5, set: { my: 0 }, name: 'idle' }, { s: 2.2, set: { my: 1 }, name: 'start' }, { s: 1.4, set: { my: 0 }, name: 'stop' } ] },
+  // a few metres down, so the lens is never at the waterline, where a wave hides him from it
+  swimside: { at: 'sea', y: -4, cam: 'side', steps: [ { s: 1.0, set: { my: 0 }, name: 'tread' }, { s: 3.2, set: { my: 1 }, name: 'crawl' }, { s: 1.2, set: { my: 1, boost: true }, name: 'boost' }, { s: 1.6, set: { my: 0, boost: false }, name: 'stop' } ] },
+  treadclose: { at: 'sea', y: -4, cam: 'near', steps: [ { s: 5, set: { my: 0 }, name: 'tread' } ] },
+  treadfront: { at: 'sea', y: -4, cam: 'front', steps: [ { s: 5, set: { my: 0 }, name: 'tread' } ] },
+  swimback: { at: 'sea', steps: [ { s: 0.8, set: { my: 0 }, name: 'tread' }, { s: 3.2, set: { my: 1 }, name: 'crawl' }, { s: 1.2, set: { my: 0 }, name: 'stop' } ] },
+  cleansprint: { at: 'sea', floor: 6, cam: 'near', steps: [ { s: 1.2, set: { my: 1 }, name: 'run' }, { s: 0.8, set: { my: 1, boost: true }, name: 'sprint' }, { s: 1.0, set: { my: 1, boost: false }, name: 'back' } ] },
   startstop: { at: 'long', cam: 'near', steps: [ { s: 1.2, set: { my: 0 }, name: 'idle' }, { s: 2.0, set: { my: 1 }, name: 'start' }, { s: 1.8, set: { my: 0 }, name: 'stop' }, { s: 1.6, set: { my: 0.22 }, name: 'walk' }, { s: 2.2, set: { my: 0 }, name: 'stop2' } ] },
   startstopback: { at: 'long', cam: 'back', steps: [ { s: 1.2, set: { my: 0 }, name: 'idle' }, { s: 2.0, set: { my: 1 }, name: 'start' }, { s: 1.8, set: { my: 0 }, name: 'stop' } ] },
   sprintnear: { at: 'long', cam: 'near', steps: [ { s: 1.4, set: { my: 1 }, name: 'run' }, { s: 0.7, set: { my: 1, boost: true }, name: 'sprint' }, { s: 1.0, set: { my: 1, boost: false }, name: 'back' } ] },
@@ -81,11 +92,13 @@ await page.evaluate(({ sc, places }) => {
   if (sc.at === 'shore') { yaw = -Math.PI / 2; x += 30; }
   if (sc.at === 'long') yaw = spot.yaw;
   if (sc.at === 'sea') yaw = Math.PI / 2;
-  window.__home = () => { const y = G.world.heightAt(x, -z); h.pos.set(x, sc.at === 'spawn' ? (sw.z ?? -6) : y > 0 ? y + 0.92 : sc.at === 'sea' ? -0.6 : -1.4, z); h.vel.set(0, 0, 0); h.prev.copy(h.pos); h.drawPos.copy(h.pos); h.land = y > -1; h.grounded = h.land; h.air = false; h.surge = 0; h.boostHeld = 0; G.camYaw = h.heading = yaw; G.camPitch = sc.at === 'sea' ? 0 : -0.08; h.spd = 0; if (h.place) h.place(); };
+  if (sc.floor !== undefined) { const fl = sc.floor; G.world.heightAt = () => fl; yaw = Math.PI / 2; G.camera.far = Math.max(G.camera.far, 2000); }
+  window.__home = () => { const y = G.world.heightAt(x, -z); h.pos.set(x, sc.at === 'spawn' ? (sw.z ?? -6) : y > 0 ? y + 0.92 : sc.at === 'sea' ? sc.y ?? -0.6 : -1.4, z); h.vel.set(0, 0, 0); h.prev.copy(h.pos); h.drawPos.copy(h.pos); h.land = y > -1; h.grounded = h.land; h.air = false; h.surge = 0; h.boostHeld = 0; G.camYaw = h.heading = yaw; G.camPitch = sc.at === 'sea' ? 0 : -0.08; h.spd = 0; if (h.place) h.place(); };
   window.__home(); if (sc.at === 'spawn') { h.land = false; h.grounded = false; }
   if (sc.raw) h.body.raw = true;
   if (sc.label) document.body.insertAdjacentHTML('beforeend', `<div style="position:fixed;left:14px;top:10px;font:600 22px system-ui,sans-serif;color:#fff;text-shadow:0 1px 4px #000;z-index:99">${sc.label}</div>`);
   if (sc.cam === 'near' || sc.cam === 'back') G.filmCam = () => { const cam = G.camera, p = h.drawPos, a = h.heading + (sc.cam === 'near' ? 1.57 : 3.14), d = sc.cam === 'near' ? 3.0 : 3.2, u = sc.cam === 'near' ? 0.1 : 0.7; cam.position.set(p.x + Math.sin(a) * d, p.y + u, p.z + Math.cos(a) * d); cam.up.set(0, 1, 0); cam.fov = 50; cam.updateProjectionMatrix(); cam.lookAt(p.x, p.y - 0.1, p.z); };
+  if (sc.cam === 'front') G.filmCam = () => { const cam = G.camera, p = h.drawPos, a = h.heading; cam.position.set(p.x + Math.sin(a) * 2.8, p.y + 0.3, p.z + Math.cos(a) * 2.8); cam.up.set(0, 1, 0); cam.fov = 50; cam.updateProjectionMatrix(); cam.lookAt(p.x, p.y - 0.1, p.z); };
   if (sc.cam === 'side') G.filmCam = () => { const cam = G.camera, p = h.drawPos, a = h.heading + 1.57; cam.position.set(p.x + Math.sin(a) * 4.4, p.y + 0.5, p.z + Math.cos(a) * 4.4); cam.up.set(0, 1, 0); cam.lookAt(p.x, p.y, p.z); };
   G.quest && (G.quest.step = () => {}); if (G.enemies && G.enemies.alive) for (const e of G.enemies.alive()) { e.t = 0; }
   G.script = { my: 0, mx: 0, boost: false, jump: false, ud: 0, turn: 0 };
