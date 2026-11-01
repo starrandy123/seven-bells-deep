@@ -184,7 +184,12 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
   for (const [k, q] of near) { const Wl = lerpAt(rivers[q[0]].W, q[1], q[2]); if (Wl > .05 && Hz[k] > Wl - 2.2) lv.set(k, Wl); }
   for (const [k, pq] of nearPool) { const Wl = pools[pq[0]].W; if ((pq[1] < 1.25 || !lv.has(k)) && Hz[k] > Wl - 2.2) lv.set(k, Wl); }
   const LK = Int32Array.from(lv.keys()), LW = Float32Array.from(lv.values());
-  const fillLevel = () => { const g = new Float32Array(n * n).fill(NO_WATER); for (let j = 0; j < LK.length; j++) g[LK[j]] = LW[j]; return g; };
+  // Laid on the box round the water, not the whole map: 2 MB of GPU memory for a sliver of the world (the box's edge is dry, so a clamped read outside it says no water)
+  let gx0 = n, gx1 = 0, gy0 = n, gy1 = 0;
+  for (let j = 0; j < LK.length; j++) { const gx = LK[j] % n, gy = Math.floor(LK[j] / n); gx0 = Math.min(gx0, gx); gx1 = Math.max(gx1, gx); gy0 = Math.min(gy0, gy); gy1 = Math.max(gy1, gy); }
+  gx0 = Math.max(0, gx0 - 2); gy0 = Math.max(0, gy0 - 2); gx1 = Math.min(n - 1, gx1 + 2); gy1 = Math.min(n - 1, gy1 + 2);
+  const lw = gx1 - gx0 + 1, lh = gy1 - gy0 + 1;
+  const fillLevel = () => { const g = new Float32Array(lw * lh).fill(NO_WATER); for (let j = 0; j < LK.length; j++) g[(Math.floor(LK[j] / n) - gy0) * lw + (LK[j] % n) - gx0] = LW[j]; return g; };
 
   // where he is in which water: river samples hashed in 4 m cells
   const HS = 4, hash = new Map();
@@ -227,7 +232,7 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
     }
     if (changed) data.instances[kind] = keep;
   }
-  return { rivers, pools, fillLevel, levelNodes: LK.length, waterAt, stats: { nodes: nodes.size, dug, built, maxDig: +maxDig.toFixed(2), digAt, maxBuild: +maxBuild.toFixed(2), buildAt, moved, dropped } };
+  return { rivers, pools, fillLevel, level: { w: lw, h: lh, map: [n / lw, n / lh, gx0 / lw, gy0 / lh] }, levelNodes: LK.length, waterAt, stats: { nodes: nodes.size, dug, built, maxDig: +maxDig.toFixed(2), digAt, maxBuild: +maxBuild.toFixed(2), buildAt, moved, dropped } };
 }
 
 // What grows and lies along the water: stones at the waterline and in the rapids, ferns and grass on the banks, a bush further back, stones round a pool's

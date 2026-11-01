@@ -105,6 +105,7 @@ uniform vec2 ocPhase;
 uniform vec4 ocSunM, ocShade, ocMap, ocLandM;
 uniform highp sampler3D tOcCaustic;
 uniform highp sampler2D tOcHeight, tOcRiver;
+uniform vec4 ocRiverM;
 uniform sampler2D tOcWet;
 uniform vec4 ocWetM;
 uniform sampler2D tOcSun, tOcNoise, tOcLand, tOcPool;
@@ -459,6 +460,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcSun: { value: white },
     tOcNoise: { value: makeNoiseTexture(256) }, tOcPool: { value: black },
     tOcHeight: { value: new THREE.DataTexture(new Float32Array([-100]), 1, 1, THREE.RedFormat, THREE.FloatType) },
+    ocRiverM: { value: new THREE.Vector4(1, 1, 0, 0) },
     tOcRiver: { value: (() => { const t = new THREE.DataTexture(new Float32Array([-1000]), 1, 1, THREE.RedFormat, THREE.FloatType); t.needsUpdate = true; return t; })() },      // rivers' surface level on the height grid (rivers.js); nothing until the world sets it
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },

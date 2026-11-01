@@ -95,7 +95,7 @@ const MEADOW_V = (uReach) => /* glsl */`
     float ocG = texture(tOcHeight, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w).r;
     float ocDist = distance(ocWp.xyz, cameraPosition);
     float ocFade = (1.0 - smoothstep(${uReach}*.55, ${uReach}, ocDist))*smoothstep(.25, .75, ocG);
-    float ocRd = ocG - texture(tOcRiver, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w).r;
+    float ocRd = ocG - texture(tOcRiver, (vec2(ocWp.x - ocMap.x, -ocWp.z - ocMap.y)/ocMap.z + .5)/ocMap.w*ocRiverM.xy - ocRiverM.zw).r;
     ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);      // none under a river (deeper than any channel is a face beside it)
     vec2 ocWu = vec2(ocWp.x - ocWetM.x, ocWetM.y - ocWp.z)*ocWetM.z + .5;
     if (ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996) { vec2 ocWv = texture(tOcWet, ocWu).rg; ocFade *= (1.0 - .8*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y)); }      // laid flat where a ride ran, under water in a puddle (wetmap.js)
@@ -160,7 +160,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   tHeight.internalFormat = 'R16F'; tHeight.minFilter = tHeight.magFilter = THREE.LinearFilter; tHeight.needsUpdate = true; freeAfter(tHeight);
   U.tOcHeight.value = tHeight; U.ocMap.value.set(ox, oy, cell, n);
   // the rivers' surface level on the same grid: the ground's shader draws their wet bed and banks from it, and no grass grows under it
-  const tRiver = riverPlan ? new THREE.DataTexture(riverPlan.fillLevel(), n, n, THREE.RedFormat, THREE.FloatType) : null;
+  const tRiver = riverPlan ? new THREE.DataTexture(riverPlan.fillLevel(), riverPlan.level.w, riverPlan.level.h, THREE.RedFormat, THREE.FloatType) : null;
+  if (tRiver) U.ocRiverM.value.fromArray(riverPlan.level.map);
   if (tRiver) { tRiver.internalFormat = 'R16F'; tRiver.minFilter = tRiver.magFilter = THREE.LinearFilter; tRiver.needsUpdate = true; freeAfter(tRiver); U.tOcRiver.value = tRiver; }
   const wetMap = createWetMap(renderer, U);                              // the water a land ride leaves behind on the ground (wetmap.js)
 
@@ -403,7 +404,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           alb = mix(alb, ground, smoothstep(-2.8, -.5, P.y));
           // a river's bed and banks (rivers.js): under its water a bed of stones, mossy where it's deep, the sun's ripples running over it; along its edge a
           // band of damp, darker earth with a sheen on it, its edge wandering as a real one does
-          float rUnder = texture(tOcRiver, uv).r - P.y;
+          float rUnder = texture(tOcRiver, uv*ocRiverM.xy - ocRiverM.zw).r - P.y;
           if (rUnder > -1.4 && rUnder < 2.4) {                // (deeper than any channel is a rock face beside the water, not its bed)
             float damp = smoothstep(-1.05 + (n4 - .5)*.6, -.04, rUnder), bedK = smoothstep(-.06, .10, rUnder);
             float st = texture(tOcNoise, P.xz*.045 + wand*.01).a, pb = texture(tOcNoise, P.zx*.15 + .37).b;      // read from above: a bank's slope mustn't smear it into stripes
@@ -565,7 +566,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.82); }`,
     }),
     meadow: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n',
+      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n',
       fragmentPars: 'varying vec2 vOcGust;\nuniform vec3 ocLandGL, ocLandGD;\n',
       // the ground's own colours, the same noise, so the blades melt into the land; a gust lightens the tips as it passes
       albedo: /* glsl */`{ float ocM = ocMeadow(vOcP.xz);
@@ -574,7 +575,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = ocG*(1.0 + ocFar*vOcGust.y*(.14 + .30*max(vOcGust.x, 0.0)))*mix(1.62, 1.0, ocPaint); }`,
     }),
     flowers: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
+      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
     }),
     boat: () => look.patch(lit({ vertexColors: true }), {
       key: 'boat',
@@ -1249,7 +1250,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     const m = look.patch(lit({ side: THREE.DoubleSide }), {
       wrap: .5, key: 'nearGrass', uniforms: { uBox: { value: BOX }, uAhead: { value: nearAhead }, uFoc: terrainU.uFocus, tBiomeG: { value: tBiome } },
       vertexDecl: 'varying vec2 vOcGust;\nattribute vec4 aRoot;\nattribute vec2 aShape;\n',
-      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform sampler2D tOcWet; uniform vec4 ocMap, uFoc, ocWetM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
+      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, uFoc, ocWetM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
       vertexExtra: /* glsl */`
         vec2 ocRel = mod(aRoot.xy - uAhead + uBox, 2.0*uBox) - uBox;
         vec2 ocW2 = uAhead + ocRel;
@@ -1258,7 +1259,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         float ocBi = texture(tBiomeG, ocUv).g;
         float ocD3 = distance(vec3(ocW2.x, ocG, ocW2.y), cameraPosition);
         float ocFade = (1.0 - smoothstep(uBox*.72, uBox*.98, length(ocRel)))*smoothstep(.2, .7, ocG)*smoothstep(.15, .45, ocBi + aRoot.w*.2);
-        float ocRd = ocG - texture(tOcRiver, ocUv).r; ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);
+        float ocRd = ocG - texture(tOcRiver, ocUv*ocRiverM.xy - ocRiverM.zw).r; ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);
         vec2 ocWu = vec2(ocW2.x - ocWetM.x, ocWetM.y - ocW2.y)*ocWetM.z + .5;
         vec2 ocWv = ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996 ? texture(tOcWet, ocWu).rg : vec2(0.0);      // laid flat where a ride ran, under water in a puddle (wetmap.js)
         float ocH = (.28 + .46*aRoot.z)*ocFade*(1.0 - .82*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y));

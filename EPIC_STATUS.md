@@ -127,14 +127,14 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
-| M20 | Swim up waterfalls | building | `8d95b35`; from inside the pool never run |
+| M20 | Swim up waterfalls | building | from inside the pool by the stick: lip reached in about 3 s, Chromium, driven; his thumb owed |
 | M21 | Sprint and climb uphill | building | `f850eb1`, read headless by the cloud only |
 | M22 | Land ride, and the water it leaves | building | half done, see §20 |
 | M23 | Surf real waves | building | he outruns the wave |
-| W23 | Falls and streams meet the land | building | seen from Crown Falls to the sea, plain and glassy; his 16:57 word: sheet of paper |
+| W23 | Falls and streams meet the land | building | `falls.js` layered fall on the free-fall arc, `rivers.js` width and fan, river surface along the current; read in `falls_shots.mjs` on the Mac's GPU; his eye owed |
 | W24 | Real cities | building | Thalor 83 draws 395k, Vesper 64 and 445k on the Mac's GPU; not looked at on a phone |
 | W25 | Ocean environment pass | todo | |
-| W26 | Natural cliffs and mountain edges | todo | |
+| W26 | Natural cliffs and mountain edges | building | `cliffs.js`: columned slabs on faces over 45°, crest and foot plants, by rule, on every island (Crown Falls shown to him first); his eye owed |
 | G13 | His phone HUD | check green | CR-36: `g_hud` G7h and `input` C1t 21 of 21 in WebKit. `ui` C3 (hotbar 5 px apart) and E1h (labels 14 px) stay red, his call |
 | G14 | One line at a time | building | in `ui.js`; a wall owed |
 
