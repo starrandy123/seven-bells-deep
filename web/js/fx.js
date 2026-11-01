@@ -661,7 +661,7 @@ export function createFx(G) {
   // a sprite that lasts this one frame, on axes of the caller's: a flame stays on the limb that throws it and turns with it, which a sprite that ages can't do
   const held = []; let heldN = 0;
   function now(cell, x, y, z, ax, ay, az, bx, by, bz, col, a, hot, add) { const q = held[heldN] || (held[heldN] = {}); heldN++; q.cell = cell; q.x = x; q.y = y; q.z = z; q.ax = ax; q.ay = ay; q.az = az; q.bx = bx; q.by = by; q.bz = bz; q.r = col.r; q.g = col.g; q.b = col.b; q.a = a; q.hot = hot; q.add = add; }
-  function ball(p, size, col, a = 1) { const c = G.camera.matrixWorld.elements; now('ball', p.x, p.y, p.z, c[0] * size, c[1] * size, c[2] * size, c[4] * size, c[5] * size, c[6] * size, col, a, 0.9, 1); }
+  function ball(p, size, col, a = 1, hot = 0.9, add = 1) { const c = G.camera.matrixWorld.elements; now('ball', p.x, p.y, p.z, c[0] * size, c[1] * size, c[2] * size, c[4] * size, c[5] * size, c[6] * size, col, a, hot, add); }
   function writeSprites(dt) {
     const cam = G.camera; cam.updateMatrixWorld(); const e = cam.matrixWorld.elements; R.set(e[0], e[1], e[2]); U.set(e[4], e[5], e[6]);
     let n0 = 0, n1 = 0, live = 0;

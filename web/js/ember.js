@@ -1,5 +1,5 @@
-// The Emberkin: fire elementals who fly on jets at the palms and the soles (EPIC V1, V2, V5). No weapon: fists, kicks and fire. The rules of a fight stay in enemies.js (tokens, tells, blows, what a hit does);
-// this file holds what's theirs: a body that burns, flight that leans into what the jets are doing, fire bolts that really fly, and what water does to them.
+// The elementals (EPIC V1, V2, V5, V8, V12). The Emberkin: fire elementals who fly on jets at the palms and the soles. No weapon: fists, kicks and fire. The water elementals fight beside the Warden: the same body and the same flight in the sea's own colours, with water and ice.
+// The rules of a fight stay in enemies.js (tokens, tells, blows, what a hit does); this file holds what's theirs: a body that burns or runs with water, flight that leans into what the jets are doing, bolts that really fly, and what water does to fire.
 // Flight is a thrust and not a slide: the body's axis stands along the push the jets must give, which is gravity, plus what he's asking of his speed, plus the drag of going fast. So he leans into a turn, lies flat at speed and rears back to stop, with no state saying so.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -19,7 +19,7 @@ const BURN = {
   vertexDecl: 'attribute vec4 _mask; uniform vec4 uEmS; varying vec4 vEM; varying vec3 vEO;\n',
   vertexBend: 'vEO = position*uEmS.w + uEmS.xyz; vEM = _mask;',
   fragmentPars: /* glsl */`
-    uniform float uHeat, uEmT; varying vec4 vEM; varying vec3 vEO; vec3 emGlow;
+    uniform float uHeat, uEmT, uSide; varying vec4 vEM; varying vec3 vEO; vec3 emGlow;
     vec3 emH(vec3 p) { p = fract(p*vec3(.1031, .1030, .0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx)*p.zyx); }
     vec3 emCell(vec3 x) {
       vec3 n = floor(x), f = x - n, b = step(.5, f) - 1.0; float F1 = 9.0, F2 = 9.0, id = 0.0;
@@ -30,18 +30,25 @@ const BURN = {
       return vec3(sqrt(F1), sqrt(F2), id);
     }`,
   albedo: /* glsl */`
+    if (uSide > .5) {      // water: the same cells, running up the body, deep at the middle and bright where the surface turns from the eye
+      vec3 p = vEO*vec3(7.0, 5.0, 7.0); p.y -= uEmT*1.5; p += .4*sin(p.yzx*1.6 + uEmT*.7); vec3 c = emCell(p);
+      float seam = c.y - c.x, line = 1.0 - smoothstep(.02, .22, seam), rim = 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), ice = 1.0 - smoothstep(.2, .4, vEM.r);
+      diffuseColor.rgb = mix(vec3(.012, .13, .24), vec3(.05, .42, .62), rim*rim) + vec3(.22, .36, .42)*ice;
+      emGlow = vec3(.20, .70, 1.0)*(line*(.22 + .5*rim) + pow(rim, 2.4)*.55 + .08) + vec3(.8, .95, 1.0)*(pow(rim, 6.0)*.5 + vEM.g*2.4) + vec3(.1, .5, .9)*smoothstep(7.0, 34.0, length(vViewPosition))*.8;
+    } else
     { vec3 p = vEO*vec3(10.0, 8.0, 10.0); p += .32*sin(p.yzx*1.4); vec3 c = emCell(p);
       float seam = c.y - c.x, line = 1.0 - smoothstep(.02, .15, seam), halo = 1.0 - smoothstep(.04, .62, seam);
       float run = .62 + .38*sin(vEO.y*5.0 - uEmT*2.4 + c.z*6.283), hot = clamp(vEM.r, 0.0, 1.0)*uHeat;
       float T = line*(.34 + .66*hot)*run*smoothstep(0.0, .22, uHeat);
       diffuseColor.rgb *= mix(vec3(.030, .024, .024), vec3(.095, .074, .066), c.z*c.z)*(1.0 - .55*line);
       vec3 ramp = mix(vec3(.86, .10, .012), vec3(1.0, .40, .05), clamp(T*1.7, 0.0, 1.0)); ramp = mix(ramp, vec3(1.0, .86, .46), clamp(T*3.0 - 1.5, 0.0, 1.0));
-      emGlow = ramp*(T*T*7.0 + halo*hot*.42) + vec3(1.0, .62, .22)*vEM.g*3.4*(.3 + .7*uHeat) + vec3(1.0, .34, .05)*pow(hot, 3.0)*1.1; }`,
+      float faraway = smoothstep(7.0, 34.0, length(vViewPosition));      // the seams go under a pixel with distance, and their light doesn't: the whole figure takes it on, so he reads as fire from far off
+      emGlow = ramp*(T*T*7.0 + halo*hot*.42) + vec3(1.0, .62, .22)*vEM.g*3.4*(.3 + .7*uHeat) + vec3(1.0, .34, .05)*pow(hot, 3.0)*1.1 + vec3(1.0, .30, .05)*faraway*uHeat*.9; }`,
   glow: 'ocGlow = emGlow;',
 };
 
 export async function createEmber(G, { foeMaterial, D }) {
-  const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 3 : 4, time = { value: 0 };
+  const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 3 : 4, WATERS = phone ? 2 : 3, time = { value: 0 };
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync('assets/ember.glb');
   let shared = null, geo = null; const packed = new THREE.Vector4(0, 0, 0, 1);       // the packer stores positions as whole numbers with a scale on the node: the fire's pattern is in metres
@@ -50,27 +57,28 @@ export async function createEmber(G, { foeMaterial, D }) {
   for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) { if (shared[k]) shared[k].dispose(); shared[k] = null; }
   shared.vertexColors = true; shared.roughness = 0.82; shared.metalness = 0; shared.emissive.setRGB(0, 0, 0); shared.color.setRGB(1, 1, 1); shared.envMapIntensity = 0.5;
   geo.deleteAttribute('uv');
-  G.look.patch(shared, { skinned: true, key: 'ember', uniforms: { uEmT: time, uHeat: { value: 1 }, uEmS: { value: packed } }, ...BURN });
+  G.look.patch(shared, { skinned: true, key: 'ember', uniforms: { uEmT: time, uHeat: { value: 1 }, uEmS: { value: packed }, uSide: { value: 0 } }, ...BURN });
   // a blow in the air leaves his legs to the flight: his upper body takes the clip and the jets keep holding him. On the ground, or for a kick, the whole body does
   const UPPER = /^(spine_|neck|head|clav_|arm_|fore_|hand_)/, AIR = /^e_(blast|cross|hook|jab)$/;
   for (const c of gltf.animations) if (AIR.test(c.name)) c.tracks = c.tracks.filter((t) => UPPER.test(t.name));
-  const pool = [];
-  for (let i = 0; i < MAX; i++) {
-    const model = SkeletonUtils.clone(gltf.scene), g = new THREE.Group(); g.add(model); g.visible = false; G.scene.add(g);
-    const mat = foeMaterial(shared, { uHeat: { value: 1 }, uEmT: time, uEmS: { value: packed } }), skinned = [];
+  const pool = [], waterPool = [];
+  for (let i = 0; i < MAX + WATERS; i++) {
+    const water = i >= MAX, model = SkeletonUtils.clone(gltf.scene), g = new THREE.Group(); g.add(model); g.visible = false; G.scene.add(g);
+    const mat = foeMaterial(shared, { uHeat: { value: 1 }, uEmT: time, uEmS: { value: packed }, uSide: { value: water ? 1 : 0 } }), skinned = []; if (water) { mat.roughness = 0.16; mat.envMapIntensity = 1.2; }
     model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = mat; if (o.isSkinnedMesh) skinned.push(o); } });
     if (G.look.addOutline) for (const o of skinned) G.look.addOutline(o, { warm: true });
     const mixer = new THREE.AnimationMixer(model), acts = {};
     for (const c of gltf.animations) { const a = acts[c.name] = mixer.clipAction(c); if (AIR.test(c.name)) a.weight = 8; }
     const bone = (n) => model.getObjectByName(n);
-    pool.push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R')], [bone('shin_L'), bone('foot_L')]], head: bone('head'), chest: bone('spine_3') });
+    (water ? waterPool : pool).push({ g, mixer, acts, busy: false, mat, shield: null, tip: null, jets: [[bone('fore_R'), bone('hand_R')], [bone('fore_L'), bone('hand_L')], [bone('shin_R'), bone('foot_R')], [bone('shin_L'), bone('foot_L')]], head: bone('head'), chest: bone('spine_3') });
   }
-  for (const s of pool) s.g.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) { o.skeleton.computeBoneTexture(); G.renderer.initTexture(o.skeleton.boneTexture); } });
+  for (const s of [...pool, ...waterPool]) s.g.traverse((o) => { if (o.isSkinnedMesh && o.skeleton) { o.skeleton.computeBoneTexture(); G.renderer.initTexture(o.skeleton.boneTexture); } });
 
   const shots = []; for (let i = 0; i < (phone ? 6 : 9); i++) shots.push({ on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, from: null, dmg: 0, back: false, cued: false, trailT: 0 });
   let X = null;      // what enemies.js lends: takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn, count
   const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
-  const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9);
+  const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
+  const waters = [];      // the water elementals in the air. They aren't foes: nothing the Warden aims lands on them, and they aren't counted in a fight
   const groundAt = (x, z) => G.world.heightAt(x, -z);
   const floorAt = (x, z) => Math.max(groundAt(x, z), 0);
   const probe = { x: 0, y: 0, z: 0 };
@@ -81,17 +89,30 @@ export async function createEmber(G, { foeMaterial, D }) {
     acc.subVectors(w, e.vel).multiplyScalar(3.2); const l = acc.length(); if (l > most) acc.multiplyScalar(most / l);
     e.vel.addScaledVector(acc, dt * e.slow); e.ask.lerp(acc, 1 - Math.exp(-10 * dt));
   }
-  function faceHim(e, dt, k = 7) { const h = G.hero.pos, y = Math.atan2(h.x - e.pos.x, h.z - e.pos.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-k * dt))); }
+  function faceHim(e, dt, k = 7) { const h = (e.foe || G.hero).pos, y = Math.atan2(h.x - e.pos.x, h.z - e.pos.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-k * dt))); }
   function faceGoing(e, dt) { if (e.vel.lengthSq() > 1) { const y = Math.atan2(e.vel.x, e.vel.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-5 * dt))); } }
   // how high he holds: over the water, or over the land under him, and over the Warden wherever he's standing
-  const heightFor = (e) => { const f = floorAt(e.pos.x, e.pos.z), hp = G.hero.pos.y; return Math.max(f + Q.flight.hover_m, hp + Q.flight.over_m); };
+  const heightFor = (e) => { const f = floorAt(e.pos.x, e.pos.z), Fl = Q.flight; if (fights(e)) return f + Fl.duel_m + Math.sin(G.time * 0.5 + e.phase) * 2.2; return Math.max(f + Fl.hover_m, (e.foe || G.hero).pos.y + Fl.over_m); };
   function goto(e, x, y, z, speed, most, dt) {
     want.set(x - e.pos.x, y - e.pos.y, z - e.pos.z); const d = want.length() || 1; want.multiplyScalar(Math.min(speed, d * 1.3) / d); aim(e, want, most, dt); return d;
   }
 
+  // who a flyer is after. Fire: the Warden, or a water elemental that's nearer. Water: the nearest Emberkin, and with none left it stays by him a while, then goes back to the sea
+  const up = (t) => t && (t === G.hero ? !t.dead : t.hp > 0);
+  const emberkin = () => G.enemies.all().filter((o) => o.def.flyer && o.hp > 0 && !o.hidden);
+  function pick(e, dt) {
+    if ((e.pickT = (e.pickT || 0) - dt) > 0 && up(e.foe)) return; e.pickT = 1.4;
+    if (e.side === 'water') { let best = null, bd = 1e9; for (const o of emberkin()) { const d = o.pos.distanceTo(e.pos); if (d < bd) { bd = d; best = o; } } e.foe = best || G.hero; e.free = !best; return; }
+    let best = G.hero, bd = G.hero.pos.distanceTo(e.pos) + (e.first ? 1e3 : 6); e.first = false; for (const w of waters) { if (w.hp <= 0) continue; const d = w.pos.distanceTo(e.pos); if (d < bd) { bd = d; best = w; } } e.foe = best;
+  }
+  const fights = (e) => e.foe && e.foe !== G.hero;       // against another elemental: no token, no parry call, no telegraph for the player to read: it's not at him
+  function tellDone(e, dt) { if (!fights(e)) return X.tellStep(e, dt); const b = e.blow; e.clock += dt; const q = clamp(e.clock / b.tell_s, 0, 1); e.u.uTell.value = q * q; return e.clock >= b.tell_s; }
+
   // ------------------------------------------------------------------ one flyer's head: comes in, rings him, picks its moment. Tokens and tells are the same as every foe's
   function brain(e, dt) {
-    const h = G.hero, F = e.def, dist = e.pos.distanceTo(h.pos), Fl = Q.flight;
+    pick(e, dt);
+    const h = e.foe || G.hero, F = e.def, dist = e.pos.distanceTo(h.pos), Fl = Q.flight;
+    if (e.side === 'water' && e.free && e.state === 'circle' && (e.idleT = (e.idleT || 0) + dt) > Q.water.stays_s) { e.state = 'leave'; e.t = 2.4; } else if (!e.free) e.idleT = 0;
     e.t -= dt; if (e.state !== 'dead') e.heat = Math.min(1, e.heat + (e.doused > 0 ? 0 : H.regain_per_s) * dt);
     if (e.doused > 0) { e.doused -= dt; if (e.doused <= 0 && e.hp > 0) relight(e); else { fallStep(e, dt); return; } }
     switch (e.state) {
@@ -102,15 +123,15 @@ export async function createEmber(G, { foeMaterial, D }) {
         break;
       }
       case 'circle': {
-        faceHim(e, dt); const R = e.ring = damp(e.ring || Fl.ring_m, Fl.ring_m + Math.sin(G.time * 0.31 + e.phase) * 3, 1, dt), sp = Fl.ring_mps; e.ang += (e.circleDir * sp / R) * dt;
+        faceHim(e, dt); const R = e.ring = damp(e.ring || Fl.ring_m, Fl.ring_m + (fights(e) ? -2 : 0) + Math.sin(G.time * 0.31 + e.phase) * 3, 1, dt), sp = Fl.ring_mps; e.ang += (e.circleDir * sp / R) * dt;
         goto(e, h.pos.x + Math.cos(e.ang) * R, heightFor(e) + Math.sin(G.time * 0.8 + e.phase) * 0.8, h.pos.z + Math.sin(e.ang) * R, sp + 6, Fl.accel, dt);
         if (dist > 60) e.state = 'swimTo';
-        if (e.t <= 0) { if (X.takeToken(e)) begin(e); else e.t = 0.4; }
+        if (e.t <= 0 && !(e.side === 'water' && e.free)) { if (fights(e) || X.takeToken(e)) begin(e); else e.t = 0.4; }
         break;
       }
       case 'tell': {
         faceHim(e, dt, 9); want.set(0, 0, 0); if (e.blow.land) want.y = 0.6; aim(e, want, Fl.accel * 0.7, dt);
-        if (X.tellStep(e, dt)) { X.beginStrike(e); strikeBegins(e); }
+        if (tellDone(e, dt)) { X.beginStrike(e); strikeBegins(e); }
         break;
       }
       case 'strike': {
@@ -124,7 +145,7 @@ export async function createEmber(G, { foeMaterial, D }) {
           if (e.pos.distanceTo(e.spot) < 1.2 || e.clock > 2.2) touchDown(e, b);
         } else {
           v1.copy(h.pos); v1.y = Math.max(h.pos.y + 0.4, -6); goto(e, v1.x, v1.y, v1.z, b.lunge_mps, Fl.accel * 2.2, dt); faceHim(e, dt, 12);
-          if (!e.hitDone && dist < b.reach_m + 0.5) { X.blowLands(e, b, e.pos); if (e.state === 'strike') { e.state = 'recover'; e.clock = 0; } }
+          if (!e.hitDone && dist < b.reach_m + 0.5) { if (fights(e)) { e.hitDone = true; meets(e, h, b); } else X.blowLands(e, b, e.pos); if (e.state === 'strike') { e.state = 'recover'; e.clock = 0; } }
           if (e.state === 'strike' && e.clock >= b.strike_s) { e.state = 'recover'; e.clock = 0; }
         }
         break;
@@ -140,20 +161,37 @@ export async function createEmber(G, { foeMaterial, D }) {
       }
       case 'takeoff': want.set(0, Fl.climb_mps, 0); aim(e, want, Fl.accel, dt); faceHim(e, dt); if (e.t <= 0) back(e); break;
       case 'stun': e.vel.multiplyScalar(Math.exp(-3 * dt)); e.ask.multiplyScalar(0.8); if (e.t <= 0) back(e); break;
-      case 'dead': fallStep(e, dt); if (e.t <= 0) X.free(e); break;
+      case 'leave': want.set(0, -14, 0); aim(e, want, Fl.accel, dt); if (e.pos.y < 0.4 && !e.wetNow) { e.wetNow = true; rise(e.pos); } if (e.t <= 0 || e.pos.y < -1.5) { sink(e); return; } break;
+      case 'dead': fallStep(e, dt); if (e.t <= 0) { if (e.side === 'water') sink(e); else X.free(e); } break;
     }
     fly(e, dt);
   }
+  // two elementals meet: a blow of one on the other, and the sea or the steam says who it was
+  function meets(e, o, b) {
+    v1.lerpVectors(e.pos, o.pos, 0.5);
+    if (e.side === 'water') { o.onHit(b.damage, e.pos, 'water', { element: 'water', melee: false, status: { soak: 1 }, knock: 9, stun: 0.5, poise: 30 }); fx().sparks(v1, 12, 0xbdf7ff, 8); steam(v1, 6, 1); }
+    else { hurt(o, b.damage, e.pos); burst(v1, 12); }
+    A().hit(true); G.combat.log.push({ t: G.time, type: 'elementals', a: e.side, blow: b.id }); v2.subVectors(o.pos, e.pos).normalize(); e.vel.addScaledVector(v2, -7); if (o.vel) o.vel.addScaledVector(v2, 7);
+  }
+  function hurt(w, n, from) {
+    if (w.hp <= 0) return; w.hp -= n; w.u.uFlash.value = 1; if (w.hp <= 0) { w.state = 'dead'; w.t = 2.2; X.endTell(w); if (w.cur) w.cur.fadeOut(0.1); w.cur = null; X.playClip(w, 'death', 0.1, true); rise(w.pos, 1.4); G.combat.log.push({ t: G.time, type: 'water_down' }); } else { v2.subVectors(w.pos, from).normalize(); w.vel.addScaledVector(v2, 5); }
+  }
+  function sink(e) { e.slot.busy = false; e.slot.g.visible = false; e.slot.mixer.stopAllAction(); const i = waters.indexOf(e); if (i >= 0) waters.splice(i, 1); rise(e.pos, 0.9); }
   function back(e) { X.dropToken(e); X.endTell(e); e.state = 'circle'; e.t = rand(e.def.wait_s[0], e.def.wait_s[1]); if (e.cur) e.cur.fadeOut(0.18); e.cur = null; }
   // which blow: from the air he shoots; a swoop comes when he's near; a Warden in the water is only reached by going in after him; on land he comes down
+  function tellOf(e, b) {
+    if (!fights(e)) return X.beginTell(e, b);
+    e.blow = b; e.state = 'tell'; e.clock = 0; e.hitDone = false; e.cued = false; if (b.clip) { const a = X.playClip(e, b.clip, 0.1, true); if (a && b.clip_t) { a.time = b.clip_t[0]; a.setEffectiveTimeScale((b.clip_t[1] - b.clip_t[0]) / b.tell_s); } e.act = a; }
+  }
   function begin(e) {
-    const h = G.hero, B = e.def.blows, by = (id) => B.find((b) => b.id === id), under = h.pos.y < -2.5, r = Math.random();
+    const h = e.foe || G.hero, B = e.def.blows, by = (id) => B.find((b) => b.id === id), under = h.pos.y < -2.5, r = Math.random();
+    if (fights(e)) return tellOf(e, by(r < 0.5 ? 'bolt' : r < 0.72 ? 'strafe' : 'swoop'));
     if (under) { if (h.pos.y > -Q.flight.dive_m && r < 0.7) return X.beginTell(e, by('swoop')); e.t = 1.2; X.dropToken(e); return; }
     if (groundAt(h.pos.x, h.pos.z) > 0.6 && r < 0.3) { const a = Math.random() * 6.283; e.spot = (e.spot || new THREE.Vector3()).set(h.pos.x + Math.cos(a) * 7, 0, h.pos.z + Math.sin(a) * 7); e.spot.y = groundAt(e.spot.x, e.spot.z) + 1.0; if (e.spot.y > 1.5) return X.beginTell(e, by('slam')); }
     X.beginTell(e, by(r < 0.45 ? 'bolt' : r < 0.75 ? 'strafe' : 'swoop'));
   }
   function strikeBegins(e) {
-    const b = e.blow; if (b.burst) { e.shotsLeft = b.burst; e.gapT = 0; if (b.pass_mps) { e.passDir = (e.passDir || new THREE.Vector3()).subVectors(G.hero.pos, e.pos); e.passDir.y = 0; e.passDir.normalize(); } }
+    const b = e.blow; if (b.burst) { e.shotsLeft = b.burst; e.gapT = 0; if (b.pass_mps) { e.passDir = (e.passDir || new THREE.Vector3()).subVectors((e.foe || G.hero).pos, e.pos); e.passDir.y = 0; e.passDir.normalize(); } }
     if (!b.burst && !b.land && b.clip === 'e_kick') A().swing();
   }
   function touchDown(e, b) {
@@ -170,6 +208,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     const was = e.up; if (was.dot(push) < 0.999) { const a = was.angleTo(push), most = Q.flight.turn_rad * dt; was.lerp(push, Math.min(1, most / Math.max(a, 1e-4))).normalize(); }
     e.thrust = damp(e.thrust, clamp(thrust, 0.5, 4), 9, dt);
     const inWater = e.pos.y < 0.3;
+    if (e.side === 'water') return;
     if (inWater && !e.wetNow) { e.wetNow = true; hissAt(e.pos, 2.2); fx().sheet && fx().sheet(v1.copy(e.pos).setY(0), 2, 0); G.combat.log.push({ t: G.time, type: 'hiss', foe: e.kind }); }
     if (!inWater) e.wetNow = false;
     if (inWater) { e.vel.multiplyScalar(Math.exp(-Q.flight.water_drag * dt)); e.heat = Math.max(0, e.heat - H.sea_per_s * dt); if ((e.steamT = (e.steamT || 0) - dt) <= 0) { e.steamT = 0.09; steam(e.pos, 1, 1.1); } if (e.heat <= 0) douse(e); }
@@ -194,10 +233,10 @@ export async function createEmber(G, { foeMaterial, D }) {
 
   // ------------------------------------------------------------------ fire: a bolt flies, leaves its trail, and meets something
   function bolt(e, b) {
-    const s = shots.find((x) => !x.on); if (!s) return; const h = G.hero, side = e.nextHand = (e.nextHand || 0) ^ 1, hand = e.slot.jets[side][1];
+    const s = shots.find((x) => !x.on); if (!s) return; const h = e.foe || G.hero, side = e.nextHand = (e.nextHand || 0) ^ 1, hand = e.slot.jets[side][1];
     hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage; s.t = 3.2; s.trailT = 0; s.blow = b.id;
-    v1.copy(h.pos); v1.y = Math.max(h.pos.y + 0.3, 0.3); const l = s.p.distanceTo(v1) / b.speed_mps; v1.addScaledVector(h.vel, l * b.lead); s.v.subVectors(v1, s.p).normalize().multiplyScalar(b.speed_mps);
-    fx().sparks(s.p, 6, 0xffa040, 5); A().fwoosh && A().fwoosh(); G.combat.log.push({ t: G.time, type: 'bolt', foe: e.kind, blow: b.id });
+    v1.copy(h.pos); if (h === G.hero) v1.y = Math.max(h.pos.y + 0.3, 0.3); const l = s.p.distanceTo(v1) / b.speed_mps; v1.addScaledVector(h.vel, l * b.lead); s.v.subVectors(v1, s.p).normalize().multiplyScalar(b.speed_mps); s.side = e.side;
+    fx().sparks(s.p, 6, e.side === 'water' ? 0xbdf7ff : 0xffa040, 5); A().fwoosh && A().fwoosh(); G.combat.log.push({ t: G.time, type: 'bolt', foe: e.kind, blow: b.id });
   }
   function burst(p, n, k = 1) {
     const f = fx(); f.sparks(p, n, 0xffa040, 9 * k); f.ring(p.clone(), 1.6 * k, 0.28, 0xff7a22, v1.subVectors(G.camera.position, p).normalize().clone());
@@ -208,10 +247,21 @@ export async function createEmber(G, { foeMaterial, D }) {
   function steam(p, n, k) { const f = fx(); for (let i = 0; i < n; i++) { v1.set(p.x + rand(-0.5, 0.5) * k, Math.max(p.y, 0.1) + rand(0, 0.5) * k, p.z + rand(-0.5, 0.5) * k); f.sp('smoke', v1, k, rand(0.8, 1.4), STEAM, { s0: 0.3 * k, s1: 1.3 * k, a: 0.55, add: 0.1, hot: 0, vy: rand(1.4, 2.6), vx: rand(-0.6, 0.6), vz: rand(-0.6, 0.6), drag: 0.8, rot: Math.random() * 6.28, spin: rand(-1, 1) }); } }
   function stepShots(dt) {
     const h = G.hero;
+    // fire and water meeting in the air: both gone, in a burst of steam
+    for (const a of shots) { if (!a.on || a.side !== 'fire') continue; for (const b of shots) if (b.on && b.side === 'water' && a.p.distanceTo(b.p) < 1.5) { a.on = b.on = false; v1.lerpVectors(a.p, b.p, 0.5); steam(v1, 10, 1.5); fx().sparks(v1, 12, 0xffd8a0, 8); fx().sp('burst', v1, 1.4, 0.26, FOAM, { s0: 0.6, s1: 2, hot: 1, add: 0.6, rot: Math.random() * 6.28 }); A().hiss && A().hiss(0.8); G.combat.log.push({ t: G.time, type: 'clash' }); break; } }
     for (const s of shots) {
       if (!s.on) continue; s.t -= dt; s.p.addScaledVector(s.v, dt); const dist = s.p.distanceTo(h.pos), sp = s.v.length() || 1; let done = s.t <= 0;
+      if (s.side === 'water') {
+        if ((s.trailT -= dt) <= 0) { s.trailT = 0.03; fx().sp('dot', s.p, 0.34, 0.24, SEA, { s0: 0.34, s1: 0.08, hot: 0.6, add: 0.5 }); fx().sp('bead', s.p, 0.1, 0.5, FOAM, { s0: 0.1, s1: 0.04, hot: 0.4, add: 0.3, vy: 1, grav: 7 }); }
+        for (const o of emberkin()) if (!done && o.pos.distanceTo(s.p) < 1.6) { o.onHit(s.dmg, s.p, 'water', { element: 'water', status: { soak: 1 }, knock: 3, stun: 0.25, poise: 14 }); fx().sparks(s.p, 10, 0xbdf7ff, 7); steam(s.p, 4, 0.9); done = true; }
+        if (!done && s.p.y < 0) { fx().ring(v2.copy(s.p).setY(0.05), 1.4, 0.35, 0xdff4ff, Y); done = true; }
+        if (!done) { const g = groundAt(s.p.x, s.p.z); if (s.p.y < g) { fx().sparks(s.p, 8, 0xbdf7ff, 5); done = true; } }
+        if (done) s.on = false;
+        continue;
+      }
       if (!s.back && !s.cued && dist / sp < 0.42 && h.pos.y > -1.6) { s.cued = true; G.ui.cue('parry'); }
       if ((s.trailT -= dt) <= 0) { s.trailT = 0.03; fx().sp('dot', s.p, 0.42, 0.26, FIRE, { s0: 0.42, s1: 0.1, hot: 0.7, add: 0.8 }); if (Math.random() < 0.35) fx().sp('smoke', s.p, 0.3, 0.6, SMOKE, { s0: 0.22, s1: 0.6, a: 0.28, add: 0, hot: 0, rot: Math.random() * 6.28 }); }
+      for (const w of waters) if (!done && w.hp > 0 && w.pos.distanceTo(s.p) < 1.6) { hurt(w, s.dmg, s.p); burst(s.p, 10); steam(s.p, 4, 0.9); done = true; }
       if (s.back) { const o = s.from; if (o && o.hp > 0 && s.p.distanceTo(o.pos) < 1.9) { o.onHit(s.dmg * 3, s.p, 'bolt', { knock: 8, stun: 1.2, poise: 40 }); burst(s.p, 14); A().boom(); done = true; } }
       else if (dist < 1.5) {
         const res = h.damage(s.dmg, s.p); G.combat.log.push({ t: G.time, type: 'contact', foe: 'emberkin', blow: s.blow, res });
@@ -226,9 +276,9 @@ export async function createEmber(G, { foeMaterial, D }) {
   function drawShots() {
     const cam = G.camera.position;
     for (const s of shots) {
-      if (!s.on) continue; const len = s.v.length() || 1; v1.copy(s.v).multiplyScalar(-1 / len); viewX.subVectors(cam, s.p).normalize().cross(v1).normalize();
-      const L = 1.0, W = 0.34; G.fx.now('flame', s.p.x + v1.x * L, s.p.y + v1.y * L, s.p.z + v1.z * L, viewX.x * W, viewX.y * W, viewX.z * W, v1.x * -L, v1.y * -L, v1.z * -L, FIRE, 1, 0.9, 0.6);
-      G.fx.ball(s.p, 0.5, HOT);
+      if (!s.on) continue; const len = s.v.length() || 1, wet = s.side === 'water'; v1.copy(s.v).multiplyScalar(-1 / len); viewX.subVectors(cam, s.p).normalize().cross(v1).normalize();
+      const L = 1.0, W = 0.34; G.fx.now('flame', s.p.x + v1.x * L, s.p.y + v1.y * L, s.p.z + v1.z * L, viewX.x * W, viewX.y * W, viewX.z * W, v1.x * -L, v1.y * -L, v1.z * -L, wet ? SEA : FIRE, 1, 0.9, wet ? 0.3 : 0.6);
+      G.fx.ball(s.p, 0.5, wet ? FOAM : HOT, 1, wet ? 0.6 : 0.9, wet ? 0.5 : 1);
     }
   }
 
@@ -263,7 +313,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (e.frozen <= 0) s.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
     e.u.uHeat.value = damp(e.u.uHeat.value, e.heat, 6, dt);
     if (e.hp <= 0 && e.t < 1.4) e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 0.8);
-    if (e.state === 'tell') G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
+    if (e.state === 'tell' && !fights(e) && e.side !== 'water') G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
+    const wetBody = e.side === 'water', JET = wetBody ? SEA : FIRE, CORE = wetBody ? FOAM : HOT, AIRY = wetBody ? 0.28 : 0.55;
     const lit = e.hp > 0 && e.frozen <= 0 && e.doused <= 0 && e.state !== 'landed' ? clamp(e.heat * 1.6, 0.15, 1) : 0;
     g.updateMatrixWorld(true);
     const cam = G.camera.position, far = e.pos.distanceTo(cam);
@@ -275,18 +326,18 @@ export async function createEmber(G, { foeMaterial, D }) {
         v2.addScaledVector(v3, foot ? 0.12 : 0.06);
         viewX.subVectors(cam, v2).normalize().cross(v3).normalize();
         const cell = (G.stats.frames + i) % 2 ? 'flame' : 'flame2';
-        G.fx.now(cell, v2.x + v3.x * L, v2.y + v3.y * L, v2.z + v3.z * L, viewX.x * Wd, viewX.y * Wd, viewX.z * Wd, v3.x * -L, v3.y * -L, v3.z * -L, FIRE, 1, 1.0, 0.55);
-        const L2 = L * 0.52, W2 = Wd * 0.46; G.fx.now(cell, v2.x + v3.x * L2, v2.y + v3.y * L2, v2.z + v3.z * L2, viewX.x * W2, viewX.y * W2, viewX.z * W2, v3.x * -L2, v3.y * -L2, v3.z * -L2, HOT, 1, 1.0, 0.8);
+        G.fx.now(cell, v2.x + v3.x * L, v2.y + v3.y * L, v2.z + v3.z * L, viewX.x * Wd, viewX.y * Wd, viewX.z * Wd, v3.x * -L, v3.y * -L, v3.z * -L, JET, 1, 1.0, AIRY);
+        const L2 = L * 0.52, W2 = Wd * 0.46; G.fx.now(cell, v2.x + v3.x * L2, v2.y + v3.y * L2, v2.z + v3.z * L2, viewX.x * W2, viewX.y * W2, viewX.z * W2, v3.x * -L2, v3.y * -L2, v3.z * -L2, CORE, 1, 1.0, wetBody ? 0.4 : 0.8);
       }
       // the crown of fire: it stands straight up off his head and his speed lays it back
       s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
-      G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.5);
+      G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY);
       // seen from far off he's a light, and the sprite holds its size on the screen so a phone reads him at 40 m
-      if (far > 14) { const halo = Math.min(far * 0.075, 16); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, FIRE, clamp((far - 14) / 40, 0.1, 0.75)); }
+      if (far > 12) { const halo = Math.min(far * 0.05, 12); s.chest.getWorldPosition(v1); G.fx.ball(v1, halo, JET, clamp((far - 12) / 60, 0.08, 0.55), 0.05, 0.4); G.fx.ball(v1, halo * 0.32, CORE, clamp((far - 12) / 30, 0.1, 0.9), 0.5, 0.5); }
       if ((e.smokeT = (e.smokeT || 0) - dt) <= 0) {
         e.smokeT = sp > 14 ? 0.07 : 0.16; v1.copy(e.pos).addScaledVector(e.up, -0.9); const k = 0.45 + 0.5 * Math.min(1, sp / 30);
-        G.fx.sp('smoke', v1, k, sp > 14 ? 1.1 : 0.8, SMOKE, { s0: 0.26 * k, s1: 0.9 * k, a: 0.15, add: 0, hot: 0, vy: 0.9, drag: 0.7, rot: Math.random() * 6.28 });
-        if (Math.random() < 0.5) G.fx.sp('dot', v1, 0.1, 0.8, HOT, { s0: 0.11, s1: 0.03, hot: 0.8, add: 1, vx: e.vel.x * 0.2 + rand(-1.4, 1.4), vy: e.vel.y * 0.2 + rand(-1, 1.6), vz: e.vel.z * 0.2 + rand(-1.4, 1.4), grav: 3 });
+        G.fx.sp('smoke', v1, k, sp > 14 ? 1.1 : 0.8, wetBody ? FOAM : SMOKE, { s0: 0.26 * k, s1: 0.9 * k, a: wetBody ? 0.12 : 0.15, add: 0, hot: 0, vy: wetBody ? -0.4 : 0.9, drag: 0.7, rot: Math.random() * 6.28 });
+        if (Math.random() < 0.5) G.fx.sp(wetBody ? 'bead' : 'dot', v1, 0.1, 0.8, CORE, { s0: 0.11, s1: 0.03, hot: 0.8, add: 1, vx: e.vel.x * 0.2 + rand(-1.4, 1.4), vy: e.vel.y * 0.2 + rand(-1, 1.6), vz: e.vel.z * 0.2 + rand(-1.4, 1.4), grav: 3 });
       }
       // low over the sea the jets dig into it
       const dy = e.pos.y; if (dy < 5.5 && groundAt(e.pos.x, e.pos.z) < 0 && (e.washT = (e.washT || 0) - dt) <= 0) { e.washT = 0.1; const near = (5.5 - dy) / 5.5, k = 0.5 + near; for (let i = 0; i < 2; i++) { const a = Math.random() * 6.283, c = Math.cos(a), n = Math.sin(a); v1.set(e.pos.x + c * 0.7, 0.1, e.pos.z + n * 0.7); G.fx.sp('smoke', v1, k, 0.7, STEAM, { s0: 0.3 * k, s1: 1.1 * k, a: 0.16 + 0.16 * near, add: 0.1, hot: 0, vx: c * 5 * k, vy: 0.6, vz: n * 5 * k, drag: 1.6, rot: Math.random() * 6.28 }); } }
@@ -299,11 +350,20 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ the raid: one comes in from the horizon, from where he's looking. When it's down, the next, after a breath
   const R = { on: false, cool: Q.raid.first_s, list: [], told: false, kills: 0 };
   const quiet = () => { const b = G.boss; return G.playing && !G.paused && G.started && !(b && b.active) && !(G.quest && G.quest.cineOn && G.quest.cineOn()) && !(G.cine && G.cine.active) && G.enemies.count() === 0; };
+  // a water elemental comes up out of the sea beside him
+  function rise(p, k = 1) { const f = fx(); v1.copy(p); v1.y = 0.05; f.sheet && f.sheet(v1, 3 * k, 0); f.ring(v1.clone(), 3 * k, 0.6, 0xdff4ff, Y); A().splash(); for (let i = 0; i < 8; i++) { const a = i * 0.785, s2 = rand(4, 9) * k; f.sp('bead', v1, 0.16, 0.9, FOAM, { s0: 0.16, s1: 0.07, hot: 0.4, add: 0.3, vx: Math.cos(a) * s2, vy: rand(6, 12) * k, vz: Math.sin(a) * s2, grav: 16 }); } }
+  function callWater(at = null) {
+    const slot = waterPool.find((x) => !x.busy); if (!slot) return null; const h = G.hero, a = G.camYaw + (Math.random() < 0.5 ? 1.2 : -1.2), W = Q.water;
+    const p = at ? at.clone() : new THREE.Vector3(h.pos.x + Math.sin(a) * 9, -2.2, h.pos.z + Math.cos(a) * 9); if (groundAt(p.x, p.z) > -2) p.y = groundAt(p.x, p.z) + 1;
+    slot.busy = true; slot.g.visible = true; slot.g.scale.setScalar(1); const e = { kind: 'water_elemental', side: 'water', def: W, slot, pos: p, vel: new THREE.Vector3(0, 16, 0), heading: a + 3.14, hp: W.hp, maxHp: W.hp, r: 0.85, t: 0, circleDir: Math.random() < 0.5 ? -1 : 1, phase: Math.random() * 6.28, cur: null, clock: 0, slow: 1, frozen: 0, launched: 0, hitDone: false, hold: false, blow: null, u: slot.mat.U, first: false };
+    for (const k of ['uFrost', 'uWet', 'uTell', 'uFlash', 'uFade']) e.u[k].value = 0; e.u.uTint.value.setRGB(1, 1, 1); born(e); e.side = 'water'; e.vel.set(0, 16, 0); waters.push(e); rise(p); G.combat.log.push({ t: G.time, type: 'water_rises' }); return e;
+  }
   function raidNow(n = 1, from = null) {
     const h = G.hero, yaw = G.camYaw + rand(-0.15, 0.15);
     for (let i = 0; i < n; i++) {
-      const p = from ? from.clone() : new THREE.Vector3(h.pos.x + Math.sin(yaw) * Q.raid.from_m + i * 18, Q.raid.high_m + i * 4, h.pos.z + Math.cos(yaw) * Q.raid.from_m); const e = X.spawn('emberkin', p); if (e) R.list.push(e);
+      const p = from ? from.clone() : new THREE.Vector3(h.pos.x + Math.sin(yaw) * Q.raid.from_m + i * 18, Q.raid.high_m + i * 4, h.pos.z + Math.cos(yaw) * Q.raid.from_m); const e = X.spawn('emberkin', p); if (e) { e.first = true; R.list.push(e); }
     }
+    R.water = 5.5;
     R.on = R.list.length > 0; if (R.on) { G.combat.log.push({ t: G.time, type: 'raid', n: R.list.length }); if (!FLAG.film) { if (h.pos.y < -3) G.ui.toast('Fire above the water', 'An Emberkin is coming. Go up and look at the sky', 6); else G.ui.toast('Fire on the horizon', 'An Emberkin is coming', 4); } }
     return R.list;
   }
@@ -315,14 +375,21 @@ export async function createEmber(G, { foeMaterial, D }) {
     raidNow(Math.min(1 + (R.kills >> 1), MAX));
   }
 
-  function step(dt) { stepShots(dt); raid(dt); }
-  function frame(dt) { time.value = G.time; drawShots(); if (A().jet) A().jet(loud); loud = 0; void dt; }
+  function step(dt) {
+    stepShots(dt); raid(dt);
+    if (R.water > 0 && (R.water -= dt) <= 0 && R.list.length && Q.water.in_raids) { if (callWater()) { if (!FLAG.film) G.ui.toast('A water elemental rises', 'It fights beside you', 4); } }      // it comes as the fire arrives
+    for (let i = waters.length - 1; i >= 0; i--) { const e = waters[i]; if (e.prev) e.prev.copy(e.pos); else { e.prev = e.pos.clone(); e.draw = e.pos.clone(); } brain(e, dt); if (waters[i] !== e) continue; e.pos.addScaledVector(e.vel, dt); keepOut(e, dt); for (const o of waters) if (o !== e) { const d = e.pos.distanceTo(o.pos); if (d < 3 && d > 0.01) e.vel.addScaledVector(v1.subVectors(e.pos, o.pos).normalize(), (3 - d) * 6 * dt); } }
+  }
+  function frame(dt) { time.value = G.time; for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); if (A().jet) A().jet(loud); loud = 0; }
 
   return {
-    pool, brain, keepOut, draw, struck, died, step, frame, raidNow, raids: R, shots, MAX,
-    warm: [...pool.map((s) => s.g)],
+    pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, waters, raids: R, shots, MAX,
+    warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g)],
+    blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
-    born(e) { e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
-      const a = e.slot.acts; for (const n of WEIGHTS) { a[n].reset(); a[n].setEffectiveWeight(n === 'fly_hover' ? 1 : 0); a[n].play(); } },
+    born,
   };
+  function born(e) { e.side = e.side || 'fire'; e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
+    const a = e.slot.acts; for (const n of WEIGHTS) { a[n].reset(); a[n].setEffectiveWeight(n === 'fly_hover' ? 1 : 0); a[n].play(); }
+  }
 }

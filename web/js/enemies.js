@@ -692,7 +692,7 @@ export async function createEnemies(G) {
   return {
     step, animate,
     keep() { for (const e of awake) { if (!e.prev) { e.prev = e.pos.clone(); e.draw = e.pos.clone(); } e.prev.copy(e.pos); } },
-    blend(a) { for (const e of awake) { if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); } },
+    blend(a) { for (const e of awake) { if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); } ember.blend(a); },
     alive: () => awake.filter((e) => e.hp > 0 && !e.hidden),   // what can be seen and struck; count() knows about a moray still in its hole
     count: () => awake.filter((e) => e.hp > 0).length, kindAt, rosterOf,
     all: () => awake,

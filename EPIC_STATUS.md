@@ -129,6 +129,7 @@ Parts such as M1a report on their parent's line. A parent is `check green` when 
 | V7 | Fire bosses | todo | |
 | V8 | The war | todo | |
 | V9 | All work well together | todo | |
+| V13 | The all-fire super mode | building | CR-44 |
 | V10 | Fire cities | todo | his words logged, what he sees is asked before building |
 | V11 | Sky fortresses | todo | his words logged, what he sees is asked before building |
 | V12 | Clips of the two sides fighting | todo | the aim of the first Emberkin step; how to film it is his |

@@ -498,7 +498,7 @@ export function createQuest(G) {
     if (!G.started) cine.step(dt);
     if ((pearlT += 1) % 2 === 0) layPearls(t);
     things.update(t); things.omenStep(t, dt);
-    things.beacon(st.talk || st.cine || cine.active ? null : target(), dt);
+    things.beacon(st.talk || st.cine || cine.active || G.noBeacon ? null : target(), dt);
     if (cine.draw()) return;
     if (st.cine && G.camera) {
       const c = st.cine, f = c.t / c.dur, a = c.a + f * 1.1;

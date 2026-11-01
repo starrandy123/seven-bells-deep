@@ -1045,7 +1045,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
           mvPosition.xyz += nv*max(ocPaint*1.2, small*1.5)/perM;
           gl_Position = projectionMatrix*mvPosition;
           // a small figure keeps its own colours; its line is whatever stands out: dark on sky, bright water and sand, pale in the deep and at night
-          vInkS = small*ocInkBg*(1.0 - step(0.0, cameraPosition.y)*(1.0 - step(.3, modelMatrix[3].y)));
+          vInkS = ${opts.warm ? 'small' : 'small*ocInkBg*(1.0 - step(0.0, cameraPosition.y)*(1.0 - step(.3, modelMatrix[3].y)))'};
         }`);
       sh.fragmentShader = 'varying float vInkS;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>\n diffuseColor.rgb = mix(vec3(.004, .010, .018), ${opts.warm ? 'vec3(1.0, .46, .10)' : 'vec3(.42, .86, 1.0)'}, vInkS);`);
     };
