@@ -10,33 +10,33 @@ def side(a, s):
     """The same arm on his left."""
     return {'fr': a['fr'], 'd1': (-a['d1'][0], a['d1'][1], a['d1'][2]), 'd2': (-a['d2'][0], a['d2'][1], a['d2'][2]), 'palm': (a['palm'][0], -a['palm'][1], -a['palm'][2])} if s == 'L' else a
 
-# Standing on the jets: the soles and palms push down, the weight hangs from the chest, one knee rides high so he reads as held up and not as stood on nothing.
+# Standing on the jets: the soles and palms push down, the weight hangs from the chest, the feet together over the one jet they share, the knees soft.
 def fly_hover(sk, ph):
     a = 2 * math.pi * ph; s, c = math.sin(a), math.cos(a); s2 = math.sin(2 * a)
     R = arm((0.36, 0.05 + 0.01 * s, -0.93), (0.30, 0.16 + 0.02 * s, -0.94), (-34, 0, 0))
     return {'hips': (5 + 1.4 * s2, 2 * s, 1.2 * c), 'off': (0.0, 0.0, 0.016 * s2), 'spine': (3 + 1.5 * s2, 3 * c, 1.2 * s), 'head': (-3, -2 * c, 0), 'R': R, 'L': side(arm((0.36, 0.05 - 0.01 * s, -0.93), (0.30, 0.16 - 0.02 * s, -0.94), (-34, 0, 0)), 'L'),
-            'legR': (-8 + 2.2 * s2, 2, 4, -15 - 3 * s2, -46, 0), 'legL': (30 - 3 * s, -5, -6, -56 + 4 * s, -40, 0), 'grip': (0.0, 0.3)}
+            'legR': (-3 + 1.6 * s2, 0, -3.4, -11 - 2 * s2, -52, 0), 'legL': (6 - 1.6 * s2, 0, 3.4, -20 + 2 * s2, -52, 0), 'grip': (0.0, 0.3)}
 
 # Flat out: the body lies along the way he's going (the game tilts him), so the clip has the rest: back arched, head up to see, arms swept behind him with the palms driving back, legs trailing, loose.
 def fly_forward(sk, ph):
     a = 2 * math.pi * ph; s, c = math.sin(a), math.cos(a)
     return {'hips': (-5, 2 * s, 2 * c), 'off': (0.0, 0.0, 0.0), 'spine': (-15 - 1.5 * c, -3 * s, 2 * s), 'head': (-46, 2 * s, 0),
             'R': arm((0.40, -0.56, -0.72), (0.26, -0.80, -0.54), (-44, 0, 0)), 'L': side(arm((0.40, -0.56, -0.72), (0.26, -0.80, -0.54), (-44, 0, 0)), 'L'),
-            'legR': (-10 + 5 * s, 2, 3, -12 - 8 * s, -54, 0), 'legL': (-3 - 5 * s, -2, -3, -30 + 9 * s, -54, 0), 'grip': (0.0, 0.3)}
+            'legR': (-8 + 1.6 * s, 0, -3.4, -7 - 2 * s, -58, 0), 'legL': (-7 - 1.6 * s, 0, 3.4, -11 + 2 * s, -58, 0), 'grip': (0.0, 0.3)}
 
 # Everything on: arms locked straight back, legs together, chin up, the whole body shaking with it.
 def fly_boost(sk, ph):
     a = 2 * math.pi * ph; s = math.sin(a); j = math.sin(2 * a) * 0.8
     return {'hips': (-7, 0, 1.2 * s), 'off': (0.0, 0.0, 0.0), 'spine': (-20 + j, 0, 1.2 * s), 'head': (-52 + j, 0, 0),
             'R': arm((0.20, -0.90, -0.38), (0.13, -0.96, -0.24), (-30, 0, 0)), 'L': side(arm((0.20, -0.90, -0.38), (0.13, -0.96, -0.24), (-30, 0, 0)), 'L'),
-            'legR': (-8 + 1.6 * s, 1, 1, -5, -62, 0), 'legL': (-11 - 1.6 * s, -1, -1, -10, -62, 0), 'grip': (0.0, 0.3)}
+            'legR': (-9 + 0.8 * s, 0, -3.4, -4, -62, 0), 'legL': (-9 - 0.8 * s, 0, 3.4, -5, -62, 0), 'grip': (0.0, 0.3)}
 
 # Stopping: the legs swing out in front and the palms push ahead of him, so the jets are aimed the way he's going.
 def fly_brake(sk, ph):
     a = 2 * math.pi * ph; s = math.sin(a); c = math.cos(a)
     return {'hips': (15, 1.5 * s, 0), 'off': (0.0, 0.0, 0.0), 'spine': (15 + 1.2 * c, 0, 1.2 * s), 'head': (-16, 0, 0),
             'R': arm((0.40, 0.56, -0.72), (0.20, 0.90, -0.40), (-72, 0, 0)), 'L': side(arm((0.40, 0.56, -0.72), (0.20, 0.90, -0.40), (-72, 0, 0)), 'L'),
-            'legR': (54 + 2 * s, 3, 5, -62 + 2 * c, -18, 0), 'legL': (38 - 2 * s, -3, -5, -42 - 2 * c, -24, 0), 'grip': (0.0, 0.3)}
+            'legR': (46 + 1.5 * s, 0, -3.4, -52 + 2 * c, -20, 0), 'legL': (42 - 1.5 * s, 0, 3.4, -48 - 2 * c, -22, 0), 'grip': (0.0, 0.3)}
 
 LOOPS = {'fly_hover': (fly_hover, 72), 'fly_forward': (fly_forward, 36), 'fly_boost': (fly_boost, 18), 'fly_brake': (fly_brake, 48)}
 

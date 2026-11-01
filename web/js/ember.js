@@ -285,13 +285,16 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
 
   // ------------------------------------------------------------------ drawing: the tilt, the clips by how he's moving, the flame at each palm and sole
-  const WEIGHTS = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'];
+  const WEIGHTS = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'], footA = new THREE.Vector3(), footB = new THREE.Vector3();
   // the flame at each palm and sole: along the limb, and pushed toward the line the jets are driving on
   function jetsOf(pairs, up, thrust, k, JET, CORE, AIRY, CA) {
     const cam = G.camera.position;
-    for (let i = 0; i < 4; i++) {
-      const [a, c] = pairs[i]; a.getWorldPosition(v1); c.getWorldPosition(v2); v3.subVectors(v2, v1).normalize().multiplyScalar(0.72).addScaledVector(up, -0.5).normalize();
-      const foot = i >= 2, L = (foot ? 0.62 : 0.42) * (0.55 + 0.62 * thrust) * k, Wd = (foot ? 0.2 : 0.15) * (0.7 + 0.2 * thrust);
+    // Randy, 1 Nov: "Make sure the foot thrusters are one": the palms each throw their own; the feet, held together, throw a single jet from between them
+    for (let i = 0; i < 3; i++) {
+      const foot = i === 2, [a, c] = pairs[i]; a.getWorldPosition(v1); c.getWorldPosition(v2);
+      if (foot) { const [a2, c2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); }
+      v3.subVectors(v2, v1).normalize().multiplyScalar(0.72).addScaledVector(up, -0.5).normalize();
+      const L = (foot ? 0.8 : 0.42) * (0.55 + 0.62 * thrust) * k, Wd = (foot ? 0.27 : 0.15) * (0.7 + 0.2 * thrust);
       v2.addScaledVector(v3, foot ? 0.12 : 0.06);
       viewX.subVectors(cam, v2).normalize().cross(v3).normalize();
       const cell = (G.stats.frames + i) % 2 ? 'flame' : 'flame2';

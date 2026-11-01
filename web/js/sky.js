@@ -400,6 +400,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         // the shallows clear over sand; foam runs in and out along the waterline
         float bed = bed0;
         float clearA = smoothstep(.2, 7.0, bed);
+        clearA = mix(clearA, max(clearA, smoothstep(.2, 2.6, bed)*.8), smoothstep(5.0, 30.0, cameraPosition.y));      // seen from the air the shallows are water with a colour of their own, not the sand lit up through a pane of glass
         a = mix(F*.9 + .10, a, clearA);
         c = mix(sky*F*.9 + spec + body*.16, c, clearA);
         if (ocPaint > 0.0) {
@@ -446,7 +447,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         if (vBrk.x > .01) {      // a breaker's white water: torn at its edges by the noise, carried with the wave
           vec2 fq = vP.xz*.33;
           float w1 = texture(tOcNoise, fq + ocTime*vec2(.021, .013)).b, w2 = texture(tOcNoise, fq*2.6 - ocTime*vec2(.034, .022)).a;
-          float bf = smoothstep(.22, .66, vBrk.x*1.2 + (w1*.6 + w2*.4 - .5)*.85);
+          float bf = smoothstep(.22, .66, vBrk.x*1.2 + (w1*.6 + w2*.4 - .5)*.85)*(1.0 - smoothstep(55.0, 150.0, dist));
           c = mix(c, vec3(1.22, 1.24, 1.22)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), bf);
           a = max(a, bf*.97);
         }

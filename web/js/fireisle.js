@@ -15,11 +15,12 @@ export function isleZ(x, y, bed) {
   const r = edge(x, y); if (r >= 1.4) return bed;
   const land = 1 - smooth((r - 0.8) / 0.2), town = 1 - smooth((Math.hypot(x - CITY.x, y - CITY.y) - CITY.r) / 40); let z = -2.4 + land * (8.4 + rough(x, y) * 0.8 * (1 - town * 0.92));      // level under the streets, or every kerb is a wall
   const d = Math.hypot(x - FIRE_HILL.x, y - FIRE_HILL.y); z += land * (68 * Math.exp(-Math.pow(d / 54, 1.5)) - 22 * Math.exp(-Math.pow(d / 12, 2)));
-  return r <= 1 ? z : Math.min(z + (bed - z) * smooth((r - 1) / 0.4), z);
+  // a volcanic shore: it drops away at once into dark water, no pale shelf and no surf
+  return r <= 1 ? z : Math.min(z + (Math.min(bed, -14) - z) * smooth((r - 1) / 0.14), z) * (1 - smooth((r - 1.14) / 0.26)) + bed * smooth((r - 1.14) / 0.26);
 }
 export function addIsle(data) {
   if (data.poi.some((p) => p.id === CITY.id)) return;
-  data.poi.push({ id: 'burnt_isle', name: 'The Burnt Isle', x: ISLE.x, y: ISLE.y, z: 8, r: ISLE.R }, { ...CITY, z: 8 }, { ...SKY });
+  data.poi.push({ id: 'burnt_isle', name: 'The Burnt Isle', x: ISLE.x, y: ISLE.y, z: 8, r: ISLE.R, noBreak: true }, { ...CITY, z: 8, noBreak: true }, { ...SKY, noBreak: true });
   const z = isleZ(FIRE_HILL.x, FIRE_HILL.y, 0); data.plumes.push({ id: 'isle_crater', x: FIRE_HILL.x, y: FIRE_HILL.y, z, r: 10, h: 80 });
   // what stood on this sea floor is under the island now
   for (const k in data.instances) { const L = data.instances[k]; let hit = false; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) < 1.15) { hit = true; break; } if (!hit) continue; const keep = []; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) >= 1.15) keep.push(L[i], L[i + 1], L[i + 2], L[i + 3], L[i + 4], L[i + 5]); data.instances[k] = keep; }
@@ -34,7 +35,7 @@ export function raiseIsle(data, Hz, n, cell, ox, oy) {
 // black rock wherever the isle stands (biome2, red: cinder. On land that's black rock)
 export function paintIsle(b, bn, c, ox, oy) {
   const near = Math.ceil((ISLE.R * 1.3) / c), ci = Math.round((ISLE.x - ox) / c), cj = Math.round((ISLE.y - oy) / c);
-  for (let j = Math.max(0, cj - near); j <= Math.min(bn - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(bn - 1, ci + near); i++) { const k = 1 - smooth((edge(ox + i * c, oy + j * c) - 1.02) / 0.1), o = (j * bn + i) * 4; if (k <= 0) continue; const c0 = Math.round(255 * k + b[o] * (1 - k)), g = Math.round(b[o + 1] * (1 - k)), r = Math.round(b[o + 2] * (1 - k)); b[o] = c0; b[o + 1] = g; b[o + 2] = r; b[o + 3] = 255 - c0 - g - r; }
+  for (let j = Math.max(0, cj - near); j <= Math.min(bn - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(bn - 1, ci + near); i++) { const k = 1 - smooth((edge(ox + i * c, oy + j * c) - 1.16) / 0.16), o = (j * bn + i) * 4; if (k <= 0) continue; const c0 = Math.round(255 * k + b[o] * (1 - k)), g = Math.round(b[o + 1] * (1 - k)), r = Math.round(b[o + 2] * (1 - k)); b[o] = c0; b[o + 1] = g; b[o + 2] = r; b[o + 3] = 255 - c0 - g - r; }
   return b;
 }
 // the rock the High City stands on: flat on top, a broken cone below it, split by the same molten seams as an Emberkin

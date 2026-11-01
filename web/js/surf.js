@@ -5,7 +5,7 @@
 // Each break: where its waterline is (scene x, z), the way out to sea, half its width along the shore, how far out the swell builds (m), its height, its phase.
 // The sea (sky.js) draws the waves from these and its CPU wave reads the same formula, so what the hero rides is the water you see.
 export function findBreaks(data, heightAt, max = 6) {
-  const islands = (data.poi || []).filter((p) => p.z > 0 && p.r >= 40), all = [];
+  const islands = (data.poi || []).filter((p) => p.z > 0 && p.r >= 40 && !p.noBreak), all = [];
   for (const isl of islands) {
     const cands = [];
     for (let a = 0; a < 360; a += 3) {
