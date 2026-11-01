@@ -50,7 +50,7 @@ const BURN = {
 };
 
 export async function createEmber(G, { foeMaterial, D }) {
-  const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 3 : 4, WATERS = phone ? 2 : 3, time = { value: 0 };
+  const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 2 : 3, WATERS = Q.water.in_raids ? (phone ? 2 : 3) : 0, time = { value: 0 };
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync('assets/ember.glb');
   let manB = null, fireB = null; const packed = new THREE.Vector4(0, 0, 0, 1);       // the packer stores positions as whole numbers with a scale on the node: the fire's pattern is in metres
