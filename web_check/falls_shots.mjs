@@ -14,12 +14,13 @@ for (const form of ['phone', 'wide']) {
   const info = await page.evaluate(() => { const G = window.__game, P = G.world.rivers, pl = P.pools[0], f = pl.f, h = G.hero; G.started = G.playing = true; G.quest.events && G.quest.events.hold && G.quest.events.hold(true); const ms = G.quest.missions; for (const m of ms.active.slice()) ms.stop(m); if (G.enemies.clearAll) G.enemies.clearAll();
     h.pos.set(pl.cx, pl.W + 1.5, -pl.cy); h.prev.copy(h.pos); h.drawPos.copy(h.pos); h.inv = 1e6; h.vel.set(0, 0, 0);
     window.__cam = { p: [0, 0, 0], at: [0, 0, 0], fov: 55 };
+    G.scene.traverse((o) => { if (o.renderOrder === 22 && o.material && o.material.uniforms && o.material.uniforms.uC) o.material.uniforms.uC.value.set(0); });      // the objective's beacon: not part of the place
     G.filmCam = () => { const c = G.camera, v = window.__cam; c.fov = v.fov; c.updateProjectionMatrix(); c.position.set(v.p[0], v.p[2], -v.p[1]); c.lookAt(v.at[0], v.at[2], -v.at[1]); c.updateMatrixWorld(); };
     return { W: pl.W, fx: pl.ft.x, fy: pl.ft.y, ox: pl.ux, oy: pl.uy, f: { x: f.x, y: f.y, z0: f.z0, z1: f.z1, w: f.w }, ra: pl.ra, rb: pl.rb }; });
   const { W, fx, fy, ox, oy, f } = info, mid = (f.z0 + W) / 2;
   const cams = {
     falls_wide: { p: [fx + ox * 34 + oy * 6, fy + oy * 34 - ox * 6, W + 7], at: [f.x, f.y, mid - 3], fov: 55 },
-    falls_near: { p: [fx + ox * 15 - oy * 5, fy + oy * 15 + ox * 5, W + 2.5], at: [fx, fy, mid], fov: 62 },
+    falls_near: { p: [fx + ox * 17 - oy * 2, fy + oy * 17 + ox * 2, W + 3.2], at: [fx, fy, mid], fov: 62 },
     falls_side: { p: [fx + ox * 4 + oy * 26, fy + oy * 4 - ox * 26, W + 8], at: [fx, fy, mid - 2], fov: 50 },
     cliff_left: { p: [fx + ox * 30 - oy * 22, fy + oy * 30 + ox * 22, W + 6], at: [fx + oy * 26, fy - ox * 26, W + 9], fov: 55 },
     crest: { p: [f.x + ox * 3 - oy * 16, f.y + oy * 3 + ox * 16, f.z0 + 6], at: [f.x + ox * 16 + oy * 16, f.y + oy * 16 - ox * 16, f.z0 - 8], fov: 60 },

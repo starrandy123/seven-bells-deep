@@ -56,9 +56,12 @@ export function planRivers(data, Hz, n, cell, ox, oy) {
     const len = curve.getLength(), N = Math.max(2, Math.round(len / DS)), ds = len / N;
     const X = new Float32Array(N + 1), Y = new Float32Array(N + 1), TX = new Float32Array(N + 1), TY = new Float32Array(N + 1), HW = new Float32Array(N + 1), D = new Float32Array(N + 1);
     const Wr = new Float64Array(N + 1), p = new THREE.Vector3(), tg = new THREE.Vector3(), hw0 = r.w * .5, depth = .55 + .07 * r.w;
+    const end = r.pts[r.pts.length - 1], lip = F.some((f) => Math.hypot(f.x - end[0], f.y - end[1]) < 3);       // this river goes over a fall
     for (let i = 0; i <= N; i++) {
       const u = i / N; curve.getPointAt(u, p); curve.getTangentAt(u, tg);
-      const tl = Math.hypot(tg.x, tg.y) || 1; X[i] = p.x; Y[i] = p.y; TX[i] = tg.x / tl; TY[i] = tg.y / tl; HW[i] = hw0; D[i] = depth;
+      // a stream's width wanders, and it fans out over a fall's lip (Randy, 1 Nov: the stream on the ground "looks sloppy"; a level ribbon of one width is what he saw)
+      const sAt = i * ds, wander = 1 + .26 * Math.sin(sAt * .17 + r.w * 3.1) + .15 * Math.sin(sAt * .41 + r.w * 7.7), toLip = (len - sAt), fan = lip ? 1 + 1.3 * smooth(10, 0, toLip) : 1;
+      const tl = Math.hypot(tg.x, tg.y) || 1; X[i] = p.x; Y[i] = p.y; TX[i] = tg.x / tl; TY[i] = tg.y / tl; HW[i] = hw0 * Math.max(wander, 1 - smooth(4, 0, sAt)) * fan; D[i] = depth;
       const nx = -TY[i], ny = TX[i], hw = HW[i];
       let bed = 1e9; for (let d = -.6 * hw; d <= .6 * hw + 1e-6; d += .5) bed = Math.min(bed, at(X[i] + nx * d, Y[i] + ny * d));
       const bank = (sd) => .5 * (at(X[i] + nx * sd * (hw + 1), Y[i] + ny * sd * (hw + 1)) + at(X[i] + nx * sd * (hw + 2.2), Y[i] + ny * sd * (hw + 2.2)));
