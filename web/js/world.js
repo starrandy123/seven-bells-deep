@@ -952,14 +952,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
 
   // ---------------------------------------------------------------- glow: pools on the ground, and soft cards in the water (a phone's bloom)
   const tGlow = (() => {
+    const gs = phone ? 2 : 1, gn = (bn - 1) / gs + 1;      // the smallest pool of light here is 11 m across: on a phone 8 m a texel holds it, and a quarter of the memory
     const bytes = () => {
-    const out = new Float32Array(bn * bn * 4);
+    const out = new Float32Array(gn * gn * 4);
     const splat = (x, y, r, ch, amp) => {
-      const c = 2 * cell, gx = (x - ox) / c, gy = (y - oy) / c, R = Math.ceil(r / c);
+      const c = 2 * cell * gs, gx = (x - ox) / c, gy = (y - oy) / c, R = Math.ceil(r / c);
       for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
-        const ix = Math.round(gx) + i, iy = Math.round(gy) + j; if (ix < 0 || iy < 0 || ix >= bn || iy >= bn) continue;
+        const ix = Math.round(gx) + i, iy = Math.round(gy) + j; if (ix < 0 || iy < 0 || ix >= gn || iy >= gn) continue;
         const dx = (ix - gx) * c, dy = (iy - gy) * c, d = Math.max(0, 1 - (dx * dx + dy * dy) / (r * r));
-        out[(iy * bn + ix) * 4 + ch] += amp * d * d;
+        out[(iy * gn + ix) * 4 + ch] += amp * d * d;
       }
     };
     const G = data.instances.glow_coral || [], Lp = data.instances.lamp || [];
@@ -967,11 +968,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     for (let i = 0; i < Lp.length; i += 6) splat(Lp[i], Lp[i + 1], 15, 2, .9);
     for (const k of ['wall_windows', 'tower', 'dome_hall']) { const L = data.instances[k] || []; for (let i = 0; i < L.length; i += 6) splat(L[i], L[i + 1], 20 * L[i + 4], 3, .5); }
     for (const k of ['wall_windows_cold', 'tower_cold']) { const L = data.instances[k] || []; for (let i = 0; i < L.length; i += 6) splat(L[i], L[i + 1], 20 * L[i + 4], 0, .5); }
-    const b = new Uint8Array(bn * bn * 4); for (let i = 0; i < b.length; i++) b[i] = Math.min(255, out[i] * 255);
+    const b = new Uint8Array(gn * gn * 4); for (let i = 0; i < b.length; i++) b[i] = Math.min(255, out[i] * 255);
     letGo(out);
     return b;
     };
-    const t = new THREE.DataTexture(bytes(), bn, bn, THREE.RGBAFormat, THREE.UnsignedByteType);
+    const t = new THREE.DataTexture(bytes(), gn, gn, THREE.RGBAFormat, THREE.UnsignedByteType);
     t.remake = bytes;
     t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; t.needsUpdate = true;
     return freeAfter(t);

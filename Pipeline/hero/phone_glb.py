@@ -1,4 +1,4 @@
-# hero_phone.glb, reaver_phone.glb: the same body with its textures at half size, for the phone tier. Geometry, skin and clips are the same bytes; only the images change.
+# hero_phone.glb, reaver_phone.glb: the same body with its textures at half size, for the phone tier, and its normal map at a quarter: a figure a phone draws 200 px tall reads no finer. Geometry, skin and clips are the same bytes; only the images change.
 #   python3 phone_glb.py <hero.glb> <hero_phone.glb> [scale=2]        macOS `sips` does the resampling (no installs)
 import json, os, struct, subprocess, sys, tempfile
 
@@ -15,7 +15,7 @@ def shrink(data, name, scale, qual):
 
 def main(src, dst, scale=2):
     J, B = read(src); views = J['bufferViews']; repl = {}
-    for im in J['images']: repl[im['bufferView']] = shrink(bytes(B[views[im['bufferView']].get('byteOffset', 0):views[im['bufferView']].get('byteOffset', 0) + views[im['bufferView']]['byteLength']]), im['name'], scale, 62)
+    for im in J['images']: repl[im['bufferView']] = shrink(bytes(B[views[im['bufferView']].get('byteOffset', 0):views[im['bufferView']].get('byteOffset', 0) + views[im['bufferView']]['byteLength']]), im['name'], scale * (2 if im.get('name', '').endswith('_normal') else 1), 62)
     out = bytearray(); pad = lambda: out.extend(b'\0' * (-len(out) % 4))
     for i, v in enumerate(views):
         ext = (v.get('extensions') or {}).get('EXT_meshopt_compression')
