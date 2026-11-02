@@ -54,7 +54,7 @@ export async function createEmber(G, { foeMaterial, D }) {
 
   const shots = []; for (let i = 0; i < (phone ? 6 : 9); i++) shots.push({ on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, from: null, dmg: 0, back: false, cued: false, trailT: 0 });
   let X = null;      // what enemies.js lends: takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn, count
-  const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
+  const v4 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
   const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
   const DUST = new THREE.Color(0.74, 0.69, 0.62);
   const waters = [];      // the water elementals in the air. They aren't foes: nothing the Warden aims lands on them, and they aren't counted in a fight
@@ -297,14 +297,27 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ drawing: the tilt, the clips by how he's moving, the flame at each palm and sole
   const WEIGHTS = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'], footA = new THREE.Vector3(), footB = new THREE.Vector3();
   // the jets: a turbine's at each palm and one under the feet, held together (Randy: "Make sure the foot thrusters are one"). The foot jet is the big one: it holds him up. Each leaves along its limb, leaning to the line of the body. `spool` is the turbine's: it comes up and down over a moment and doesn't follow the throttle (turbine.js)
-  function jetsOf(pairs, up, spool, wet, seed) {
+  // a blow that carries knocks the jets out: they cough a puff of smoke and go dark, and he drops. They come back with a stutter. Randy, 2 Nov: "losing their air thrusters when hit"
+  function jetsLost(e) {
+    e.jetOut = true; e.jetBlown = e.spool || 0.6; e.blowT = 0; e.spool = 0; e.relightT = 0; const s = e.slot; for (const p of s.jets) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 0.6, 0.7, SMOKE, { s0: 0.25, s1: 1.1, a: 0.3, add: 0, hot: 0, vy: 0.8, drag: 1, rot: Math.random() * 6.28 }); G.fx.sparks(v1, 3, e.side === 'water' ? 0xbfefff : 0xffa040, 5); }
+  }
+  function jetsBack(e) { e.jetOut = false; e.relightT = D.rag.relight_s; e.spool = 0.15; if (e.jetS) for (const S of e.jetS) { S.L = 0; S.on = false; } }
+  // a blow that doesn't knock them out still throws the stream: its tip goes the way the blow went
+  function jolt(e, dir, k) { if (!e.jetS) return; for (const S of e.jetS) { S.a.addScaledVector(dir, k); S.b.addScaledVector(dir, k * 0.6); } }
+  // Each jet keeps where its tip was: two followers behind where the tip should be now, so a nozzle that moves leaves its stream curving behind it. `box` holds that for one body
+  const JET_LAG = 0.05, EXIT = 34;
+  function jetsOf(pairs, up, spool, wet, seed, box, dt, cut = 0) {
+    const J = box.jetS || (box.jetS = [0, 1, 2].map(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), L: 0, on: false }))), k = 1 - Math.exp(-(dt || 1 / 60) / JET_LAG);
     for (let i = 0; i < 3; i++) {
       const foot = i === 2, [a, c, t] = pairs[i]; a.getWorldPosition(v1); c.getWorldPosition(v2);
       if (foot) { const [a2, c2, t2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); t.getWorldPosition(footA); t2.getWorldPosition(footB); footA.add(footB).multiplyScalar(0.5); }
       v3.subVectors(v2, v1).normalize().multiplyScalar(foot ? 0.6 : 0.3).addScaledVector(up, -1).normalize();
       if (foot) v2.lerp(footA, 0.45).addScaledVector(v3, 0.07); else v2.addScaledVector(v3, 0.08);
-      const L = (foot ? 3.1 : 1.1) * (0.36 + 0.64 * spool), R = foot ? 0.125 : 0.072;
-      JET.add(v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, L, R, spool, wet, seed + i * 0.37);
+      const S = J[i], want = (foot ? 3.1 : 1.1) * (0.36 + 0.64 * spool) * (0.9 + 0.1 * Math.sin(G.time * 19 + seed * 9 + i * 2) + 0.06 * Math.sin(G.time * 43 + i));
+      // it grows out of the nozzle at the speed the gas leaves it, and falls back faster
+      S.L = want > S.L ? Math.min(want, S.L + EXIT * (dt || 1 / 60)) : Math.max(want, S.L - EXIT * 2 * (dt || 1 / 60)); const L = S.L, R = foot ? 0.125 : 0.072;
+      v4.copy(v2).addScaledVector(v3, L); if (!S.on) { S.a.copy(v4); S.b.copy(v4); S.on = true; } S.a.lerp(v4, k); S.b.lerp(S.a, k); v4.subVectors(S.b, v4); const most = L * 0.85, bl = v4.length(); if (bl > most) v4.multiplyScalar(most / bl);
+      JET.add(v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, L, R, spool, wet, seed + i * 0.37, v4.x, v4.y, v4.z, cut);
       G.fx.ball(v2, (foot ? 0.17 : 0.09) * (0.8 + 0.5 * spool), wet ? FOAM : HOT, 0.34 + 0.2 * spool, 0.9, 1);
     }
   }
@@ -325,17 +338,22 @@ export async function createEmber(G, { foeMaterial, D }) {
     const W = [(1 - f) * (1 - brake), f * (1 - b) * (1 - brake), f * b * (1 - brake), brake];
     for (let i = 0; i < 4; i++) { const a = s.acts[WEIGHTS[i]]; e.w[i] = damp(e.w[i], W[i], 7, dt); a.setEffectiveWeight(e.w[i] * rest); }
     if (e.frozen <= 0) s.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
-    if (rest > 0 && e.hp > 0 && e.frozen <= 0) { const tg = e.target || G.hero; v1.copy(sp > 6 ? e.vel : v2.subVectors(tg.pos, e.pos)).normalize(); aimChain(s.look, LOOK_S, s.head, s.face, v1, 1.42, e.w[0] * 0.8 + 1 - e.w[0]); }
+    if (rest > 0 && e.hp > 0 && e.frozen <= 0 && !e.rag) { const tg = e.target || G.hero; v1.copy(sp > 6 ? e.vel : v2.subVectors(tg.pos, e.pos)).normalize(); aimChain(s.look, LOOK_S, s.head, s.face, v1, 1.42, e.w[0] * 0.8 + 1 - e.w[0]); }
     e.u.uHeat.value = damp(e.u.uHeat.value, e.heat, 6, dt);
     if (e.hp <= 0 && e.t < 1.4) e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 0.8);
     if (e.state === 'tell' && !fights(e) && !e.friend) G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
     const wetBody = e.side === 'water', JET = wetBody ? SEA : FIRE, CORE = wetBody ? FOAM : HOT, AIRY = wetBody ? 0.28 : 0.55;
-    const lit = e.hp > 0 && e.frozen <= 0 && e.doused <= 0 && e.state !== 'landed' ? clamp(e.heat * 1.6, 0.15, 1) : 0;
+    let lit = e.hp > 0 && e.frozen <= 0 && e.doused <= 0 && e.state !== 'landed' && !e.jetOut ? clamp(e.heat * 1.6, 0.15, 1) : 0;
+    // a flameout: for a moment after they relight the jets catch and die, and catch again
+    if (e.relightT > 0) { e.relightT -= dt; if (Math.random() < 0.5) lit = 0; else if ((e.smokeT2 = (e.smokeT2 || 0) - dt) <= 0) { e.smokeT2 = 0.09; A().crackle && A().crackle(0.25); } }
+    X.drawRag(e, dt);
     g.updateMatrixWorld(true);
+    // the flame blown off the nozzle: for a moment it goes on burning, cut away from the nozzle end
+    if (e.jetOut && e.blowT < 0.2 && e.jetS) { e.blowT += dt; jetsOf(e.slot.jets, e.up, e.jetBlown * (1 - e.blowT * 2), e.side === 'water' ? 1 : 0, e.phase, e, dt, e.blowT / 0.2); }
     const cam = G.camera.position, far = e.pos.distanceTo(cam);
     if (lit > 0) {
       const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(e.spool ?? 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
-      jetsOf(s.jets, e.up, e.spool * lit, wetBody ? 1 : 0, e.phase);
+      jetsOf(s.jets, e.up, e.spool * lit, wetBody ? 1 : 0, e.phase, e, dt);
       // the crown of fire: it stands straight up off his head and his speed lays it back. The man has none
       if (e.super || e.friend) { s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
       G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY); }
@@ -443,7 +461,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (h.combatT < 3 && !h.dead && (H2.fistT = (H2.fistT || 0) - dt) <= 0) { H2.fistT = 0.09; for (const b of [B.hand_R, B.hand_L]) { b.getWorldPosition(v1); FL.puff(v1, 0.2 + Math.random() * 0.12, 0.2, rand(-0.4, 0.4), rand(0.8, 1.8), rand(-0.4, 0.4), 2, 2, 1.3); } }
     if (!burning && !sup) return;
     h.root.updateMatrixWorld(true); B.spine_3.getWorldPosition(v1); B.hips.getWorldPosition(v2); H2.up.subVectors(v1, v2).normalize();
-    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1);
+    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1, H2, dt);
     if (sup) { const cam = G.camera.position; B.head.getWorldPosition(v1); v1.addScaledVector(H2.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(h.vel, -0.5).normalize(); const Lc = 0.42 * flick, Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize(); G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.55); }
     if (burning) { washUnder(h.pos, H2.spool, dt, H2); loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.09 : 0.18; v1.copy(h.pos).addScaledVector(H2.up, -3.2); G.fx.sp('smoke', v1, 0.5, 1, SMOKE, { s0: 0.14, s1: 0.5, a: 0.06, add: 0, hot: 0, vy: 0.5, drag: 0.7, rot: Math.random() * 6.28 }); } }
   }
@@ -464,7 +482,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); CH.frame(); JET.flush(G.time); if (A().jet) A().jet(loud, H2.spool || loud); loud = 0; }
 
   return {
-    pool, brain, keepOut, draw, struck, died, step, frame, home, fresh, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
+    pool, brain, keepOut, draw, struck, died, step, frame, home, fresh, jetsLost, jetsBack, jolt, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
     champions: () => CH, raids: R, warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },

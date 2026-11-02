@@ -25,3 +25,9 @@ Randy, 2 Nov 2026: "Never just make shit up from scratch. Always have the best e
 ## Budgets on his phone
 
 Q5 under 96 MB after the whole map (F2m, F2n). Q7 100 draws. Q8 500k triangles. `web_check/weigh.mjs`.
+
+## Too heavy is not a no
+
+Randy, 2 Nov: "Also for shit that is "too heavy" for the phone, we can still learn and use it and make an optimized version if it's the best out there. This is where we can improvise a little. That's another meta rule".
+
+If the best thing out there doesn't fit the phone, learn it, use it, and cut it down until it does. And each piece is researched on its own, for behaviour, results and how the world answers: "Don't just half ass it and call it done. We need it to mimic actual life with proven techniques and requirements to get these done and open source tools and frameworks available."

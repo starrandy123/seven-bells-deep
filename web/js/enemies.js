@@ -7,6 +7,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { W, retry } from './config.js';
 import { createEmber } from './ember.js';
+import { createRagdoll } from './ragdoll.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -153,6 +154,35 @@ export async function createEnemies(G) {
     awake.push(e); return e;
   }
 
+  // ------------------------------------------------------------------ thrown: a blow that carries takes the body out of its clips and gives it to the ragdoll (ragdoll.js). It flies, tumbles, lands or drifts, and comes back from wherever it ended up. Numbers in combat.json `rag`
+  const ragV = new THREE.Vector3(), ragP = new THREE.Vector3(), ragS = new THREE.Vector3();
+  function throwBody(e, dir, carry, o = {}) {
+    const s = e.slot, Q = D.rag; if (!e.def.flyer && e.def.body !== 'reaver') return false; if (s.rag === undefined) s.rag = createRagdoll(s.g); if (!s.rag) return false; if (e.rag) return false;
+    const under = e.pos.y < SEA_Y, k = under ? Q.water_carry : 1; ragV.copy(dir).multiplyScalar(carry * k); ragV.y += (under ? Q.water_up : Q.up_mps) * Math.min(1, carry / Q.ref_mps);
+    ragS.set(-dir.z, 0, dir.x).multiplyScalar(Q.spin_rad * Math.min(1, carry / Q.ref_mps) * k); ragS.y = (Math.random() - 0.5) * Q.spin_rad;
+    s.g.updateMatrixWorld(true); s.rag.start(e.vel, ragV, ragS); e.vel.set(0, 0, 0); dropToken(e); if (!o.dead) endTell(e); if (e.cur) e.cur.fadeOut(0.1); e.cur = null;
+    e.rag = { t: 0, T: o.T || (under ? Q.water_s : Q.down_s), w: 0, out: false, last: null, dead: !!o.dead }; if (!o.dead) { e.state = 'thrown'; e.t = 9; }
+    if (e.def.flyer) ember.jetsLost(e, dir);
+    G.combat.log.push({ t: G.time, type: 'thrown', foe: e.kind, carry: +carry.toFixed(1), under }); return true;
+  }
+  function stepRag(e, dt) {
+    const r = e.rag, R = e.slot.rag; r.t += dt;
+    if (r.last) { const dx = e.pos.x - r.last.x, dz = e.pos.z - r.last.z; if (dx || dz) R.shift(dx, 0, dz); }
+    R.hips(ragP); const g = footAt(ragP.x, ragP.z, ragP.y + 0.4), under = ragP.y < SEA_Y; R.step(dt, g, under); R.hips(e.pos); (r.last || (r.last = new THREE.Vector3())).copy(e.pos); e.vel.set(0, 0, 0);
+    if (under && !r.wet) { r.wet = true; ember.fellIn && ember.fellIn(e); }
+    if (!r.dead && !r.out && (r.t >= r.T || (R.settled > D.rag.still_s && r.t > D.rag.min_s))) wakeRag(e, under, ragP.y - g < 1.2);
+    return true;
+  }
+  function wakeRag(e, under, down) {
+    const r = e.rag, R = e.slot.rag, Q = D.rag; r.out = true; r.blend = under ? Q.water_back_s : Q.back_s; R.velocity(ragV); e.vel.copy(ragV).multiplyScalar(0.3); e.state = 'stun'; e.t = r.blend + 0.1; e.stunGuard = 1.2;
+    // on the ground he gets up the way a person does, from how he's lying, played on from the ragdoll's own pose
+    if (down && !under) { const a = playClip(e, R.faceUp() ? 'up_back' : 'up_front', 0.1, true); if (a) { a.setEffectiveTimeScale(Q.up_speed); e.t = a.getClip().duration / Q.up_speed; r.blend = 0.3; } }
+    if (e.def.flyer) ember.jetsBack(e);
+  }
+  function drawRag(e, dt) {
+    const r = e.rag; if (!r) return; r.w = r.out ? Math.max(0, r.w - dt / r.blend) : Math.min(1, r.w + dt / 0.05); e.slot.g.updateMatrixWorld(true); e.slot.rag.apply(r.w); if (r.out && r.w <= 0) { e.slot.rag.stop(); e.rag = null; }
+  }
+
   function playClip(e, name, fade, once) {
     const a = e.slot.acts && e.slot.acts[name]; if (!a) return null;
     if (e.cur && e.cur !== a) e.cur.fadeOut(0.1);
@@ -195,7 +225,7 @@ export async function createEnemies(G) {
     if (F.soaked_mul && e.soaked > 0) mul *= F.soaked_mul;
     e.hp -= dmg * mul * (F.flank_mul && e.state === 'recover' ? F.flank_mul : 1);
     e.u.uFlash.value = 1;
-    if (e.hp <= 0) { die(e); return 'dead'; }
+    if (e.hp <= 0) { e.lastD = new THREE.Vector3().subVectors(e.pos, from).normalize(); e.lastKnock = info.knock; die(e); return 'dead'; }
     if (status.soak) e.soaked = S.soaked_s;
     if (status.chill) addChill(e, status.chill);
     if (e.frozen > 0) { if (!e.shatter) return 'hit'; }
@@ -206,6 +236,9 @@ export async function createEnemies(G) {
     if (e.onLand && !e.launched && (info.knock || 0) >= D.foeplay.arc_knock) { e.launched = D.foeplay.arc_s; e.vel.y = D.foeplay.arc_up_mps; }
     if (info.launch) { e.launched = Math.max(e.launched, info.stun || 1.2); e.vel.y = Math.max(e.vel.y, info.launch); dropToken(e); }
     e.poise -= info.poise || 0;
+    if (F.flyer) ember.jolt(e, d, 0.3 + 0.1 * (info.knock || 0));
+    // a heavy blow in the open throws him: the ragdoll, not a clip
+    if (!e.rag && e.frozen <= 0 && (info.heavy || (info.knock || 0) >= D.rag.at_knock) && throwBody(e, d, (info.knock === undefined ? 6 : info.knock) * D.rag.carry, {})) return 'hit';
     if (e.poise <= 0) { stagger(e); return 'hit'; }
     // a light blow doesn't stop a foe in its stride: it finishes what it told, and it can't be held down by mashing. A heavy blow, or a Siren's song, is what breaks a blow
     const told = e.state === 'tell' || e.state === 'strike', stops = info.heavy || F.fragile || (!told && e.stunGuard <= 0);
@@ -236,7 +269,7 @@ export async function createEnemies(G) {
     G.combat.log.push({ t: G.time, type: 'kill', foe: e.kind });
     // the last of them: the moment leans out and the lens goes in
     if (e.enc && e.enc.list && e.enc.list.length && !e.enc.list.some((q) => q !== e && q.hp > 0 && !q.hidden)) { const Q = D.foeplay; G.slowT = Q.finish_s; G.slowK = Q.finish_k; G.fx.pushIn(e.pos, Q.finish_s * 1.5); G.combat.log.push({ t: G.time, type: 'finish', foe: e.kind }); G.audio.boom(); }
-    if (!e.fishy && !broken) playClip(e, 'death', 0.08, true);
+    if (!e.fishy && !broken && !throwBody(e, e.lastD || AY, (e.lastKnock === undefined ? 6 : e.lastKnock) * D.rag.carry + D.rag.kill_mps, { dead: true })) playClip(e, 'death', 0.08, true);
     if (e.def.flyer) { ember.died(e, broken); if (broken) e.slot.g.visible = false; e.frozen = 0; e.stagger = 0; return; }
     if (broken) e.slot.g.visible = false; else { G.fx.dissolve && G.fx.dissolve(e.pos, e.def.body); G.fx.bubbles(e.pos, 18, 1.4); }
     e.frozen = 0; e.stagger = 0; e.vel.multiplyScalar(0.4);
@@ -558,11 +591,12 @@ export async function createEnemies(G) {
     }
     blendSoldier(e);
   }
-  ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
+  ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, drawRag, throwBody, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
   const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain };
 
   // what holds a foe outside its own head: ice, a lash, being thrown. True means its brain sits this step out
   function held(e, dt) {
+    if (e.rag) { stepRag(e, dt); if (!e.rag || !e.rag.dead) return true; }
     if (e.hp <= 0) return false;
     if (e.spun) {
       const s = e.spun, Q = D.spout, rode = G.combat.powers.spout.riding; s.t -= dt; s.a += Q.spun_rad * dt; s.y += (s.top - s.y) * (1 - Math.exp(-2.2 * dt)); e.pos.set(s.base.x + Math.cos(s.a) * s.r, s.y, s.base.z + Math.sin(s.a) * s.r); e.vel.set(0, 0, 0); e.heading = wrap(e.heading + 11 * dt);
@@ -677,6 +711,7 @@ export async function createEnemies(G) {
         g.position.y -= 0.9 * Math.cos(e.tilt); qX.setFromAxisAngle(AX, e.tilt); g.quaternion.copy(qY).multiply(qX);
         if (e.flA > 0) { flAxis.set(e.flZ, 0, -e.flX); qF.setFromAxisAngle(flAxis, Math.sin(Math.min(1, e.flT / 0.05) * 1.5708) * Math.exp(-e.flT * 6.5) * e.flA); g.quaternion.premultiply(qF); }
         if (e.slot.mixer && e.frozen <= 0) e.slot.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
+        drawRag(e, dt);
         if (e.state === 'tell') G.fx.edge(e.pos, e.blow && e.blow.unblockable);
         if (e.state === 'tell' && e.slot.tip && G.fx.glint) { e.slot.tip.getWorldPosition(tipW); G.fx.glint(tipW, e.blow && e.blow.unblockable ? 0xff4422 : 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
       } else {

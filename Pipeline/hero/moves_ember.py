@@ -81,6 +81,21 @@ def cut(sk, S, name):
             tracks[x].append(q)
     n = b - a; return {'n': n, 'q': tracks, 'off': [(0.0, 0.0, 0.0)] * (n + 1), 'loop': False, 'miss': 0.0, 'contact': round(before, 3), 'strikes': end}
 
+# Getting up off the ground, from CMU subject 140 ("Getting Up From Ground"): a real person from lying flat to standing, so the hips have to travel, which the blows never do. The file's hip height comes with the turns, scaled to his body, measured from where he ends up standing.
+UPS = {'up_front': ('140_01', 1.6, 5.1), 'up_back': ('140_09', 1.5, 4.9)}
+def get_up(sk, S, name):
+    take, a_s, b_s = UPS[name]; a, b = int(a_s * FPS), int(b_s * FPS); F = mocap_cmu.amc(os.path.join(mocap_cmu.DIR, take + '.amc'), 4); U = 0.0254 / 0.45
+    q_end = S[b]['hips']; f = qrot(q_end, (0.0, -1.0, 0.0)); fix = qaxis((0.0, 0.0, 1.0), -math.degrees(math.atan2(f[0], -f[1]))); end = F[b]['root']; k = sk.pos['hips'][2] / (end[1] * U)
+    tracks = {x: [] for x in KEYED}; off = []
+    for i in range(a, b + 1):
+        for x in KEYED:
+            q = S[i].get(x, QI)
+            if x == 'hips': q = qmul(fix, q)
+            if tracks[x] and qdot(tracks[x][-1], q) < 0: q = tuple(-v for v in q)
+            tracks[x].append(q)
+        r = F[i]['root']; d = mocap_cmu.to_moves_v(((r[0] - end[0]) * U * k, (r[1] - end[1]) * U * k, (r[2] - end[2]) * U * k)); off.append(qrot(fix, d))
+    return {'n': b - a, 'q': tracks, 'off': off, 'loop': False, 'miss': 0.0}
+
 def still(sk, S, seconds):
     """The stillest stretch of guard: the frames where neither hand moves much, and the hands stay up."""
     n = int(seconds * FPS); P = [(end_of(sk, q, 'hand_R'), end_of(sk, q, 'hand_L')) for q in S]; best, at = 1e9, 0
@@ -118,6 +133,7 @@ def bake(data):
     for name, b in BLOWS.items(): out[name] = cut(sk, take(b[0]), name)
     out['fly_launch'] = moves.bake_keys(sk, launch_keys(sk)); out['fly_launch'].update(loop=False, miss=0.0)
     out['e_guard'] = guard(sk, take(GUARD[0]))
+    for name, u in UPS.items(): out[name] = get_up(sk, take(u[0]), name)
     return sk, out
 
 def meta(clips):

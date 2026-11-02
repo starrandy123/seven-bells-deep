@@ -132,6 +132,10 @@
       { "id": "land_cinder_rim", "at": "cindermere", "dx": -112, "dy": -108, "r": 24, "mix": ["magma_husk", "archer", "magma_husk"] }
     ]
   },
+  "rag": {
+    "_doc": "a body thrown by a blow (ragdoll.js, enemies.js throwBody). at_knock: a blow with this knock or a heavy one throws him. carry: metres a second of throw for each point of knock. up_mps and spin_rad at ref_mps of throw. down_s: how long the body is the ragdoll's in air, water_s in water, where the throw carries water_carry as far and the body drifts. back_s: the blend back to the clips. min_s: he isn't given back sooner. relight_s: the jets stutter this long",
+    "at_knock": 10, "carry": 1.3, "kill_mps": 5, "ref_mps": 14, "up_mps": 5.5, "spin_rad": 5, "down_s": 1.8, "water_s": 2.6, "water_carry": 0.45, "water_up": 0.5, "water_back_s": 0.8, "back_s": 0.42, "up_speed": 1.5, "still_s": 0.3, "min_s": 0.7, "relight_s": 0.6
+  },
   "foeplay": {
     "_doc": "how a soldier fills his wait, and how he takes a blow. every_s: how often he does something; feint, cut: the shares (the rest step back). flinch: how far he leans from a hit, light, medium, heavy, in radians, always away from where it came from. arc: a blow of arc_knock or more on the ground throws him up arc_up_mps; he flies till he lands",
     "every_s": [0.7, 1.5], "feint": 0.4, "cut": 0.35, "feint_s": 0.32, "in_mps": 7, "back_mps": 6, "cut_mps": 7,

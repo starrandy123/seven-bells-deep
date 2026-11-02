@@ -31,7 +31,8 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 25 | The fighting stops looking choppy and sloppy | To do |
 | 26 | Lava meeting the sea turns into steam and solid rock at the bottom | To do |
 | 27 | Ragdoll physics: characters pushed back by attacks | To do |
-| 28 | Thrusters are lost when hit | To do |
+| 28 | Thrusters are lost when hit | Ragdoll and flameout working on the blue men, Build 64 |
+| 40 | Thrusters look alive: they bend, trail and kick when the body moves or is hit, not painted on | To do |
 | 29 | Body and movement requirements read off real fight frames, from the two references he named | Started |
 | 31 | Ice in the fights and the duel, the water side's second element | To do |
 | 32 | The blue foes are their own people, separate from the water elementals, and fight and fly better | To do |
@@ -42,6 +43,8 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 37 | A great water tornado, summoned near water, lifts a water elemental to the sky cities | To do |
 | 38 | Fire animals the fire side fights, as the water side has its beasts and bosses | To do |
 | 39 | Peaceful birds to fly with, and beautiful views | To do |
+| 41 | Lava with real body and motion, not a sheet of paper; the ground burns round it | To do |
+| 42 | Earth to ocean transitions as good games do them, on every coast | To do |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
