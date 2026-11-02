@@ -493,7 +493,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
-    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, ocEmbers: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     ocAddGain: { value: phone ? 1 : .5 },
     ocRes: { value: new THREE.Vector2(0, 0) },
     ocShaft: { value: 1 },
@@ -704,11 +704,14 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
       uniforms: { ...U, uBox: { value: box }, uPix: { value: 1 } },
       vertexShader: /* glsl */`
         attribute float aSd;
-        uniform float uBox, ocTime, uPix, ocAddGain, ocBio; uniform vec3 ocScat, ocKd, ocSunCol;
+        uniform float uBox, ocTime, uPix, ocAddGain, ocBio, ocEmbers; uniform vec3 ocScat, ocKd, ocSunCol;
         varying vec3 vC; varying float vR;
         void main() {
           float sd = aSd;
           vec3 p = position + vec3(sin(ocTime*.11 + sd*40.0)*1.1, -ocTime*(.05 + .05*sd) + sin(ocTime*.09 + sd*19.0)*.4, cos(ocTime*.13 + sd*23.0)*1.1);
+          // over the fire isle: embers rising 1 to 3 m/s and cooling as they go, ash drifting down at .4 (Pipeline/research/CITY_SOURCES.md)
+          bool ember = ocEmbers > .01 && cameraPosition.y > 0.0, ash = fract(sd*3.7) > .62;
+          if (ember) p = position + vec3(sin(ocTime*.3 + sd*40.0)*1.6, ash ? -ocTime*.4 : ocTime*(1.0 + 2.0*sd), cos(ocTime*.27 + sd*23.0)*1.6);
           vec3 rel = mod(p - cameraPosition + .5*uBox, uBox) - .5*uBox;
           vec3 wp = cameraPosition + rel;
           vec4 mv = viewMatrix*vec4(wp, 1.0);
@@ -720,6 +723,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
           float d = max(-wp.y, 0.0);
           vC = (vec3(.12, .17, .18) + ocScat*.30)*exp(-ocKd*d*.75)*f*ocAddGain*step(wp.y, 0.0)*min(1.0, ps/1.8);
           vC += vec3(.05, .62, .78)*ocBio*.5*f*ocAddGain*step(wp.y, 0.0)*step(.55, fract(sd*7.3))*(.6 + .4*sin(ocTime*2.1 + sd*40.0));   // at night some of the snow is alive
+          if (ember) { float up = clamp(rel.y/uBox + .5, 0.0, 1.0), keep = step(.45, fract(sd*13.1)); vC = ash ? vec3(.28, .27, .26)*.35*f*keep : mix(vec3(1.0, .69, .38), vec3(.88, .21, .06), up)*(1.0 - up*.85)*f*1.4*keep; vC *= ocEmbers*step(0.0, wp.y); gl_PointSize = clamp(ps*.6, 1.0, ash ? 3.0 : 2.0); }
           vR = sd;
         }`,
       fragmentShader: /* glsl */`
@@ -802,9 +806,21 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
       for (let c = 0; c < 3; c++) { waterNow.scat[c] += t.scat[c] * w; waterNow.deep[c] += t.deep[c] * w; }
       waterNow.sun += t.sun * w; waterNow.caus += t.caus * w; waterNow.amb += t.amb * w; waterNow.ex += t.ex * w; waterNow.shaft += t.shaft * w;
     }
+    if (biomeK > .001) { const E = emberOf(lookName), nk = skyW.night, dk = 1 - nk; for (let i = 0; i < lookB.length; i++) lookB[i] += (E.day[i] * dk + E.night[i] * nk - lookB[i]) * biomeK; }
     if (lookK >= 1) { lookN.set(lookB); writeLook(); writeMoods(1); }
   }
   function setSky(w) { for (const k in skyW) skyW[k] = w[k] || 0; mixSky(); }
+  // the fire isle's own air (Pipeline/research/CITY_SOURCES.md): every good fire place sets a warm against a cool, a sky that holds the fire's colour and a haze the colour of ash, weighted in as he comes near and gone above the ash
+  const lin = (h) => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; };
+  const EMBER = { day: { zenith: lin(0x3b3a52), horizon: lin(0xd09365), glow: lin(0xf1c38e), haze: lin(0xa56f54), cloudLit: lin(0xe26044), cloudShade: lin(0x30467b), warm: [1.16, .9, .66], cool: [.78, .78, 1.02], sun: [1.25, .82, .52], hemi: [.86, .76, .78] },
+    night: { zenith: lin(0x15131f), horizon: lin(0x5a2418), glow: lin(0xe26044), haze: lin(0x2a1614), cloudLit: lin(0x975640), cloudShade: lin(0x15131f), warm: [1.2, .85, .6], cool: [.6, .7, 1.1], sun: [.6, .5, .5], hemi: [.6, .6, .9] } };
+  const emberFlats = {}; let biomeK = 0;
+  function emberOf(name) {
+    if (emberFlats[name]) return emberFlats[name]; const H = HOURS[name];
+    const mk = (B, o) => { const L = clone(B); Object.assign(L.sky, { zenith: o.zenith, horizon: o.horizon, glow: o.glow, cloudLit: o.cloudLit, cloudShade: o.cloudShade }); L.haze = o.haze; L.warm = o.warm; L.cool = o.cool; const li = L.light || NO_LIGHT; L.light = { sun: li.sun.map((v, i) => v * o.sun[i]), hemi: li.hemi.map((v, i) => v * o.hemi[i]) }; return new Float32Array(lookValues(L)); };
+    return (emberFlats[name] = { day: mk(H.day, EMBER.day), night: mk(H.night, EMBER.night) });
+  }
+  function setBiome(k) { U.ocEmbers.value = k; if (Math.abs(k - biomeK) < .02 && !(k === 0 && biomeK > 0)) return; biomeK = k; mixSky(); }
   function setLook(name, seconds = .7) {
     const L = LOOKS[name]; if (!L) return lookName;
     lookFrom = lookTo; lookTo = L; lookK = 0; lookSecs = Math.max(seconds, .001); lookName = name;
@@ -1126,5 +1142,5 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
   function setSunMap(texture, m) { U.tOcSun.value = texture; U.ocSunM.value.copy(m); }
   function setLandMap(texture, m) { U.tOcLand.value = texture; U.ocLandM.value.copy(m); }
 
-  return { setFlashLight, get inkBg() { return inkBg; }, bakeGrid, upload: (t) => renderer.initTexture(t), causticRT, uniforms: U, tier, stats, precompile, kick, onCross, crossed, addOutline, setFrost, waterMat, iceMat, setLook, setSky, onRestore, skyTable: (n) => LOOKS[n].sky, get lookName() { return lookName; }, looks: Object.keys(LOOKS), patch, update, flash, setMood, setRegion, render, resize, setSunMap, setLandMap, glsl: OCEAN_GLSL, sunA, sunW, sun, hemi, shafts, snow, setLandMap };
+  return { setFlashLight, setBiome, get biome() { return biomeK; }, get inkBg() { return inkBg; }, bakeGrid, upload: (t) => renderer.initTexture(t), causticRT, uniforms: U, tier, stats, precompile, kick, onCross, crossed, addOutline, setFrost, waterMat, iceMat, setLook, setSky, onRestore, skyTable: (n) => LOOKS[n].sky, get lookName() { return lookName; }, looks: Object.keys(LOOKS), patch, update, flash, setMood, setRegion, render, resize, setSunMap, setLandMap, glsl: OCEAN_GLSL, sunA, sunW, sun, hemi, shafts, snow, setLandMap };
 }

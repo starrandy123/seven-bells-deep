@@ -416,6 +416,17 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           ground = mix(ground, vec3(.40, .43, .48)*(.90 + .16*macro), b2.g*(1.0 - steep*.7));          // snow: a little under what the sun will make white
           // ash and black rock: basalt where it's bare, a rust of oxidised lava in patches, sulphur near the vents, as a real lava field has
           vec3 ashC = mix(vec3(.034, .031, .034)*(.8 + .7*n3), vec3(.062, .040, .034)*(.8 + .5*n4), .55*smoothstep(.46, .78, n3*.45 + n4*.3 + macro*.25)); ashC = mix(ashC, vec3(.24, .19, .06)*(.7 + .5*n4), smoothstep(.68, .82, n4*.5 + macro*.5)*smoothstep(38.0, 70.0, P.y));
+          // the isle in bands, measured off real volcanic ground (Pipeline/research/CITY_SOURCES.md): it isn't black. Black sand at the shore; a lapilli plain in wind ripples; smooth sheets with dark cracks near the lava; an oxidised cone in strata; fumarole fields, the brightest ground there is
+          { float Hh = b2.a, rip = .9 + .2*sin(dot(P.xz, vec2(1.3, .7)) + n4*6.0);
+            vec3 lap = mix(vec3(.078, .082, .088), vec3(.171, .171, .168), smoothstep(.25, .8, n3*.6 + macro*.4))*rip;
+            vec3 sheet = mix(vec3(.107, .093, .10), vec3(.19, .165, .177), n4)*(1.0 - .85*(1.0 - smoothstep(.0, .06, abs(fract(n3*6.0 + macro*2.0) - .5))));
+            vec3 cone = mix(vec3(.165, .125, .06), vec3(.40, .29, .13), smoothstep(.35, .65, fract(P.y*.09 + n4*.6)))*(.85 + .3*n3);
+            vec3 fum = mix(vec3(.35, .26, .18), vec3(.59, .49, .36), n4*.7 + macro*.3);
+            vec3 shore = mix(vec3(.036, .038, .045), vec3(.0075, .0086, .0128), 1.0 - smoothstep(.3, 1.2, P.y));
+            float wS = smoothstep(.22, .45, Hh)*(1.0 - smoothstep(.75, .95, Hh)), wC = smoothstep(26.0, 44.0, P.y)*(1.0 - smoothstep(92.0, 100.0, P.y)), wF = smoothstep(.6, .75, Hh)*smoothstep(.76, .84, macro + n3*.08)*(1.0 - wC);
+            vec3 band = mix(mix(mix(lap, sheet, wS), cone, wC), fum, wF);
+            band = mix(band, shore, 1.0 - smoothstep(.8, 1.8, P.y));
+            ashC = mix(ashC, band, .85); }
           ground = mix(ground, ashC, b2.r);
           if (camD < 60.0) ground *= mix(.82 + .36*ocTile(P, Nbase, 1.7, wand, slope).a, 1.0, smoothstep(34.0, 60.0, camD));
           alb = mix(alb, ground, smoothstep(-2.8, -.5, P.y));

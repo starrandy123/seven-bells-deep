@@ -715,7 +715,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     const st = wx.storm;
     skyW.day = (1 - night - dusk) * (1 - st); skyW.dusk = dusk * (1 - st); skyW.night = night * (1 - st * .5); skyW.storm = st * (1 - night * .5);
     look.setSky(skyW);
-    U.ocNight.value = night; U.ocStorm.value = st; U.ocFog.value = wx.fog; U.ocBio.value = Math.max(night * .32, wx.bloom);
+    U.ocNight.value = night; U.ocStorm.value = st; U.ocFog.value = Math.max(wx.fog, look.biome * .136 * (1 - Math.min(1, Math.max(0, (look.camY || 0) - 20) / 50))); U.ocBio.value = Math.max(night * .32, wx.bloom);
     const sn = look.sunA, g = Math.abs(1 - 2 * night) * (1 - st * .9), L = U.ocSkyL.value;
     if (night < .5) L.set(sn.x, U.ocSunLow.value, sn.z).normalize(); else L.copy(U.ocMoon.value);
     U.ocGlint.value = g;
