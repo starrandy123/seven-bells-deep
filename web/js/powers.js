@@ -104,7 +104,7 @@ export function createPowers(G, h, D, C) {
     p.y = floorNear(p, 9);
     spawnGeyser(p, d, a, false);
     if (lv('geyser') >= 3) lives.push({ kind: 'later', t: U.geyser.again_s, fn: () => spawnGeyser(p.clone(), d, a, false) });
-    G.audio.bubble(); G.fx.circle && G.fx.circle(p, null, d.radius_m * 1.1, 'water', d.tell_s + 0.25);
+    G.audio.bubble(); G.fx.circle && G.fx.circle(p, null, d.radius_m * 1.1, G.sideNow === 'fire' ? 'fire' : 'water', d.tell_s + 0.25);
   }
   function spawnGeyser(p, d, a, hostile) {
     const r = d.radius_m;

@@ -190,8 +190,13 @@ export const CITY_ALBEDO = /* glsl */`{
     float S = 3.2, st = floor(ocUV.y/S), vy = ocUV.y - st*S, bi = floor(ocUV.x/ocBw), ux = ocUV.x - (bi + .5)*ocBw, hb = ocBw*.5; vec3 RED = vec3(.46, .055, .03), BLK = vec3(.035, .03, .03);
     float gx = fract(ux/.42 + .5), gy = fract(vy/.42 + .5), lat = max(ocLnGrid(ux/.42 + .5), ocLnGrid(vy/.42 + .5));
     vec3 c = vec3(.10, .03, .02); float lit = step(.3, ocH1(vec2(bi, st) + vFacSeed*19.0)), post = 1.0 - step(.26, hb - abs(ux)), beam = step(S - .42, vy) + (1.0 - step(.3, vy));
+    // a real lattice screen, read off machiya and hall fronts at dusk: a solid board below the waist, a rail, two leaves meeting in the middle, and paper that's brightest round the lamp behind it and falls off to the frame
+    float leaf = abs(ux) - .03, ku = abs(ux)/max(hb - .26, .1), kv = (vy - 1.95)/.9, hot = exp(-(ku*ku*1.7 + kv*kv*1.5)), gain = .4 + .6*ocH1(vec2(bi + 5.0, st) + vFacSeed*29.0);
     if (ocH1(vec2(bi, st + 3.0) + vFacSeed*23.0) < .22 && st < .5 && vy < 2.5) { c = vec3(.30, .05, .02)*(.85 + .2*step(.5, fract(ux*2.2))); lit = 0.0; }      // a door
-    else { ocWinM = lit*.55*(1.0 - lat*.8); ocWinC = vec3(1.0, .42, .10); c = mix(c, BLK, lat); }
+    else if (vy < 1.05) { c = vec3(.15, .035, .02)*(.8 + .3*step(.5, fract(ux*1.6)))*(.86 + .2*ocH1(vec2(bi, st + 9.0))); ocWinM = 0.0; ink = max(ink, ocLnGrid(ux*1.6)*.5); }      // the board below the waist
+    else if (vy < 1.17) { c = BLK*1.6; ocWinM = 0.0; }      // the rail
+    else if (leaf < 0.0) { c = BLK*1.6; ocWinM = 0.0; }      // where the two leaves meet
+    else { float shade = .72 + .28*smoothstep(.0, .22, gy)*smoothstep(.0, .22, gx); ocWinM = lit*gain*(.14 + .46*hot)*shade*(1.0 - lat*.9); ocWinC = mix(vec3(1.0, .30, .07), vec3(1.0, .60, .24), hot); c = mix(mix(c, vec3(.34, .13, .05)*(.6 + .6*hot), lit*gain), BLK, lat); }
     if (post > .5) { c = RED*(.9 + .2*ocH1(vec2(bi, 3.0))); ocWinM = 0.0; } if (beam > .5) { c = BLK; ocWinM = 0.0; if (abs(vy - (S - .22)) < .05) c = GOLD; }
     inkW = max(inkW, max(ocLn(hb - abs(ux) - .26), max(ocLn(vy - .3), ocLn(vy - (S - .42))))); ink = max(ink, lat*.6);
     ocC = mix(mix(vec3(.16, .05, .03), RED, .35), c, ocLodW); ocWinM *= ocLodW; ocWinM = max(ocWinM, .22*(1.0 - ocLodW)); ocEmber = 1.0; ocStoneish = false;

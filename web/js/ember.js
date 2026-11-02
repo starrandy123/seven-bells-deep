@@ -414,7 +414,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     G.fx.setSide && G.fx.setSide(fire); G.fireKit.install(fire); if (G.combat.relabel) G.combat.relabel();
     // what was coming for the other side goes back where it came from
     for (const e of R.list.slice()) { if (e.hp > 0) { e.hp = 0; X.free(e); } } R.list = []; R.on = false; R.cool = Q.raid.again_s * 0.5;
-    if (place) { const a = (G.world.lifts || [])[0], sp = G.world.data.spawn; if (fire && a) { h.respawn(new THREE.Vector3(a.x + 5, a.z + 0.92, -(a.y + 5)), 2.4); h.land = true; h.grounded = true; h.air = false; G.camYaw = 2.4; h.place(); } else if (sp) { h.respawn(new THREE.Vector3(sp.x, sp.z, -sp.y), sp.yaw || 0); h.land = false; h.grounded = false; h.air = false; G.camYaw = sp.yaw || 0; h.place(); } }
+    // on the fire side the first thing he sees is the plaza, the street of halls, and the volcano past them
+    if (place) { const a = (G.world.lifts || [])[0], sp = G.world.data.spawn; if (fire && a) { h.respawn(new THREE.Vector3(a.x - 14, a.z + 0.92, -(a.y - 21)), 1.16); h.land = true; h.grounded = true; h.air = false; G.camYaw = 1.16; h.place(); } else if (sp) { h.respawn(new THREE.Vector3(sp.x, sp.z, -sp.y), sp.yaw || 0); h.land = false; h.grounded = false; h.air = false; G.camYaw = sp.yaw || 0; h.place(); } }
     if (!quiet) { G.fx.ring(h.pos.clone(), 5, 0.6, fire ? 0xff8a30 : 0xbdf7ff); G.fx.sparks(h.pos, 16, fire ? 0xffa040 : 0xbdf7ff, 7); A().boom(); }
   }
   function heroSuper() {

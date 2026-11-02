@@ -111,7 +111,7 @@ function noiseTexture(renderer) {
 
 export function createFx(G) {
   const scene = G.scene, phone = G.tier === 'phone', atlas = paintAtlas(G), noiseT = noiseTexture(G.renderer);
-  const C = { water: new THREE.Color(0.18, 0.78, 1.0), ice: new THREE.Color(0.62, 0.86, 1.0), gold: new THREE.Color(1.0, 0.72, 0.3), foam: new THREE.Color(0.86, 0.97, 1.0), bead: new THREE.Color(0.62, 0.92, 1.0), dark: new THREE.Color(0.0, 0.1, 0.24) };
+  const C = { lava: new THREE.Color(1.0, 0.36, 0.08), water: new THREE.Color(0.18, 0.78, 1.0), ice: new THREE.Color(0.62, 0.86, 1.0), gold: new THREE.Color(1.0, 0.72, 0.3), foam: new THREE.Color(0.86, 0.97, 1.0), bead: new THREE.Color(0.62, 0.92, 1.0), dark: new THREE.Color(0.0, 0.1, 0.24) };
   const tmpC = new THREE.Color(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), ZF = new THREE.Vector3(0, 0, 1);
   const shared = { uT: { value: 0 } };
   const reduced = () => G.settings && G.settings.flash === false;
@@ -619,9 +619,9 @@ export function createFx(G) {
   for (let i = 0; i < 3; i++) { const m = new THREE.Mesh(circleGeo, circleMat()); m.visible = false; m.frustumCulled = false; m.renderOrder = 15.4; scene.add(m); circles.push({ m, t: 0, dur: 1, r: 1, rise: 0 }); }
   function circle(p, normal, radius, el, dur) {
     const c = circles.find((x) => !x.m.visible) || circles[0]; c.t = 0; c.dur = dur; c.r = radius; c.m.visible = true; c.m.position.copy(p);
-    c.m.material.uniforms.uCol.value.copy(el === 'ice' ? C.ice : C.water); c.m.material.uniforms.uN.value = el === 'ice' ? 6 : 5;
+    const col = el === 'ice' ? C.ice : el === 'fire' ? C.lava : C.water; c.m.material.uniforms.uCol.value.copy(col); c.m.material.uniforms.uN.value = el === 'ice' ? 6 : 5;
     if (normal) c.m.quaternion.setFromUnitVectors(ZF, normal); else c.m.rotation.set(-Math.PI / 2, 0, 0);
-    v1.copy(p); const s = sp('ring', v1, radius * 1.05, Math.min(0.3, dur), el === 'ice' ? C.ice : C.water, { b: 0, s0: radius * 1.3, a: 0.9, hot: 0.8, outF: 0.4 }); if (normal) planeAxes(s, normal); else planeAxes(s, Y);
+    v1.copy(p); const s = sp('ring', v1, radius * 1.05, Math.min(0.3, dur), col, { b: 0, s0: radius * 1.3, a: 0.9, hot: 0.8, outF: 0.4 }); if (normal) planeAxes(s, normal); else planeAxes(s, Y);
   }
 
   // ------------------------------------------------------------------ super speed: streaks that rush past the camera
