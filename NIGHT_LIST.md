@@ -11,12 +11,12 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 5 | Water looks unnatural from the air | Built, his eye |
 | 6 | Thrusters fire like an actual gas turbine | Build 41, his eye |
 | 7 | Flight graceful and fluid, like Iron Man, head forward, hands along the body | Build 41, his eye |
-| 8 | Hover | Build 41, redone by #10 |
-| 9 | Takeoff good | Build 41, redone by #10 |
-| 10 | Boost held on the ground runs on thrusters, Jump is a big fire jump, in the air Boost is Fly, held to fly or hover | Next |
-| 11 | Fire fights as fire: emitted, blasted, comboed, not water recoloured | Next |
+| 8 | Hover | Build 42, his eye |
+| 9 | Takeoff good | Build 42, his eye |
+| 10 | Boost held on the ground runs on thrusters, Jump is a big fire jump, in the air Boost is Fly, held to fly or hover | Build 42, his eye |
+| 11 | Fire fights as fire: emitted, blasted, comboed, not water recoloured | Build 43: new flame system and kit. Moves still to come (#12) |
 | 12 | Martial-arts elemental fighting styles, for both sides | To do |
-| 13 | Fire ranged and close attacks, combos | To do |
+| 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
 | 14 | Combat, cities, buildings, bosses built off proven frameworks | To do |
 | 15 | The right bosses for the fire side and the land people | To do |
 | 16 | Underwater buildings stop being bland, from real references | To do |

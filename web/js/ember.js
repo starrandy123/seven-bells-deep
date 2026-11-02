@@ -10,6 +10,8 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { FLAG } from './config.js';
 import { BURN } from './burn_glsl.js';
 import { createTurbines } from './turbine.js';
+import { createFlames } from './flame.js';
+import { createFireKit } from './firekit.js';
 import { aimChain, faceIn } from './formulas/aim.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -54,7 +56,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
   const DUST = new THREE.Color(0.74, 0.69, 0.62);
   const waters = [];      // the water elementals in the air. They aren't foes: nothing the Warden aims lands on them, and they aren't counted in a fight
-  const JET = createTurbines(G, phone ? 12 : 18);
+  const JET = createTurbines(G, phone ? 12 : 18), FL = createFlames(G, phone ? 130 : 190); G.fireKit = createFireKit(G, FL); G.flames = FL;
   const groundAt = (x, z) => G.world.heightAt(x, -z);
   const floorAt = (x, z) => Math.max(groundAt(x, z), 0);
   const probe = { x: 0, y: 0, z: 0 };
@@ -266,8 +268,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     const cam = G.camera.position;
     for (const s of shots) {
       if (!s.on) continue; const len = s.v.length() || 1, wet = s.side === 'water'; v1.copy(s.v).multiplyScalar(-1 / len); viewX.subVectors(cam, s.p).normalize().cross(v1).normalize();
-      const L = 1.0, W = 0.34; G.fx.now('flame', s.p.x + v1.x * L, s.p.y + v1.y * L, s.p.z + v1.z * L, viewX.x * W, viewX.y * W, viewX.z * W, v1.x * -L, v1.y * -L, v1.z * -L, wet ? SEA : FIRE, 1, 0.9, wet ? 0.3 : 0.6);
-      G.fx.ball(s.p, 0.5, wet ? FOAM : HOT, 1, wet ? 0.6 : 0.9, wet ? 0.5 : 1);
+      if (wet) { const L = 1.0, W = 0.34; G.fx.now('flame', s.p.x + v1.x * L, s.p.y + v1.y * L, s.p.z + v1.z * L, viewX.x * W, viewX.y * W, viewX.z * W, v1.x * -L, v1.y * -L, v1.z * -L, SEA, 1, 0.9, 0.3); G.fx.ball(s.p, 0.5, FOAM, 1, 0.6, 0.5); }
+      else { if (!s.flame || s.flame.age >= s.flame.life || !s.flame.on) s.flame = FL.comet(s.p, s.v, 0.8, 3, 0.12); else { s.flame.p.copy(s.p); s.flame.a.copy(s.v).normalize(); s.flame.v.copy(s.v); s.flame.age = 0; } if ((s.trailF = (s.trailF || 0) - 1) <= 0) { s.trailF = 2; FL.puff(s.p, 0.34, 0.2, v1.x * 4, v1.y * 4, v1.z * 4, 4, 2, 1.4); } }
     }
   }
 
@@ -392,7 +394,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function setSide(side, { place = false, quiet = false } = {}) {
     const fire = side === 'fire', h = G.hero; if (!H2.man) return; G.sideNow = fire ? 'fire' : 'water'; document.body.dataset.side = G.sideNow; H2.on = fire; if (!fire) { H2.sup = 0; if (h.fly) h.endFly(); } showHero();
     try { localStorage.setItem('thalor.side', G.sideNow); } catch (_) { /* a choice for this visit */ }
-    G.fx.setSide && G.fx.setSide(fire); if (G.combat.relabel) G.combat.relabel();
+    G.fx.setSide && G.fx.setSide(fire); G.fireKit.install(fire); if (G.combat.relabel) G.combat.relabel();
     // what was coming for the other side goes back where it came from
     for (const e of R.list.slice()) { if (e.hp > 0) { e.hp = 0; X.free(e); } } R.list = []; R.on = false; R.cool = Q.raid.again_s * 0.5;
     if (place) { const a = (G.world.lifts || [])[0], sp = G.world.data.spawn; if (fire && a) { h.respawn(new THREE.Vector3(a.x + 5, a.z + 0.92, -(a.y + 5)), 2.4); h.land = true; h.grounded = true; h.air = false; G.camYaw = 2.4; h.place(); } else if (sp) { h.respawn(new THREE.Vector3(sp.x, sp.z, -sp.y), sp.yaw || 0); h.land = false; h.grounded = false; h.air = false; G.camYaw = sp.yaw || 0; h.place(); } }
@@ -425,11 +427,11 @@ export async function createEmber(G, { foeMaterial, D }) {
       for (let i = 0; i < 6; i++) { const t = i * 1.047 + G.time * 0.7, cx = x + Math.cos(t) * 3, cz = z + Math.sin(t) * 3, Lk = 0.9 + 0.3 * Math.sin(G.time * 7 + i * 2), W2 = 0.42; v3.set(0, 1, 0); viewX.set(cx - cam.x, 0, cz - cam.z).normalize().cross(v3).normalize(); G.fx.now(i % 2 ? 'flame' : 'flame2', cx, y + Lk, cz, viewX.x * W2, 0, viewX.z * W2, 0, Lk, 0, FIRE, 1, 1, 0.6); }
     }
   }
-  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); JET.flush(G.time); if (A().jet) A().jet(loud); loud = 0; }
+  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); JET.flush(G.time); if (A().jet) A().jet(loud); loud = 0; }
 
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
-    warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh],
+    warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born,

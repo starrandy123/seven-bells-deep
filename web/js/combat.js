@@ -96,6 +96,8 @@ export function createCombat(G, h, api) {
     if (!t) { heroFacing(a.dir); return; }
     to.subVectors(t.pos, h.pos); const dist = to.length() || 1, gap = Math.max(0, dist - (t.r || 0.8) - 1.3);
     a.dir.copy(to).multiplyScalar(1 / dist);
+    // the fire side doesn't cross the gap: from here on the same blow is thrown at him as a blast. He stands and turns to it
+    if (fireMove(a.id) && d.kind === 'strike' && gap > D.fire.melee_m) { a.shotAt = t; a.target = null; h.heading = Math.atan2(a.dir.x, a.dir.z); return; }
     if (d.startup > 0) { const need = (gap / 26) * FPS; a.close = need > d.startup ? d.startup / Math.min(need, d.startup + 18) : 1; if (a.shot) a.shot.rate = rateFor(d, 0) * a.close; }
   }
 
@@ -241,7 +243,9 @@ export function createCombat(G, h, api) {
     if (d.kind === 'power' && !a.released && f >= d.startup) { a.released = true; pay(a.id); P.release(a.id, a); }
     if (a.rehitAt && f >= a.rehitAt) { a.rehitAt = 0; a.hits.clear(); }
     if (d.reach && d.active > 0 && f >= d.startup && f < hitEnd) {
-      if (d.rehit_f) { a.rehit -= dt * FPS; if (a.rehit <= 0) { a.rehit = d.rehit_f; a.hits.clear(); checkHits(a); } } else checkHits(a);
+      const fm = !a.fired && d.kind === 'strike' ? fireMove(a.id) : null; if (fm && G.fireKit) { a.fired = true; G.fireKit.strike(a, fm.limb, !!a.shotAt); }
+      if (a.shotAt || (fireMove(a.id) && d.kind === 'strike' && !a.target)) { /* it left his hand: the blast does the hitting */ }
+      else if (d.rehit_f) { a.rehit -= dt * FPS; if (a.rehit <= 0) { a.rehit = d.rehit_f; a.hits.clear(); checkHits(a); } } else checkHits(a);
     }
     if (d.kind === 'power' && P) P.during(a, dt);
   }
@@ -368,7 +372,7 @@ export function createCombat(G, h, api) {
     v2.subVectors(e.pos, from).normalize();
     G.fx.impact ? G.fx.impact(v1, v2, d.impact, el) : G.fx.sparks(v1, 16, 0x9ff4ff, 8);
     G.audio.hit(!!im.heavy_sound);
-    G.look.flash(v1, el === 'ice' ? 0xcfeeff : 0x8feeff, im.light_m, 0.1 + im.hitstop_f * 0.02);
+    G.look.flash(v1, G.sideNow === 'fire' ? 0xffa050 : el === 'ice' ? 0xcfeeff : 0x8feeff, im.light_m, 0.1 + im.hitstop_f * 0.02);
     G.life && G.life.scatter(v1, 14);
     G.hitstop = Math.max(G.hitstop, im.hitstop_f / FPS);
     punch(im, v2);
@@ -440,6 +444,7 @@ export function createCombat(G, h, api) {
   const ready = fetch('data/combat.json').then((r) => { if (!r.ok) throw new Error('combat.json ' + r.status); return r.json(); }).then((data) => {
     const bad = audit(data); if (bad.length) console.error('combat.json:\n' + bad.join('\n'));
     D = data; buf = createBuffer(D.input.buffer_f);
+    if (G.fireKit) G.fireKit.bind({ land });
     P = createPowers(G, h, D, { land, findTarget, cool, log, teach, camDir, lv, jumpHeld: () => jumpIsHeld, interact: (id) => teach(id, D.interactions[id].name, D.interactions[id].tip) });
     setStance('water', true);
     return data;

@@ -193,9 +193,10 @@
       { "id": "slam", "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "land": true, "tell_s": 0.75, "strike_s": 2.2, "recover_s": 0.2, "lunge_mps": 22, "radius_m": 5.5, "hold_s": 1.5, "damage": 14 } ] }
   },
   "fire": {
-    "_doc": "the fire side when it's played (V15): each power's name on the hotbar, and the strikes that use his fists and feet in place of the trident: clip, and clip_t as in moves",
+    "_doc": "the fire side when it's played (V15): each power's name on the hotbar, and the strikes that use his fists and feet in place of the trident: clip, clip_t as in moves, and limb, the hand or foot the fire leaves from. Past melee_m of gap a strike is thrown as a blast",
+    "melee_m": 3.2,
     "names": { "whip": "Flame Whip", "riptide": "Flare Rush", "maelstrom": "Firewheel", "wave": "Wall of Fire", "geyser": "Magma Geyser", "lance": "Magma Lance", "glacier": "Obsidian Stomp", "breath": "Flame Breath", "icepath": "Lava Path", "cast": "Fire Spear", "shoalsong": "Ember Swarm", "call": "All Fire" },
-    "moves": { "strike1": { "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "strike2": { "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "strike3": { "clip": "e_kick", "clip_t": [0.38, 0.62, 1.3] }, "air1": { "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "air2": { "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "launcher": { "clip": "e_hook", "clip_t": [0.3, 0.55, 1.05] } }
+    "moves": { "strike1": { "limb": "hand_L", "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "strike2": { "limb": "hand_R", "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "strike3": { "limb": "foot_R", "clip": "e_kick", "clip_t": [0.38, 0.62, 1.3] }, "air1": { "limb": "hand_L", "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "air2": { "limb": "hand_R", "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "launcher": { "limb": "hand_R", "clip": "e_hook", "clip_t": [0.3, 0.55, 1.05] } }
   },
   "ember": {
     "_doc": "the Emberkin (EPIC V2, V5). flight: speeds in m/s, accel in m/s2, heights in metres; turn_rad how fast the body swings to the jets' line. heat: 1 is burning; a hit of water takes `water`, of ice `ice`; the sea takes sea_per_s; at 0 it's doused: its jets die for doused_s, it falls, blows do doused_mul, and it relights at `relight`. raid: how a flyer comes in, in seconds and metres",

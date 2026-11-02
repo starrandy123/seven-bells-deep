@@ -16,10 +16,11 @@ export function createHomeward(G, h, D, C) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xc99a3f, metalness: 0.9, roughness: 0.34, emissive: 0x2ad0ff, emissiveIntensity: 0.35 }); G.look.patch(mat, {});
   const mesh = new THREE.Mesh(mergeGeometries(parts.map(clean), false), mat); mesh.visible = false; mesh.frustumCulled = false; G.scene.add(mesh); G.fx.warmList.push(mesh);
   const T = { state: 'held', p: new THREE.Vector3(), v: new THREE.Vector3(), to: new THREE.Vector3(), left: 0, t: 0, dur: 1, hangT: 0, a: null, moteT: 0, stops: [], stuck: false };
+  G.homeT = T;
   let B, scale0 = null;
   const bone = () => { if (B === undefined) { B = (h.bones && h.bones.weapon) || G.scene.getObjectByName('weapon') || null; if (B) scale0 = B.scale.clone(); } return B; };
   const hand = (out) => { const b = bone(); if (b) return b.getWorldPosition(out); out.copy(h.pos); out.y += 0.5; return out; };
-  function fold(gone) { const b = bone(); if (b) { if (gone) b.scale.setScalar(0.001); else b.scale.copy(scale0); } mesh.visible = gone; if (G.ui.setCast) G.ui.setCast(gone); if (G.audio.whirr) G.audio.whirr(gone); }
+  function fold(gone) { const b = bone(); if (b) { if (gone) b.scale.setScalar(0.001); else b.scale.copy(scale0); } mesh.visible = gone && G.sideNow !== 'fire'; if (G.ui.setCast) G.ui.setCast(gone); if (G.audio.whirr) G.audio.whirr(gone); }
   function hits(mul) {
     const a = T.a; a.from = T.p;
     if (G.enemies) for (const e of G.enemies.alive()) { if (!a.hits.has(e) && e.pos.distanceTo(T.p) < 1.4 + (e.r || 0.8) && C.land(e, a, mul) === 'blocked') T.left = 0; }
