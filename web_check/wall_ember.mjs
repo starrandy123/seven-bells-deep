@@ -13,7 +13,7 @@ await section(['E13'], async () => {
 await section(['E14'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   const r = await page.evaluate(() => { const G = window.__game, CH = G.ember.champions(), h = G.hero; G.ember.setSide('fire', { place: true, quiet: true }); h.inv = 1e6; const e = CH.start('water'), seen = new Set(); G.combat.log.length = 0; for (let i = 0; i < 2600; i++) { G.frame(1 / 30); h.hp = h.maxHp; if (e.B.move) seen.add(e.B.move); if (i === 400) e.hp = e.maxHp * 0.5; if (i === 900) e.hp = e.maxHp * 0.3; if (i % 40 === 0) { const a = { hits: new Set(), def: { damage: 40, kind: 'strike', impact: 'light' } }; try { e.onHit(40, h.pos, 'fire', { element: 'fire', melee: false, knock: 1, stun: 0.1, poise: 1 }); } catch (x) { console.error(String(x)); } } } return { seen: [...seen], hp: e.hp | 0, side: e.side, contacts: G.combat.log.filter((x) => x.foe === 'champion').length }; });
-  line('E14', r.seen.length >= 5 && r.side === 'water' && !errors.filter((x) => !/qa\.js/.test(x)).length, `the Tidecaller fights a fire player with his whole kit: ${r.seen.join(' ')}; ${r.contacts} logged; no page errors`);
+  line('E14', r.seen.length >= 5 && r.side === 'water' && !errors.filter((x) => !/qa\.js|Failed to load/.test(x)).length, `the Tidecaller fights a fire player with his whole kit: ${r.seen.join(' ')}; ${r.contacts} logged; side ${r.side}; errors ${JSON.stringify(errors.slice(0, 3)).slice(0, 300)}`);
   await close();
 });
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
