@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 
 export function createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities, isle, phone }) {
-  const W = 320, s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(); cam.matrixAutoUpdate = false; cam.matrixWorldAutoUpdate = false;
+  const W = phone ? 256 : 320, s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(); cam.matrixAutoUpdate = false; cam.matrixWorldAutoUpdate = false;
   let rt = null, frame = 0, h0 = 0;
   const day = { value: 1 }, night = { value: 0 };
   // the land: a grid over the world, its colour and its light baked once, never below the sea

@@ -255,14 +255,15 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       return [lo, hi];
     };
     const make = (x0, z0, s, level) => {
-      const node = { x0, z0, s, level, kids: null, box: new THREE.Box3() };
+      // two numbers for its height, not a box of its own: ten thousand nodes held 1.5 MB of boxes (a heap snapshot, 2 Nov). pick() builds the box when it needs one
+      const node = { x0, z0, s, level, kids: null, lo: 0, hi: 0 };
       let lo, hi;
       if (level > 1) {                                  // (the nearest level has no nodes: see pick. On the big map a fourth of the tree)
         const m = s / 2;
         node.kids = [make(x0, z0, m, level - 1), make(x0 + m, z0, m, level - 1), make(x0, z0 + m, m, level - 1), make(x0 + m, z0 + m, m, level - 1)];
-        lo = Math.min(...node.kids.map(k => k.box.min.y)); hi = Math.max(...node.kids.map(k => k.box.max.y));
+        lo = Math.min(...node.kids.map(k => k.lo)); hi = Math.max(...node.kids.map(k => k.hi));
       } else [lo, hi] = scan(x0, z0, s);
-      node.box.min.set(x0, lo - .5, z0); node.box.max.set(x0 + s, hi + .5, z0 + s);
+      node.lo = lo - .5; node.hi = hi + .5;
       return node;
     };
     const roots = [], rs = leafS * Math.pow(2, LEVELS - 1);
@@ -531,11 +532,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   const frustum = new THREE.Frustum(), pv = new THREE.Matrix4(), near = new THREE.Vector3();
   let FAR = 460;                                  // in the water nothing is seen past this; from the air the other island is
   let picked = 0;
-  const leafBox = new THREE.Box3();
+  const leafBox = new THREE.Box3(), nodeBox = new THREE.Box3();
   function pick(node, cam) {
-    node.box.clampPoint(cam, near);
+    nodeBox.min.set(node.x0, node.lo, node.z0); nodeBox.max.set(node.x0 + node.s, node.hi, node.z0 + node.s); nodeBox.clampPoint(cam, near);
     const d = near.distanceTo(cam);
-    if (d > FAR || !frustum.intersectsBox(node.box)) return;
+    if (d > FAR || !frustum.intersectsBox(nodeBox)) return;
     if (d > ranges[node.level - 1]) {
       if (picked < CAP) { tGeo.attributes.aNode.setXYZW(picked, node.x0, node.z0, node.s, node.level); picked++; }
       return;
@@ -544,7 +545,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     const m = node.s / 2;                               // four nearest patches, in the box of the node that holds them
     for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
       const x = node.x0 + i * m, z = node.z0 + j * m;
-      leafBox.min.set(x, node.box.min.y, z); leafBox.max.set(x + m, node.box.max.y, z + m);
+      leafBox.min.set(x, node.lo, z); leafBox.max.set(x + m, node.hi, z + m);
       if (picked < CAP && frustum.intersectsBox(leafBox)) { tGeo.attributes.aNode.setXYZW(picked, x, z, m, 0); picked++; }
     }
   }

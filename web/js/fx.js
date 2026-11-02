@@ -88,10 +88,12 @@ function atlasBytes() {
   return rg;
 }
 // the bytes go once the GPU has them, 2 MB of heap back; a lost context paints them again
+// on a phone the atlas is half a side: no sprite there comes near its full size, and it's 2 MB of the budget back. Painted at full size and box-filtered, so nothing is lost but what a phone can't show
+function halfRG(b, S) { const H = S / 2, o = new Uint8Array(H * H * 2); for (let y = 0; y < H; y++) for (let x = 0; x < H; x++) for (let c = 0; c < 2; c++) { const i = (2 * y * S + 2 * x) * 2 + c; o[(y * H + x) * 2 + c] = (b[i] + b[i + 2] + b[i + S * 2] + b[i + S * 2 + 2] + 2) >> 2; } return o; }
 function paintAtlas(G) {
-  const S = 1024, t = new THREE.DataTexture(atlasBytes(), S, S, THREE.RGFormat, THREE.UnsignedByteType), free = () => { t.image.data = null; t.onUpdate = null; };
+  const phone = G.tier === 'phone', S = phone ? 512 : 1024, bytes = () => (phone ? halfRG(atlasBytes(), 1024) : atlasBytes()), t = new THREE.DataTexture(bytes(), S, S, THREE.RGFormat, THREE.UnsignedByteType), free = () => { t.image.data = null; t.onUpdate = null; };
   t.flipY = false; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = true; t.onUpdate = free; t.needsUpdate = true;
-  if (G.look.onRestore) G.look.onRestore(() => { t.image.data = atlasBytes(); t.onUpdate = free; t.needsUpdate = true; });
+  if (G.look.onRestore) G.look.onRestore(() => { t.image.data = bytes(); t.onUpdate = free; t.needsUpdate = true; });
   return t;
 }
 
