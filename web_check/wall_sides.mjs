@@ -60,4 +60,18 @@ if (process.argv[3] === 'chromium') await section(['S9', 'S10'], async () => {
   line('S10', g.skim && k.fireAir && k.y > e.y + 4, `one thumb slides from Boost to Jump in 130 ms and the jump still comes: ${e.y} to ${k.y} m`);
   await close();
 });
+// A phone drops the graphics context when the player leaves the app. The ground comes back from the files, and the Burnt Isle is painted over them, so it has to be painted again or the isle comes back green
+await section(['S11'], async () => {
+  const { page, close } = await open('?fresh&tier=phone', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 }); await page.waitForTimeout(400);
+  await tap(page, '#pickFire'); await page.waitForTimeout(700); await tap(page, '#dive'); await page.waitForTimeout(1600);
+  await page.evaluate(() => { window.__qa.walkAt(246, -760); window.__game.camPitch = 0.45; }); await page.waitForTimeout(3500);
+  const pic = async () => { const b = await page.screenshot({ type: 'jpeg', quality: 80 }); return page.evaluate(async (u) => { const i = new Image(); i.src = u; await i.decode(); const c = document.createElement('canvas'); c.width = 32; c.height = 16; const x = c.getContext('2d'); x.drawImage(i, 0, 0, 32, 16); return [...x.getImageData(0, 9, 32, 7).data]; }, 'data:image/jpeg;base64,' + b.toString('base64')); };
+  const a = await pic(); await page.screenshot({ path: `${out}/isle_before.jpg`, type: 'jpeg', quality: 80 });
+  const ok = await page.evaluate(() => new Promise((res) => { const g = window.__game.renderer.getContext(), e = g.getExtension('WEBGL_lose_context'); if (!e) return res(false); e.loseContext(); setTimeout(() => { e.restoreContext(); res(true); }, 700); }));
+  await page.waitForTimeout(6000); const b = await pic(); await page.screenshot({ path: `${out}/isle_after.jpg`, type: 'jpeg', quality: 80 });
+  let d = 0, green = 0; for (let i = 0; i < a.length; i += 4) { d += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]); if (b[i + 1] > b[i] + 12 && b[i + 1] > b[i + 2] + 12) green++; } d /= (a.length / 4) * 3;
+  line('S11', !ok || (d < 26 && green < 12), ok ? `a lost and restored context leaves the isle as it was: ${d.toFixed(1)} of 255 apart, ${green} of ${a.length / 4} blocks green` : 'this engine offers no way to lose a context here');
+  await close();
+});
 await finish();

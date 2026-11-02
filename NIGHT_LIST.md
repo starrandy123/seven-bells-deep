@@ -17,7 +17,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 11 | Fire fights as fire: emitted, blasted, comboed, not water recoloured | Build 43: new flame system and kit. Moves still to come (#12) |
 | 12 | Martial-arts elemental fighting styles, for both sides | Build 50: fire's blows and powers cut from the karate forms already here. More kicks and water's tai chi wait on his yes for 25 CMU files, 41 MB |
 | 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
-| 14 | Combat, cities, buildings, bosses built off proven frameworks | To do |
+| 14 | Combat, cities, buildings, bosses built off proven frameworks | Combat: frame data and boss structure from published talks (`Pipeline/research/FIRE_SOURCES.md`). Cities: lofted roofs and streets from `WORLD_SOURCES.md`. Bosses: tells and punish windows. His eye |
 | 15 | The right bosses for the fire side and the land people | Build 47: the Tidecaller for fire, the Cinder King for water. The Last Seawall at the harbour, Build 49 |
 | 16 | Underwater buildings stop being bland, from real references | Build 45: dark water, lit windows, rims of light, moving lights, reefs on the streets. Build 54: kit halls have dark glass and lit glazing bars |
 | 17 | Nice buildings on land and in the fire cities | Build 48: fire cities rebuilt with lofted curved roofs and lacquered walls; harbour town has balconies and awnings |
@@ -28,6 +28,6 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
 
-Owed from before: two real thumbs on Boost and Jump, a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
+Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
 Added by me as owed work: fire side objectives (road.js), Build 51. Lava burns the water side, Build 51. Basalt columns, Build 51.
