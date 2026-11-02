@@ -415,7 +415,7 @@ export function createUI(G) {
     if (jumpOn !== bJump.classList.contains('show')) { bJump.classList.toggle('show', jumpOn); declareControls(); }
     const sp = $('speedv'); if (sp) sp.style.opacity = (h.surge * 0.85).toFixed(2);
     const bar = $('bossbar'), b = G.champ || G.boss;
-    const on = !!(b && (b.active || G.champ === b)); bar.classList.toggle('on', on); if (on) bar.querySelector('i').style.transform = `scaleX(${Math.max(0, b.hp / b.maxHp)})`;
+    const on = !!(b && (b.active || G.champ === b)); bar.classList.toggle('on', on); document.body.classList.toggle('bossOn', on); if (on) bar.querySelector('i').style.transform = `scaleX(${Math.max(0, b.hp / b.maxHp)})`;
   }
 
   return {

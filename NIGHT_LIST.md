@@ -51,6 +51,9 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 46 | Flight controls as flight games have them: the stick points, Fly only drives forward | To do |
 | 47 | Fire cities get their own foliage, lighting and ground variety | To do |
 | 48 | Ground cities with skyscrapers and full anime-style places to visit and fight in | To do |
+| 49 | Real shadows | To do |
+| 50 | Water reflections | To do |
+| 51 | Fire lights the world: every flame, jet and blast casts light on the city and the ground, inside the budgets | To do |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).

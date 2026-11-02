@@ -43,6 +43,13 @@
   #place { padding: 5px 16px; font: 500 18px var(--title); letter-spacing: 0.12em; }
   #bossbar { width: min(76vw, 460px); padding: 6px 12px 3px; }
   #bossbar b { font: 500 16px var(--title); letter-spacing: 0.14em; } #bossbar .bar { height: 11px; margin: 3px 0 4px; } #bossbar .bar i { background: linear-gradient(90deg, #b03a7a, #ff3fb4); }
+  /* on a phone the boss's bar goes up under the objective, out of the fight. Randy, 2 Nov: "the boss HUD with health bar is blocking the screen and is too low on the mobile side" */
+  @media (max-height: 520px), (max-width: 700px) {
+    #bossbar { position: fixed; top: 46px; left: 50%; transform: translateX(-50%); width: min(46vw, 340px); padding: 2px 10px 1px; z-index: 6; }
+    #bossbar b { font-size: 11px; letter-spacing: 0.12em; } #bossbar .bar { height: 7px; margin: 1px 0 3px; }
+    body.bossOn #dist, body.bossOn #compass { display: none; }
+  }
+  @media (max-width: 700px) and (orientation: portrait) { #bossbar { top: 104px; width: min(70vw, 340px); } }
   #timer { padding: 3px 14px; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--gold); } #timer small { font-size: 17px; color: var(--ink); margin-right: 8px; font-weight: 600; }
   #tip { font-size: 17px; font-weight: 600; padding: 7px 14px; }
   #bark { padding: 7px 14px; font-size: 17px; line-height: 1.32; text-align: left; border-left: 3px solid var(--gold); } #bark b { color: var(--gold); margin-right: 7px; font-size: 17px; }
