@@ -496,6 +496,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     // in the air on the jets he stands along the thrust (hero.js), turned about that line, pivoting at his hips, with the slow breath of a body held up
     flyK += ((h.flyPose ? 1 : 0) - flyK) * (1 - Math.exp(-7 * dt));
     if (flyK > 0.002) { root.quaternion.slerp(h.flyQ, flyK); tv.copy(h.drawPos).addScaledVector(h.flyUp, -STAND); const still = 1 - smooth(1, 7, h.speed); tv.y += still * (0.05 * Math.sin(t0 * 1.7) + 0.028 * Math.sin(t0 * 2.9 + 1)); tv.x += still * 0.03 * Math.sin(t0 * 1.1); tv.z += still * 0.03 * Math.sin(t0 * 0.9 + 2); root.position.lerp(tv, flyK); }
+    // the air dodge's roll, round his own length through his middle
+    if (h.dodgeT > 0 && flyK > 0.002) { const q = 1 - h.dodgeT / 0.36; qL.setFromAxisAngle(AZ, h.dodgeSide * -6.2832 * q * q * (3 - 2 * q)); root.quaternion.multiply(qL); tv.copy(h.drawPos).addScaledVector(h.flyUp, -STAND); root.position.lerp(tv, 1); }
     // the ride's lean and rake (hero.js): the root stands at his feet, so he tips from there and they stay on the water
     if (h.surfLean || h.surfRake) { qL.setFromAxisAngle(AZ, h.surfLean || 0); qR.setFromAxisAngle(AX, h.surfRake || 0); root.quaternion.multiply(qL).multiply(qR); }
     if (!wantClip) {

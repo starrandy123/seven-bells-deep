@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { FLAG, W, TOUCH, retry } from './config.js';
+import { createRagdoll } from './ragdoll.js';
 import { createCombat } from './combat.js';
 import { createBody } from './body.js';
 import { createWake } from './wake.js';
@@ -238,7 +239,7 @@ export async function createHero(G) {
   });
 
   h.respawn = (p, yaw) => {
-    h.endFly(); h.surf = null; h.carve = 0; h.pos.copy(p); h.prev.copy(p); h.drawPos.copy(p); h.vel.set(0, 0, 0); h.hp = h.maxHp; h.tide = 60; h.dead = false; h.state = 'swim'; h.heading = yaw || 0; h.inv = 2; h.spd = 0;
+    if (h.rag) { Rag.stop(); h.rag = null; } h.endFly(); h.surf = null; h.carve = 0; h.pos.copy(p); h.prev.copy(p); h.drawPos.copy(p); h.vel.set(0, 0, 0); h.hp = h.maxHp; h.tide = 60; h.dead = false; h.state = 'swim'; h.heading = yaw || 0; h.inv = 2; h.spd = 0;
     body.clear(0.2); body.place();
   };
 
@@ -519,13 +520,22 @@ export async function createHero(G) {
       if (h.jumpBuf > 0) { h.jumpBuf = 0; h.skim = false; h.fly = false; launch(); h.launchT = LAUNCH.dip; } else if (h.skimOff > FLY.slide) stopSkim();
     }
     else if (!lifting) {
+      if (h.fly && h.jumpBuf > 0 && h.dodgeCool <= 0) { h.jumpBuf = 0; airDodge(u); }
       if (onIt && !h.fly && (h.vel.y < FLY.stopRise || !h.fireAir || u.my > 0.3)) { h.fireAir = true; startFly(); }
       else if (!onIt && h.fly) { h.fly = false; h.apexY = h.pos.y; flyW.set(0, 0, 0); }
     }
     h.glide = h.fireAir && !h.fly && held && h.vel.y < 3 && (h.launchT ?? 9) >= LAUNCH.t;
     h.flyPose = h.fireAir && (h.fly || h.glide || (h.launchT ?? 9) < 1.1); if (h.flyPose && !h.fly) { h.flyThrottle = h.glide ? 0.42 : (h.launchT ?? 9) < LAUNCH.t ? 1 : 0.5; h.flyLat = damp(h.flyLat, 0, 5, dt); h.flyBrake = damp(h.flyBrake, 0, 5, dt); flyA.multiplyScalar(Math.exp(-6 * dt)); flyBody(dt); }
   }
+  // the dodge in the air (Randy, 2 Nov: "Make sure users can dodge while in the air"): a tap of Jump while he holds Fly. A burst from the jets the way the stick says, a roll round his own length, and for its first part nothing touches him
+  const AIR_DODGE = { s: 0.36, mps: 34, inv: 0.26, again: 0.5 }; h.dodgeT = 0; h.dodgeCool = 0; h.dodgeSide = 1; const dodgeDir = new THREE.Vector3(); h.dodgeDir = dodgeDir;
+  function airDodge(u) {
+    const fx = Math.sin(G.camYaw), fz = Math.cos(G.camYaw), mx = u.mx || 0, my = u.my || 0; dodgeDir.set(-fz * mx + fx * my, 0, fx * mx + fz * my);
+    if (dodgeDir.lengthSq() < 0.04) { h.dodgeSide = -h.dodgeSide; dodgeDir.set(-fz * h.dodgeSide, 0, fx * h.dodgeSide); } else { dodgeDir.normalize(); h.dodgeSide = mx >= 0 ? 1 : -1; }
+    h.dodgeT = AIR_DODGE.s; h.dodgeCool = AIR_DODGE.again; h.inv = Math.max(h.inv, AIR_DODGE.inv); G.fx.dodge && G.fx.dodge(h.pos, dodgeDir, 'water'); G.audio.fwoosh && G.audio.fwoosh(); G.combat.log.push({ t: G.time, type: 'air_dodge' });
+  }
   function stepFly(u, dt, held, inputAmt) {
+    h.dodgeCool = Math.max(0, h.dodgeCool - dt); if (h.dodgeT > 0) { h.dodgeT = Math.max(0, h.dodgeT - dt); const q = h.dodgeT / AIR_DODGE.s; h.pos.addScaledVector(dodgeDir, AIR_DODGE.mps * q * q * dt * 1.6); }
     if (h.state === 'attack' || h.state === 'parry') G.combat.stepAttack(dt);
     const sp = h.vel.length(), g0 = groundAt(h.pos.x, h.pos.z), floor = Math.max(g0, 0), clear = h.pos.y - floor - STAND;
     // the goal: the way he looks with the stick, and the longer the stick stays pushed the harder the turbines run. No stick and he hovers; Jump held takes him down
@@ -564,10 +574,29 @@ export async function createHero(G) {
     else if (h.pos.y < -0.2 && g1 < SWIM_Y - STAND) { h.endFly(); h.air = false; h.land = false; G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, -0.05, h.pos.z), 7, 1.1, 0xe8fbff); G.fx.bubbles(h.pos, 26, 1.6); }
   }
 
+  // ------------------------------------------------------------------ thrown: a heavy blow gives him to the ragdoll (ragdoll.js), in the air, on the ground or in the sea. Numbers in combat.json `rag`
+  let Rag; const ragP = new THREE.Vector3(), ragV = new THREE.Vector3(), ragS = new THREE.Vector3(); h.rag = null;
+  h.thrown = (dir, carry, o = {}) => {
+    if (h.rag || h.climb || h.ride || !bones.hips) return false; if (Rag === undefined) Rag = createRagdoll(model); if (!Rag) return false;
+    const Q = G.combat.data.rag, under = !h.air && !h.land && h.pos.y < -0.8, k = under ? Q.water_carry : 1; ragV.copy(dir).multiplyScalar(carry * k); ragV.y += (under ? Q.water_up : Q.up_mps) * Math.min(1, carry / Q.ref_mps); ragS.set(-dir.z, 0, dir.x).multiplyScalar(Q.spin_rad * Math.min(1, carry / Q.ref_mps) * k); ragS.y = (Math.random() - 0.5) * Q.spin_rad;
+    root.updateMatrixWorld(true); Rag.start(h.vel, ragV, ragS); h.vel.set(0, 0, 0); h.endFly(); h.flyPose = false; h.surf = null; body.clear(0.1); G.ember && G.ember.heroFlameout && G.ember.heroFlameout();
+    h.rag = { t: 0, T: under ? Q.water_s : Q.down_s, w: 0, out: false, blend: Q.back_s, last: null, dead: !!o.dead }; if (!o.dead) { h.state = 'thrown'; h.inv = Math.max(h.inv, h.rag.T + 0.6); } G.combat.log.push({ t: G.time, type: 'thrown', foe: 'hero', under }); return true;
+  };
+  function stepRag(dt) {
+    const r = h.rag, Q = G.combat.data.rag; r.t += dt;
+    if (r.last) { const dx = h.pos.x - r.last.x, dz = h.pos.z - r.last.z; if (dx || dz) Rag.shift(dx, 0, dz); }
+    Rag.hips(ragP); const g = groundAt(ragP.x, ragP.z), under = ragP.y < -0.8 && g < ragP.y; Rag.step(dt, g, under); Rag.hips(h.pos); collide(0.4); (r.last || (r.last = new THREE.Vector3())).copy(h.pos); h.vel.set(0, 0, 0); h.prev.copy(h.pos);
+    if (r.dead || r.out || !(r.t >= r.T || (Rag.settled > Q.still_s && r.t > Q.min_s))) return;
+    r.out = true; const near = ragP.y - g < 1.2; Rag.velocity(ragV);
+    if (under) { r.blend = Q.water_back_s; h.state = 'swim'; h.air = false; h.land = false; h.grounded = false; h.vel.copy(ragV).multiplyScalar(0.3); }
+    else if (near) { const name = Rag.faceUp() ? 'up_back' : 'up_front'; r.blend = 0.3; h.land = true; h.grounded = true; h.air = false; h.pos.y = g + STAND; h.state = 'hurt'; h.stun = 0.4; if (body.play(name, 0.1, true)) { const s = body.shot; if (s) { s.rate = Q.up_speed; h.stun = s.dur / Q.up_speed; } } h.inv = Math.max(h.inv, h.stun); }
+    else { h.air = true; h.land = false; h.grounded = false; h.state = 'swim'; h.apexY = h.pos.y; h.vel.copy(ragV); }
+  }
   h.step = (dt) => {
     const u = G.ui.sample(), cam = G.camera;
     h.prevHeading = h.heading;
     h.inv = Math.max(0, h.inv - dt); h.parryT = Math.max(0, h.parryT - dt); h.combatT += dt;
+    if (h.rag && !h.rag.out) { stepRag(dt); u.atk = u.dash = u.spin = u.wave = u.parry = false; return; }
     for (const k in h.cool) h.cool[k] = Math.max(0, h.cool[k] - dt);
     if (h.combatT > 6 && h.hp < h.maxHp && !h.dead) h.hp = Math.min(h.maxHp, h.hp + 5 * dt);
     h.tide = Math.min(h.maxTide, h.tide + 3.5 * dt);
@@ -718,6 +747,7 @@ export async function createHero(G) {
     const a = G.alpha !== undefined ? G.alpha : blendShare();
     h.drawHeading = (h.prevHeading === undefined ? h.heading : h.prevHeading + wrap(h.heading - h.prevHeading) * a);
     body.draw(dt); if (wake) wake.update(dt);
+    if (h.rag) { const r = h.rag; r.w = r.out ? Math.max(0, r.w - dt / r.blend) : Math.min(1, r.w + dt / 0.05); root.updateMatrixWorld(true); Rag.apply(r.w); if (r.out && r.w <= 0) { Rag.stop(); h.rag = null; } }
     G.heroScales.value = G.look.lookName === 'painted' ? 0 : 1;
     G.heroGlow.value = damp(G.heroGlow.value, h.state === 'attack' ? 3.4 : h.speed > 11 ? 2.2 : 1.1, 10, dt);
     if (bones.weapon && bones.weapon_tip) {

@@ -419,9 +419,10 @@ export function createCombat(G, h, api) {
     if (h.hp <= 0) {
       if (G.quest && G.quest.spareFirstFight()) { h.hp = 18; return 'spared'; }
       if (cur) leave();
-      h.hp = 0; h.dead = true; h.state = 'dead'; api.play('death', 0.15); G.quest && G.quest.onDeath(); return 'dead';
+      h.hp = 0; h.dead = true; h.state = 'dead'; G.quest && G.quest.onDeath(); if (!(from && h.thrown(v2, D.rag.ref_mps, { dead: true }))) api.play('death', 0.15); return 'dead';
     }
     const armoured = d && d.armour;
+    if (opts.heavy && from && !h.dead) { if (cur) leave(); if (h.thrown(v2, D.rag.ref_mps * 0.8)) return 'thrown'; }
     if (!armoured || opts.heavy) {
       if (cur) leave();
       const fromAhead = from ? Math.abs(wrap(Math.atan2(from.x - h.pos.x, from.z - h.pos.z) - h.heading)) < 1.57 : true;

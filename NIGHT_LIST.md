@@ -45,6 +45,8 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 39 | Peaceful birds to fly with, and beautiful views | To do |
 | 41 | Lava with real body and motion, not a sheet of paper; the ground burns round it | To do |
 | 42 | Earth to ocean transitions as good games do them, on every coast | To do |
+| 43 | Better foliage textures, leaves in the wind, leaves falling in some places | After the rest |
+| 44 | The boss health bar stops blocking the screen on phones | After the rest |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
