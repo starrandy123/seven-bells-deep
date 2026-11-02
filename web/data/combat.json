@@ -209,7 +209,7 @@
   },
   "champions": {
     "_doc": "the boss each side meets, and the duel (champion.js). tell_s by weight: quick .75, heavy 1 to 1.5, arena 2.6. recover_s is how long he stands open. phases open by health",
-    "hp": 2400, "duel_hp": 520, "show": ["combo", "volley", "rush", "combo", "whip", "wheel", "combo", "geyser", "rush", "wall", "combo", "nova"], "scale": 1.28, "hold_m": 13, "high_m": 5, "in_mps": 42, "from_m": 120, "recover_s": [2.0, 3.0], "false_at": 0.1, "false_s": 3.2, "last_hp": 0.22, "false_line": "Not yet",
+    "hp": 2400, "duel_hp": 520, "show": ["combo", "volley", "rush", "combo", "whip", "wheel", "combo", "geyser", "rush", "wall", "combo", "nova"], "show_warden": ["combo", "volley", "rush", "combo", "frost", "wheel", "combo", "geyser", "rush", "wall", "combo", "frost"], "all_fire_at": 0.5, "ice_fire_at": 0.9, "throw_mps": 8, "warden_moves": { "volley": { "clip": "lance_throw", "clip_t": [0.0, 0.17, 0.57] }, "rush": { "clip": "atk_dash", "clip_t": [0.0, 0.13, 1.07] }, "combo": { "clip": "idle_combat", "clips": ["atk1", "atk2", "atk3"], "clip_at": [0.1, 0.2, 0.23] }, "whip": { "clip": "whip", "clip_t": [0.0, 0.18, 0.53] }, "wheel": { "clip": "idle_combat", "strike": "atk_spin" }, "wall": { "clip": "cast_wave", "clip_t": [0.0, 0.43, 1.33] }, "geyser": { "clip": "geyser", "clip_t": [0.0, 0.3, 0.63] }, "nova": { "clip": "glacier_stomp", "clip_t": [0.0, 0.23, 0.73] }, "frost": { "clip": "breath_cone", "clip_t": [0.0, 0.3, 1.2] } }, "scale": 1.28, "hold_m": 13, "high_m": 5, "in_mps": 42, "from_m": 120, "recover_s": [2.0, 3.0], "false_at": 0.1, "false_s": 3.2, "last_hp": 0.22, "false_line": "Not yet",
     "fire": { "name": "The Cinder King", "hint": "Water puts his fire out. Strike when he falls" },
     "water": { "name": "The Tidecaller", "hint": "Fire boils him dry. Strike when he falls" },
     "moves": {
@@ -220,7 +220,8 @@
       "wheel": { "tell_s": 1.1, "clip": "e_guard", "radius_m": 7.5, "time_s": 1.05, "damage": 11 },
       "wall": { "tell_s": 1.2, "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "speed_mps": 30, "width_m": 9, "range_m": 38, "damage": 20 },
       "geyser": { "tell_s": 1.4, "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "radius_m": 3.8, "height_m": 15, "last_s": 1.1, "damage": 18 },
-      "nova": { "tell_s": 2.6, "big": true, "clip": "e_guard", "radius_m": 30, "speed_mps": 22, "damage": 26 }
+      "frost": { "tell_s": 1.0, "clip": "e_guard", "range_m": 15, "cone_deg": 30, "time_s": 0.8, "damage": 14, "hold_s": 1.5 },
+        "nova": { "tell_s": 2.6, "big": true, "clip": "e_guard", "radius_m": 30, "speed_mps": 22, "damage": 26 }
     },
     "phases": [ { "at": 1.0, "moves": ["volley", "combo", "whip"] }, { "at": 0.68, "moves": ["volley", "combo", "rush", "whip", "wheel", "geyser"] }, { "at": 0.36, "moves": ["combo", "rush", "whip", "wheel", "geyser", "wall", "nova"] } ]
   },

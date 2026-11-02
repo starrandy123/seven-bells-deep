@@ -228,6 +228,7 @@ export async function createHero(G) {
     return false;
   }
 
+  h.clips = clips; h.skin = inked;
   const body = h.body = bones.hips ? createBody(G, h, { root, model, bones, clips, STAND, moves }) : { draw() {}, play() { return false; }, clear() {}, inertia() {}, has: () => false, place() {} };
   const play = (name, fade) => body.play(name, fade), has = (n, alt) => (body.has(n) ? n : alt);
   const wake = h.wake = inked ? createWake(G, h, inked) : null;

@@ -267,7 +267,7 @@ export async function createEnemies(G) {
       if (n) { G.combat.interact('flash_freeze'); G.combat.log.push({ t: G.time, type: 'flash_freeze', n }); }
     }
   }
-  function thaw(e) { e.frozen = 0; G.fx.thaw && G.fx.thaw(e); e.state = e.def.brain === 'lurker' ? 'back' : e.def.brain === 'fish' ? 'stalk' : 'circle'; e.t = 0.6; }
+  function thaw(e) { e.frozen = 0; G.fx.thaw && G.fx.thaw(e); e.state = e.def.brain === 'lurker' ? 'back' : e.def.brain === 'fish' ? 'stalk' : 'circle'; e.t = 0.6; if (e.champ) ember.thawed(e); }
   function stagger(e) { e.stagger = S.stagger_s; e.poise = e.def.poise; dropToken(e); e.state = 'stun'; e.t = S.stagger_s; endTell(e); G.fx.stagger && G.fx.stagger(e); G.combat.log.push({ t: G.time, type: 'stagger', foe: e.kind }); if (e.def.body === 'reaver' && !playClip(e, 'stagger', 0.08, true)) playClip(e, 'hit_front', 0.05, true); }
   function sendMissile(e, from) {
     e.frozen = Math.max(e.frozen, 1.2); e.missile = 1.1; const d = new THREE.Vector3().subVectors(e.pos, from).normalize(); e.vel.copy(d).multiplyScalar(I.ice_missile.speed_mps);
@@ -603,7 +603,7 @@ export async function createEnemies(G) {
     }
     blendSoldier(e);
   }
-  ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, drawRag, throwBody, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
+  ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, drawRag, throwBody, freeze, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
   const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain };
 
   // what holds a foe outside its own head: ice, a lash, being thrown. True means its brain sits this step out
