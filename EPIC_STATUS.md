@@ -182,3 +182,12 @@ Still open:
 - `s_whale` (followers keep to his trail, hop when stuck) and The Pit (fights go to combat's fighter): fixes in, `g_side` never reread.
 - Combat's boss shots: C1s not reread. WebKit `g_hud` not read after Cast and Jump.
 
+## 2 Nov, the night run, Build 54 on his game
+
+Every ask of the night is tracked in `NIGHT_LIST.md`. Builds 41 to 54 went to his private link; nothing certified, launched or published. `fire` and `part2` are the same commit as of Build 53.
+
+Check green, his eye still to come: turbine jets, flight read off real footage, hover, his takeoff sequence, flame system and fire kit, fire strikes from karate capture, beach bands and dune grass, the run, glowing sea cities, the volcano, fire city buildings, the two champions, the duel, the Last Seawall, the fire side's road.
+
+Numbers: walls `wall_ember` 14 of 14, `wall_sides` 8 of 8 in both engines, `ride_lean` 7 of 7, platform playtest clean on Build 51, Q5 95.3 MB (0.7 MB of room), Thalor 102 draws and 495k triangles.
+
+Blocked on his word: 25 CMU files, 41 MB, for more kicks on fire and tai chi for water.
