@@ -16,6 +16,36 @@ await section(['E14'], async () => {
   line('E14', r.seen.length >= 5 && r.side === 'water' && !errors.filter((x) => !/qa\.js|Failed to load/.test(x)).length, `the Tidecaller fights a fire player with his whole kit: ${r.seen.join(' ')}; ${r.contacts} logged; side ${r.side}; errors ${JSON.stringify(errors.slice(0, 3)).slice(0, 300)}`);
   await close();
 });
+// the whole road on the fire side, a step at a time, from the player's seat: every step can be done, and the next one follows. A step that can't finish would strand a player for good
+await section(['E15'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => {
+    const G = window.__game, h = G.hero, E = G.ember, R = G.road, V = G.camera.position.constructor, seen = [], run = (n) => { for (let i = 0; i < n; i++) { h.hp = h.maxHp; G.frame(1 / 30); } };
+    E.setSide('fire', { place: true, quiet: true }); R.at = 0; h.inv = 1e6;
+    const put = (p, air) => { h.respawn(new V(p.x, p.y, p.z), 0); if (air) { h.fireAir = true; h.air = true; h.fly = true; } else { h.land = true; h.grounded = true; h.air = false; h.place(); } };
+    for (let guard = 0; guard < 12; guard++) {
+      const t = R.text(), to = R.target(), at = R.at; seen.push(t); if (!t) break;
+      if (/Take off/.test(t)) { h.air = true; h.fireAir = true; }
+      else if (to) put(to, !/Land on/.test(t));
+      else if (/raids/.test(t)) { E.raids.kills = 3; }
+      else if (/Tidecaller/.test(t)) { G.enemies.clearAll(); for (const e of E.raids.list) e.hp = 0; run(60); let c = G.champ; if (!c) { E.champions().start('water'); c = G.champ; } seen.push(c ? 'he comes' : 'NO CHAMPION'); if (c) { c.e.B.falsed = true; c.e.hp = 0; } }
+      else if (/Seawall/.test(t)) { const b = G.bosses && G.bosses.seawall; if (b) { b.dead = true; } }
+      run(40); if (R.at === at) { run(120); if (R.at === at) { seen.push('STUCK at ' + t + ' pos ' + h.pos.toArray().map((v) => v | 0)); break; } }
+    }
+    return { seen, end: R.at, foes: G.enemies.alive ? G.enemies.alive().length : -1 };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E15', r.seen.length >= 8 && !r.seen.some((x) => /STUCK|NO CHAMPION/.test(x)) && !real.length, `the fire road runs to its end: ${r.seen.join(' > ').slice(0, 330)}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
+// the showcase, asked for in the worst moment: a raid has every body in the pool, then a real fight is on
+await section(['E16'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => { const G = window.__game, E = G.ember, CH = E.champions(); E.setSide('fire', { place: true, quiet: true }); E.raidNow(3); for (let i = 0; i < 20; i++) G.frame(1 / 30); const full = E.pool.filter((q) => q.busy).length; CH.watch(true); for (let i = 0; i < 120; i++) G.frame(1 / 30); const d = CH.duel, both = !!(d && d.a && d.b && d.a.B && d.b.B); CH.watch(false); for (let i = 0; i < 20; i++) G.frame(1 / 30); const c = CH.start('water'), refused = CH.watch(true); return { full, both, c: !!c, refused }; });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E16', r.both && r.c && r.refused === false && !real.length, `Watch the duel with the pool full (${r.full} taken) still gives two fighters: ${r.both}; refused in a real fight: ${r.refused === false}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Two sky fortresses hang over the Burnt Isle: the Cinder Keep and the Ember Gate. Land on the Keep and the blue men come for you';
+const NEWS = 'Fire powers sound like fire, and the lava rivers roar and crackle as you come near';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -230,7 +230,7 @@ export function createUI(G) {
     const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
     const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
     $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
-    $('watchDuel').addEventListener('click', () => { G.ui.setPause(false); G.ember.champions().watch(true); });
+    $('watchDuel').addEventListener('click', () => { G.ui.setPause(false); if (G.ember.champions().watch(true) === false) toast('Not now', 'Finish this fight first', 3); });
     $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Hold Boost to run on the jets, Jump to take off, then Fly. Super goes all fire' : 'Back to the sea', 4); });
     { let saved = null; try { saved = localStorage.getItem('thalor.side'); } catch (_) { /* water, then */ } G.sideNow = 'water'; if (saved === 'fire' && !FLAG.film) { G.ember.setSide('fire', { place: true, quiet: true }); if (G.quest) G.quest.endTitle(); } paintSide(); }
     setTimeout(() => screens.map.warm(), 1200);

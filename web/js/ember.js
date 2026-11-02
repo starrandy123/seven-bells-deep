@@ -386,7 +386,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function raid(dt) {
     CH.stepShow(dt); watchHarbour();
     if (!R.auto || G.champ) return;
-    if (R.kills >= Q.raid.before_champion && !R.champed && !R.on && quiet()) { R.champed = true; CH.start(G.sideNow === 'fire' ? 'water' : 'fire'); return; }
+    if (R.kills >= Q.raid.before_champion && !R.champed && !R.on && quiet()) { R.champed = !!CH.start(G.sideNow === 'fire' ? 'water' : 'fire'); return; }
     if (R.on) { R.list = R.list.filter((e) => e.hp > 0); if (!R.list.length) { R.on = false; R.cool = Q.raid.again_s; R.kills++; } return; }
     if ((R.cool -= dt) > 0 || !quiet()) return;
     if (G.hero.pos.y < -Q.raid.deepest_m) { if (!R.told) { R.told = true; G.ui.tip && G.ui.tip('Something burns above the water. Go up', 6); } return; }

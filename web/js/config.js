@@ -31,4 +31,4 @@ export function pixelRatioFor(tier, w, h) {
 }
 
 // the build, said on the title and the pause screen. One number on every door: the platform bakes its own into the page, but the owner's page and a play link count differently (31 and 2 on one upload). The next upload's number on NotesMosaic, set before it goes up
-export const BUILD = 61;
+export const BUILD = 62;

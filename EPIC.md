@@ -878,6 +878,7 @@ This is the baseline. From now on:
 | CR-58 | 2 Nov | **The fire side opens on the High City's plaza facing the volcano, not a wall.** Its halls get lattice screens read off real fronts: board, rail, two leaves, paper lit from a hot spot. Build 58. |
 | CR-59 | 2 Nov | **The duel is a conversation.** Turns, an exchange with blocks and counters, a hard distance limit, and a director that keeps its side of the line, frames from the separation, and cuts on the blows. Sources in `Pipeline/research/DUEL_SOURCES.md`. The road's second step is now the first flight, down to the Ash City. Build 59. |
 | CR-60 | 2 Nov | **V11, sky fortresses.** Two keeps on floating rocks: a five-storey tower on a raised stone base, smaller keeps, corner turrets, tiled walls with a gate, read off Himeji's published plan. They share the High City's kit, so they add one draw. The road lands the player on the Cinder Keep. Build 60. |
+| CR-61 | 2 Nov | **Found from the player's seat.** The phone's Emberkin pool holds two: Watch the duel with a raid on would have crashed, and a failed champion spawn was never tried again. Both fixed, E15 walks the whole fire road, E16 holds the duel. Fire powers stop calling water's sounds; lava roars and crackles. Build 62. |
 
 ## 20. Part 2: the fire war, and the day's asks (V, M20-M23, W23-W26, G13, G14). Owner: lead
 

@@ -120,7 +120,10 @@ export function createChampions(G, A) {
   }
   // the showcase: both at once, nobody else in it. Where lava meets the sea, the best stage this world has
   function startDuel(at) {
-    if (duel) return duel; duel = {}; const p = at || new THREE.Vector3(514, 12, 868), a = spawn('fire', v1.copy(p).add(v2.set(0, 8, -9)).clone()), b = spawn('water', v1.copy(p).add(v2.set(0, 6, 9)).clone()); a.foe = b; b.foe = a; a.B.t = 1.2; b.B.t = 1.2; duel.a = a; duel.b = b; duel.p = p; duel.clashT = 9; duel.last = b; return duel;
+    if (duel) return duel;
+    // the pool holds two on a phone: anyone else in it would leave a fighter with no body
+    if (G.enemies.clearAll) G.enemies.clearAll();
+    duel = {}; const p = at || new THREE.Vector3(514, 12, 868), a = spawn('fire', v1.copy(p).add(v2.set(0, 8, -9)).clone()), b = spawn('water', v1.copy(p).add(v2.set(0, 6, 9)).clone()); a.foe = b; b.foe = a; a.B.t = 1.2; b.B.t = 1.2; duel.a = a; duel.b = b; duel.p = p; duel.clashT = 9; duel.last = b; return duel;
   }
   function endDuel() { if (!duel) return; for (const e of [duel.a, duel.b]) { if (e) { e.hp = 0; e.champ = null; e.slot.g.scale.setScalar(1); A.X.free(e); } } duel = null; }
   // the director: the duel shot as a fight is shot. Pipeline/research/DUEL_SOURCES.md
@@ -148,6 +151,8 @@ export function createChampions(G, A) {
   let show = null;
   function watch(on) {
     const h = G.hero;
+    // not in the middle of a real fight: clearing the field would count as having won it
+    if (on && !show && (G.champ || (G.boss && G.boss.active))) return false;
     if (on && !show) { show = { pos: h.pos.clone(), inv: h.inv, again: 0 }; h.model.visible = false; document.body.classList.add('duelShow'); h.inv = 1e6; startDuel(); lens.shot = ''; lens.held = 0; G.filmCam = direct; G.noBeacon = true; show.end = () => watch(false); setTimeout(() => { addEventListener('pointerdown', show.end, { once: true }); }, 400); }
     else if (!on && show) { removeEventListener('pointerdown', show.end); endDuel(); h.model.visible = true; document.body.classList.remove('duelShow'); h.inv = show.inv; G.filmCam = null; G.noBeacon = false; show = null; }
   }
