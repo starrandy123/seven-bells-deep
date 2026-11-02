@@ -251,8 +251,9 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
           // on the ground the foot does what the clip's foot does, heel to ball, turning about whichever is down; it just stays where it is. As he slows the clip moves on faster than a foot can roll
           const most = lerp(7, 16, smooth(1.5, 7, speed)) * dt;
           l.rock += clamp(c.rock - l.rock, -most, most);
-          // and over the end of the stance it's given back to the clip, no faster than a foot on the ground can go unseen, so the leg doesn't have to catch up with the capture in the air
-          const A = ankleOn(l), share = gaitOn && !loco && !l.keep ? smooth(0.6, 1, l.ph / Math.max(S.bt, 0.01)) : 0, room = 0.019 * dt * 60, gnd = h.groundAt(A[0], A[2]) - body[1];
+          // and over the end of the stance it's given back to the clip, no faster than a foot on the ground can go unseen, so the leg doesn't have to catch up with the capture in the air:
+          // 1.2 cm a frame, which with the landing's own correction keeps a planted foot under M1's 3 cm (it was 1.9, and the ball of the foot slid 3.17 cm in a frame at a run)
+          const A = ankleOn(l), share = gaitOn && !loco && !l.keep ? smooth(0.6, 1, l.ph / Math.max(S.bt, 0.01)) : 0, room = 0.012 * dt * 60, gnd = h.groundAt(A[0], A[2]) - body[1];
           l.rel = l.rel || [0, 0, 0];
           { const d = [0, 1, 2].map((k) => share * (l.cA[k] + (k === 1 ? gnd : 0) - A[k]) - l.rel[k]), m = Math.hypot(d[0], d[1], d[2]), g = m > room ? room / m : 1; for (let k = 0; k < 3; k++) { l.rel[k] += d[k] * g; A[k] += l.rel[k]; } }
           if (l.err) { const e = Math.exp(-dt * 40); l.err = K.scale(l.err, e); if (K.len(l.err) < 1e-3) l.err = null; else { A[0] += l.err[0]; A[1] += l.err[1]; A[2] += l.err[2]; } }
