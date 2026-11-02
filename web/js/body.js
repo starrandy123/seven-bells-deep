@@ -28,7 +28,7 @@ const KNEE_RATE = 24.4;      // rad/s, 1,400°/s: a knee has a top speed. Past t
 const FOOT_RATE = 20;        // rad/s: and the foot's. A handover can leave a foot in the air with no swing left to get flat in
 const TOE_RATE = 24;         // rad/s: the toe joint is the capture's, without the capture's noise, 1,576°/s at his rate on a joint this small
 const HOVER_OUT = 1.5;     // m/s: a hard landing's feet come the last of the way to the ground at this
-const CLIP_LEGS = new Set(['death', 'jump', 'jump2', 'leap_super', 'surf_jump', 'glacier_stomp', 'dodge_land', 'atk_dash_land']);      // a land dodge goes off at 18 m/s in a frame or two, Riptide at 34: no foot could stay planted, and the slide's in the clip
+const CLIP_LEGS = new Set(['death', 'jump', 'jump2', 'leap_super', 'surf_jump', 'glacier_stomp', 'dodge_land', 'atk_dash_land', 'e_side', 'e_kick', 'e_lunge', 'e_rev', 'e_double', 'e_hook', 'e_cross', 'e_jab', 'e_blast']);      // a land dodge goes off at 18 m/s in a frame or two, Riptide at 34: no foot could stay planted, and the slide's in the clip
 // how a switch dies away: an offset is given the time it needs to die at this rate at most, radians a second, so a big difference takes longer than a small one and nothing pops (M3b)
 const SWITCH_RATE = 10.5;
 const HIPS_EASE = 45;         // m/s²: what a pose's hip change may add to a landing's brake (M5g)
@@ -433,7 +433,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       advance(dt, speed);
       standT = (standT + dc) % (CL.stand ? CL.stand.dur : 3);
       const pace = chase(P.pace, F.pace, Math.min(speed, 12), dt), st = 1 - smooth(0.1, 0.8, pace), go = 1 - st;
-      if (sheath.k < 0.995 && CL.idle_combat) { guardT = (guardT + dc) % CL.idle_combat.dur; sample('stand', standT, st * (0.5 + 0.5 * sheath.k)); sample('idle_combat', guardT, st * 0.5 * (1 - sheath.k)); } else sample('stand', standT, st);
+      if (h.fireBody && CL.e_guard && h.combatT < 3) { guardT = (guardT + dc) % CL.e_guard.dur; sample('e_guard', guardT, st); }      // a fighter's guard, from capture: fists up, weight low
+      else if (sheath.k < 0.995 && CL.idle_combat) { guardT = (guardT + dc) % CL.idle_combat.dur; sample('stand', standT, st * (0.5 + 0.5 * sheath.k)); sample('idle_combat', guardT, st * 0.5 * (1 - sheath.k)); } else sample('stand', standT, st);
       if (loco) { accQ.fill(0); accW.fill(0); accP[0] = accP[1] = accP[2] = 0; accP.w = 0; sample(loco.name, Math.min(loco.t, loco.dur - 1e-3), 1); }
       else { const pR = warp(phase, S), pL = warp((phase - S.onL + 1) % 1, S); for (const [n, w] of [['walk', S.wa], ['run', S.ru], ['sprint', S.sp]]) if (CL[n]) sample(n, phase * CL[n].dur, go * w, pR * CL[n].dur, ((pL + GAITS[n].on_L) % 1) * CL[n].dur); }
       settle(); held.set(pose); heldP = poseP.slice();

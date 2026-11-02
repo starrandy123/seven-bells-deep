@@ -409,7 +409,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   G.road = createRoad(G);
   CH = createChampions(G, { D, Q, X: new Proxy({}, { get: (_, k) => X[k] }), R, aim, goto, faceHim, form, bolt, floorAt: (x, z) => Math.max(groundAt(x, z), 0), film: FLAG.film });
   function setSide(side, { place = false, quiet = false } = {}) {
-    const fire = side === 'fire', h = G.hero; if (!H2.man) return; G.sideNow = fire ? 'fire' : 'water'; document.body.dataset.side = G.sideNow; H2.on = fire; if (!fire) { H2.sup = 0; if (h.fly) h.endFly(); } showHero();
+    const fire = side === 'fire', h = G.hero; if (!H2.man) return; G.sideNow = fire ? 'fire' : 'water'; document.body.dataset.side = G.sideNow; H2.on = fire; h.fireBody = fire; if (!fire) { H2.sup = 0; if (h.fly) h.endFly(); } showHero();
     try { localStorage.setItem('thalor.side', G.sideNow); } catch (_) { /* a choice for this visit */ }
     G.fx.setSide && G.fx.setSide(fire); G.fireKit.install(fire); if (G.combat.relabel) G.combat.relabel();
     // what was coming for the other side goes back where it came from
@@ -424,7 +424,10 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
   function heroBurn(dt) {
     if (!H2.on) return; const h = G.hero, B = h.bones; if (H2.sup > 0 && (H2.sup -= dt) <= 0) { H2.cool = Q.super.hero_again_s; showHero(); burst(v1.copy(h.pos), 12, 1); } if (H2.cool > 0) H2.cool -= dt;
-    const sup = H2.sup > 0, burning = h.flyPose; if (!burning) { H2.spool = 0; H2.ringT = 0; } if (!burning && !sup) return;
+    const sup = H2.sup > 0, burning = h.flyPose; if (!burning) { H2.spool = 0; H2.ringT = 0; }
+    // in a fight his fists are alight, ready
+    if (h.combatT < 3 && !h.dead && (H2.fistT = (H2.fistT || 0) - dt) <= 0) { H2.fistT = 0.09; for (const b of [B.hand_R, B.hand_L]) { b.getWorldPosition(v1); FL.puff(v1, 0.2 + Math.random() * 0.12, 0.2, rand(-0.4, 0.4), rand(0.8, 1.8), rand(-0.4, 0.4), 2, 2, 1.3); } }
+    if (!burning && !sup) return;
     h.root.updateMatrixWorld(true); B.spine_3.getWorldPosition(v1); B.hips.getWorldPosition(v2); H2.up.subVectors(v1, v2).normalize();
     const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1);
     if (sup) { const cam = G.camera.position; B.head.getWorldPosition(v1); v1.addScaledVector(H2.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(h.vel, -0.5).normalize(); const Lc = 0.42 * flick, Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize(); G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.55); }

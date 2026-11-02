@@ -69,6 +69,7 @@ export function createPowers(G, h, D, C) {
   function during(a, dt) {
     const d = a.def, f = a.f, hitEnd = d.startup + d.active;
     if (a.id === 'maelstrom' && f >= d.startup && f < hitEnd && G.enemies) G.enemies.drag(h.pos, radiusOf(), dt);
+    if (a.id === 'maelstrom' && G.sideNow === 'fire' && f >= d.startup && f < hitEnd) { h.heading += dt * 11; h.drawHeading = h.heading; }      // the whirlwind kick: he goes round on the standing leg with the ring of fire
     if (a.id === 'maelstrom' && lv('maelstrom') >= 3 && !a.thrown && f >= hitEnd) { a.thrown = true; if (G.enemies) for (const e of G.enemies.alive()) { to.subVectors(e.pos, h.pos); const l = to.length() || 1; if (l < radiusOf() + 2 && e.frozen <= 0) { e.vel.addScaledVector(to, U.maelstrom.throw_mps / l); e.vel.y += 4; } } G.fx.ring(h.pos.clone(), radiusOf(), 0.4, 0x7ff3ff); }
     if (a.id === 'breath' && f >= d.startup && f < hitEnd) breath(a, dt);
   }
