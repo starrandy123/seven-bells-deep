@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Champions: the Cinder King and the Tidecaller come after three raids. Pause, then Watch the duel to see them fight';
+const NEWS = 'The Ash City and the High City are rebuilt: tiered red halls, curved roofs, lit lattices, gold. The harbour town has balconies and awnings';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };

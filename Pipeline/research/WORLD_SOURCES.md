@@ -18,6 +18,10 @@ Frames of the best drowned cities, studied 2 Nov, overruled the first reading: w
 
 A shape grammar, our own code in the form CGA made standard: Lot, Mass, Facade, Floor, Bay; split and comp; a seed per lot; terminals are palette meshes. WFC (MIT) and hex-map-wfc (MIT) show adjacency and one-palette batching. Kenney and Quaternius kits are CC0, for reference.
 
+## Fire city architecture
+
+Frames of great red palaces and halls: vermilion posts, dark glazed tile, tier on tier, gold at the corners, lanterns. A curved roof is a surface lofted from a straight eave up a concave slope, its corners lifted (the eaves are straight on plan and rise at their ends). `Mk.pagoda` in `city.js`.
+
 ## Lava
 
 Temperature to colour, from USGS: red 873-1073 K, orange 1073-1273 K, yellow 1273-1473 K; fresh Hawaiian lava about 1443 K. A crust forms in seconds and thickens with the square root of time; it breaks into plates with hot seams. Basalt columns are jittered hexagons. Flow by two phases half a cycle apart (MIT-0, Catlike Coding; three.js Water2, MIT). Shadertoy's default licence is non-commercial: not used.

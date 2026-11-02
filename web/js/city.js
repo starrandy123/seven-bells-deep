@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ------------------------------------------------------------------------------------------------ what a surface is (the city material reads these numbers)
-export const K = { STONE: 0, SEA_WALL: 1, LAND_WALL: 2, TILE: 3, DOME: 4, DRUM: 5, COLUMN: 6, SPIRE: 7, GOLD: 8, PAVING: 9, LAMP: 10, AWNING: 11, FRIEZE: 12, DARK: 13, TIMBER: 14, SEA_GROUND: 15 };
+export const K = { STONE: 0, SEA_WALL: 1, LAND_WALL: 2, TILE: 3, DOME: 4, DRUM: 5, COLUMN: 6, SPIRE: 7, GOLD: 8, PAVING: 9, LAMP: 10, AWNING: 11, FRIEZE: 12, DARK: 13, TIMBER: 14, SEA_GROUND: 15, FIRE: 16, FIRE_POST: 17 };
 const SEA_S = 4.2, SEA_BAY = 3.6, LAND_S = 3.0, LAND_BAY = 2.8;      // a storey and a bay, in metres; the material draws to the same storeys
 
 // ------------------------------------------------------------------------------------------------ the cities
@@ -103,6 +103,30 @@ class Mk {
       this.I.push(this.v(x, y0, za, sx, 0, 0, za - (cz - gd), y0 - base, gable, LAND_BAY), this.v(x, y0, zb2, sx, 0, 0, zb2 - (cz - gd), y0 - base, gable, LAND_BAY), this.v(x, yt, cz, sx, 0, 0, gd, yt - base, gable, LAND_BAY));
     }
     this.S.push({ t: 'box', x: cx, z: cz, hx: w / 2, hz: d / 4, y0, y1: y0 + h * 0.85 });
+  }
+  // a curved tiled roof: a surface lofted from a straight eave up a concave slope to its ridge, the corners lifted (Pipeline/research/WORLD_SOURCES.md). Eaves that are straight on plan and rise at their ends
+  pagoda(cx, cz, w, d, y0, h, over, lift) {
+    const a = w / 2 + over, b = d / 2 + over, r = Math.max(0, (w - d) / 2), SEG = 6, ROWS = 3;
+    const at = (side, s, t, out) => {
+      const ex = side === 0 ? s * a : side === 1 ? a : side === 2 ? -s * a : -a, ez = side === 0 ? b : side === 1 ? -s * b : side === 2 ? -b : s * b, rx = side === 0 ? s * r : side === 1 ? r : side === 2 ? -s * r : -r;
+      out[0] = cx + ex + (rx - ex) * t; out[2] = cz + ez - ez * t; out[1] = y0 + h * Math.pow(t, 1.7) + lift * Math.pow(Math.abs(s), 3) * (1 - t) * (1 - t); return out;
+    };
+    const p = [0, 0, 0], p0 = [0, 0, 0], p1 = [0, 0, 0], q0 = [0, 0, 0], q1 = [0, 0, 0];
+    for (let side = 0; side < 4; side++) {
+      const base = this.P.length / 3, len = side % 2 ? 2 * b : 2 * a, slope = Math.hypot(side % 2 ? a - r : b, h);
+      for (let j = 0; j <= SEG; j++) for (let i = 0; i <= ROWS; i++) {
+        const s = -1 + (2 * j) / SEG, t = i / ROWS; at(side, s, t, p); at(side, Math.max(-1, s - 0.05), t, p0); at(side, Math.min(1, s + 0.05), t, p1); at(side, s, Math.max(0, t - 0.05), q0); at(side, s, Math.min(1, t + 0.05), q1);
+        const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2], vx = q1[0] - q0[0], vy = q1[1] - q0[1], vz = q1[2] - q0[2]; let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1, sg = ny < 0 ? -1 : 1; nx *= sg / l; ny *= sg / l; nz *= sg / l;
+        this.v(p[0], p[1], p[2], nx, ny, nz, ((s + 1) / 2) * len, t * slope, K.TILE, 1);
+      }
+      for (let j = 0; j < SEG; j++) for (let i = 0; i < ROWS; i++) { const k = base + j * (ROWS + 1) + i; this.quad(k, k + ROWS + 1, k + ROWS + 2, k + 1); }
+      // under the eave, in shadow
+      const c0 = at(side, -1, 0, [0, 0, 0]), c1 = at(side, 1, 0, [0, 0, 0]), hw = w / 2, hd = d / 2, wa = side === 0 ? [-hw, hd] : side === 1 ? [hw, hd] : side === 2 ? [hw, -hd] : [-hw, -hd], wb = side === 0 ? [hw, hd] : side === 1 ? [hw, -hd] : side === 2 ? [-hw, -hd] : [-hw, hd], sn = side === 0 ? [0, 1] : side === 1 ? [1, 0] : side === 2 ? [0, -1] : [-1, 0];
+      this.quad(this.v(cx + wa[0], y0 + 0.02, cz + wa[1], sn[0] * 0.3, -1, sn[1] * 0.3, 0, 0, K.DARK, 1), this.v(c0[0], c0[1] - 0.02, c0[2], sn[0] * 0.3, -1, sn[1] * 0.3, 0, 0, K.DARK, 1), this.v(c1[0], c1[1] - 0.02, c1[2], sn[0] * 0.3, -1, sn[1] * 0.3, 0, 0, K.DARK, 1), this.v(cx + wb[0], y0 + 0.02, cz + wb[1], sn[0] * 0.3, -1, sn[1] * 0.3, 0, 0, K.DARK, 1));
+      this.cyl(c0[0], c0[2], 0.1, 0.015, c0[1] - 0.05, c0[1] + 0.7, 5, K.GOLD, { solid: false });      // a gilt point on every corner
+    }
+    if (r > 0) this.box(cx, cz, 2 * r + 0.5, 0.3, y0 + h - 0.06, y0 + h + 0.2, K.DARK, K.GOLD, 3, null, false);
+    this.S.push({ t: 'box', x: cx, z: cz, hx: w / 2, hz: d / 2, y0, y1: y0 + h * 0.8 });
   }
   column(x, z, r, y0, h, seg) {
     this.box(x, z, r * 2.6, r * 2.6, y0, y0 + r * 0.9, K.STONE, K.STONE, 3, null, false);
@@ -223,6 +247,31 @@ function seaSet(phone) {
   { const m = new Mk(); m.box(0, 0, 1, 1, -4, 0, K.STONE, K.PAVING, 3); A.plinth = { geo: m.geometry(), solids: m.S, H: 0, W: 1 }; }
   return A;
 }
+// the fire cities' own buildings: lacquered posts, lit lattices, tier on tier of dark curved roofs, gold at every point. Read off frames of the great red palaces and halls. Same names as the land's, so the planner lays them out the same way
+function fireSet(phone) {
+  const A = {}, FS = 3.2, BAY = 2.3, cseg = phone ? 8 : 10, foot = (m, w, d) => m.box(0, 0, w + 1, d + 1, -1.5, 0.5, K.STONE, K.PAVING, 3);
+  const tower = (w, tiers) => {
+    const m = new Mk(); foot(m, w, w); let y = 0.5, W = w;
+    for (let i = 0; i < tiers; i++) { const last = i === tiers - 1, h = FS * (i ? 0.92 : 1.15); m.box(0, 0, W, W, y, y + h, K.FIRE, null, BAY, y); y += h; const rh = last ? 2.8 : 1.15; m.pagoda(0, 0, W, W, y, rh, 1.25 - 0.08 * i, 0.95); y += last ? rh : rh * 0.62; W *= 0.8; }
+    m.cyl(0, 0, 0.26, 0.02, y - 0.3, y + 3, 6, K.GOLD, { solid: false }); return { geo: m.geometry(), solids: m.S, H: y + 3, W: w + 1 };
+  };
+  A.towerHouse = tower(5.2, 3); A.campanile = tower(7.4, 5);
+  const house = (w, d, n) => {
+    const m = new Mk(); foot(m, w, d); const h = n * FS; m.box(0, 0, w, d, 0.5, 0.5 + h, K.FIRE, null, BAY, 0.5); if (n > 1) m.pagoda(0, 0, w, d, 0.5 + FS, 0.55, 0.85, 0.3);
+    m.pagoda(0, 0, w * 0.98, d * 0.98, 0.5 + h, 2.7, 1.15, 1.05); return { geo: m.geometry(), solids: m.S, H: 0.5 + h + 2.7, W: Math.max(w, d) + 1 };
+  };
+  A.house2 = house(7.0, 6.0, 2); A.house3 = house(5.8, 6.2, 3);
+  { const m = new Mk(); foot(m, 8.6, 6.4); m.box(-1.0, 0, 6.2, 6.0, 0.5, 0.5 + 2 * FS, K.FIRE, null, BAY, 0.5); m.pagoda(-1.0, 0, 6.2, 6.0, 0.5 + 2 * FS, 2.4, 1.0, 0.95); m.box(3.2, -0.5, 2.6, 4.2, 0.5, 0.5 + FS, K.FIRE, null, BAY, 0.5); m.pagoda(3.2, -0.5, 2.6, 4.2, 0.5 + FS, 1.3, 0.7, 0.6); A.houseWing = { geo: m.geometry(), solids: m.S, H: 0.5 + 2 * FS + 2.4, W: 9.6 }; }
+  const hall = (w, d, n) => {
+    const m = new Mk(); foot(m, w, d); const cols = Math.round(w / 2.4); for (const z of [-d / 2 + 0.3, d / 2 - 0.3]) for (let i = 0; i <= cols; i++) m.cyl(-w / 2 + 0.3 + (i * (w - 0.6)) / cols, z, 0.24, 0.24, 0.5, 4.6, cseg, K.FIRE_POST, { solid: false });
+    m.box(0, 0, w - 3, d - 2.4, 0.5, 4.6, K.FIRE, null, BAY, 0.5); m.pagoda(0, 0, w, d, 4.6, 1.0, 1.1, 0.6); m.box(0, 0, w * 0.62, d * 0.62, 5.3, 6.9, K.FIRE, null, BAY, 5.3); m.pagoda(0, 0, w * 0.64, d * 0.64, 6.9, 1.9 + n * 0.1, 1.0, 0.9); return { geo: m.geometry(), solids: m.S, H: 9.2, W: Math.max(w, d) + 1 };
+  };
+  A.loggia = hall(8.2, 6.2, 1); A.market = hall(12, 8, 2);
+  { const m = new Mk(); for (const x of [-1.5, 1.5]) for (const z of [-1, 1]) m.cyl(x, z, 0.09, 0.09, 0, 2.5, 5, K.FIRE_POST, { solid: false }); m.pagoda(0, 0, 3.0, 2.0, 2.5, 0.8, 0.5, 0.35); m.box(0, 0, 3.0, 1.6, 0, 0.9, K.TIMBER, K.TIMBER, 3); A.stall = { geo: m.geometry(), solids: m.S, H: 3.3, W: 3.6 }; }
+  { const m = new Mk(); m.cyl(0, 0, 0.1, 0.08, 0, 3.9, 6, K.DARK, { solid: false }); m.cyl(0, 0, 0.34, 0.34, 3.9, 4.6, 8, K.LAMP, { solid: false }); m.cyl(0, 0, 0.42, 0.04, 4.6, 5.0, 8, K.GOLD, { solid: false }); m.S.push({ t: 'cyl', x: 0, z: 0, r: 0.22, y0: 0, y1: 5 }); A.lamp = { geo: m.geometry(), solids: m.S, H: 5, W: 0.8 }; }
+  { const m = new Mk(); m.box(0, 0, 1, 1, -3, 0, K.STONE, K.PAVING, 3); A.plinth = { geo: m.geometry(), solids: m.S, H: 0, W: 1 }; }
+  return A;
+}
 function landSet(phone) {
   const A = {}, seg = phone ? 8 : 12;
   // town houses: plaster walls, shuttered windows, a door, a terracotta roof with eaves, a chimney
@@ -231,6 +280,10 @@ function landSet(phone) {
     const h = n * LAND_S; m.box(0, 0, w, d, 0.2, 0.2 + h, K.LAND_WALL, null, LAND_BAY, 0.2);
     m.roof(0, 0, w, d, 0.2 + h, roofH, 0.45, K.LAND_WALL, 0.2);
     m.box(w * 0.28, -d * 0.18, 0.7, 0.7, 0.2 + h, 0.2 + h + roofH + 1.0, K.STONE, K.DARK, 3, null, false);
+    // what makes a harbour street lived in: a timber balcony on its rail, a striped awning over the door, a flower box
+    const fy = 0.2 + LAND_S; m.box(0, d / 2 + 0.42, w * 0.56, 0.84, fy - 0.1, fy + 0.04, K.TIMBER, K.TIMBER, 3, null, false); for (const x of [-w * 0.27, -w * 0.09, w * 0.09, w * 0.27]) m.cyl(x, d / 2 + 0.78, 0.04, 0.04, fy, fy + 1.0, 4, K.TIMBER, { solid: false }); m.box(0, d / 2 + 0.8, w * 0.56, 0.08, fy + 0.96, fy + 1.04, K.TIMBER, K.TIMBER, 3, null, false);
+    m.box(-w * 0.25, d / 2 + 0.55, w * 0.34, 1.1, 2.3, 2.42, K.AWNING, K.AWNING, 3, null, false);
+    m.box(w * 0.26, -d / 2 - 0.16, 1.5, 0.3, fy + 0.72, fy + 0.96, K.TIMBER, K.TIMBER, 3, null, false);
     return { geo: m.geometry(), solids: m.S, H: 0.2 + h + roofH + 1.0, W: Math.max(w, d) + 0.5 };
   };
   A.house2 = house(7.0, 6.0, 2, 2.4);
@@ -294,7 +347,7 @@ function landSet(phone) {
 export function planCities(data, heightAt, opts = {}) {
   const phone = !!opts.phone, poi = new Map((data.poi || []).map((p) => [p.id, p])), colliders = [], cities = [], why = {}, earth = heightAt;
   const no = (city, r) => { const k = city + ':' + r; why[k] = (why[k] || 0) + 1; };      // why a lot stayed empty (for the checks)
-  const sets = { sea: seaSet(phone), land: landSet(phone) };
+  const sets = { sea: seaSet(phone), land: landSet(phone), fire: fireSet(phone) }, setOf = (d) => (d.fire ? sets.fire : sets[d.kind]);
   // first each city clears its footprint of the clutter it replaces (so this runs before the world draws or collides with any instance)
   const cleared = {};
   for (const def of CITIES) {
@@ -326,7 +379,7 @@ export function planCities(data, heightAt, opts = {}) {
     // a city in the sky stands on its own rock: the rock's top is its ground, and it's a solid the hero can land on (fireisle.js draws it)
     heightAt = def.sky ? (x, y) => (Math.hypot(x - p.x, y - p.y) < p.r * 1.04 ? p.z : -60) : earth;
     if (def.sky) colliders.push({ t: 'cyl', x: p.x, y: p.y, z0: p.z - 14, z1: p.z, r: p.r * 1.06, city: def.id, type: 'rock' });
-    const rand = rng((Math.round(p.x * 131 + p.y * 977) ^ 0x9e37) >>> 0), R = p.r * (def.radius || 0.96), ca = Math.cos(def.angle), sa = Math.sin(def.angle), A = sets[def.kind];
+    const rand = rng((Math.round(p.x * 131 + p.y * 977) ^ 0x9e37) >>> 0), R = p.r * (def.radius || 0.96), ca = Math.cos(def.angle), sa = Math.sin(def.angle), A = setOf(def);
     const cx0 = p.x + (def.shift ? def.shift[0] : 0), cy0 = p.y + (def.shift ? def.shift[1] : 0);
     const keepPoi = def.keep.map((id) => poi.get(id)).filter(Boolean), sea = def.kind === 'sea', B = def.block, inner = B - def.street, half = Math.ceil(R / B);
     const surface = -3;                                                      // a sea piece's top stays this far under the water
@@ -411,7 +464,7 @@ export function planCities(data, heightAt, opts = {}) {
   }
   // every building's solids, turned and scaled as it stands. The archetype's local x and z (scene) become the world's x, y: local z is -y before the turn
   for (const c of cities) for (const type in c.inst) {
-    const A = sets[c.def.kind][type]; if (!A) continue;
+    const A = setOf(c.def)[type]; if (!A) continue;
     for (const [x, y, z, yaw, sx, sy, sz] of c.inst[type]) {
       const co = Math.cos(yaw), si = Math.sin(yaw);
       for (const s of A.solids) {
@@ -422,7 +475,7 @@ export function planCities(data, heightAt, opts = {}) {
     }
   }
   heightAt = earth; const count = {}; let total = 0, tris = 0;
-  for (const c of cities) { count[c.def.id] = {}; for (const t in c.inst) { count[c.def.id][t] = c.inst[t].length; if (t !== 'plinth' && t !== 'lamp') total += c.inst[t].length; tris += c.inst[t].length * (sets[c.def.kind][t].geo.index.count / 3); } }
+  for (const c of cities) { count[c.def.id] = {}; for (const t in c.inst) { count[c.def.id][t] = c.inst[t].length; if (t !== 'plinth' && t !== 'lamp') total += c.inst[t].length; tris += c.inst[t].length * (setOf(c.def)[t].geo.index.count / 3); } }
 
   // the ink line (a comic's outline): each building drawn again inside out, pushed out along smooth normals (welded, so the hull closes at every corner)
   const hulls = new Map();
@@ -436,7 +489,7 @@ export function planCities(data, heightAt, opts = {}) {
     for (const c of cities) {
       const group = new THREE.Group(); group.name = 'city_' + c.def.id; scene.add(group);
       for (const type in c.inst) {
-        const A = sets[c.def.kind][type], L = c.inst[type]; if (!A || !L.length) continue;
+        const A = setOf(c.def)[type], L = c.inst[type]; if (!A || !L.length) continue;
         const im = new THREE.InstancedMesh(A.geo, matFor(type), L.length);
         im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(L.length * 3), 3);
         L.forEach(([x, y, z, yaw, sx, sy, sz, tint], i) => { v.set(x, z, -y); e.set(0, yaw, 0); q.setFromEuler(e); s.set(sx, sy, sz); m4.compose(v, q, s); im.setMatrixAt(i, m4); col.setRGB(tint[0], tint[1], tint[2]); im.setColorAt(i, col); });

@@ -168,12 +168,13 @@ export const CITY_ALBEDO = /* glsl */`{
     // ---------------- terracotta roof tiles: rounded courses up the slope, staggered
     float rv = ocUV.y/.32, row = floor(rv), tu = ocUV.x/.26 + row*.5;
     float ocRs = fract(vFacSeed*9.13); vec3 ocRc = ocRs < .46 ? vec3(.50, .17, .08) : ocRs < .7 ? vec3(.56, .30, .11) : ocRs < .86 ? vec3(.34, .10, .07) : vec3(.20, .22, .26);      // terracotta, ochre, oxblood, slate
+    if (ocEmber > .5) ocRc = ocRs < .6 ? vec3(.055, .05, .058) : ocRs < .85 ? vec3(.14, .035, .03) : vec3(.05, .09, .08);      // the fire cities' glazed tile: black, oxblood, a dark jade
     vec3 t = ocRc*(.82 + .3*ocH1(vec2(floor(tu), row) + vFacSeed*3.0));
     t *= mix(.68, 1.0, smoothstep(.0, .4, fract(rv)));
     ink = max(ink, ocLnGrid(rv)*.6); ink = max(ink, ocLnGrid(tu)*.25);
     ocC = mix(ocRc*.9, t, ocLod); ocStoneish = false;
   }
-  else if (ocK == 10) { ocC = vec3(1.0, .88, .62); ocWinM = 1.0; ocWinC = mix(vec3(1.0, .72, .40), vec3(.35, .95, .95), ocDeep); ocStoneish = false; }
+  else if (ocK == 10) { ocC = mix(vec3(1.0, .88, .62), vec3(1.0, .30, .12), ocEmber); ocWinM = 1.0; ocWinC = mix(mix(vec3(1.0, .72, .40), vec3(.35, .95, .95), ocDeep), vec3(1.0, .34, .10), ocEmber); ocStoneish = false; }
   else if (ocK == 11) { ocC = mix(vec3(.62, .10, .07), vec3(.88, .82, .68), step(.5, fract(ocUV.x/.5))); ink = max(ink, ocLnGrid(ocUV.x/.5)*.4); ocStoneish = false; }
   else if (ocK == 12) {
     // ---------------- the frieze: a running wave in gold on sea green, gold borders
@@ -184,6 +185,18 @@ export const CITY_ALBEDO = /* glsl */`{
     ocC = mix(mix(bg, GOLD, .35), c, ocLodW); ocStoneish = false;
     if (vOcP.y < -3.0) { ocWinM = max(ocWinM, (d < .12 || y < .12 || y > .88 ? .85 : .08)); ocWinC = mix(vec3(1.0, .74, .30), vec3(.30, .90, 1.0), step(.6, fract(vFacSeed*3.71))); }      // under the sea the frieze is a line of light round the building, the rim every tower wears in the great drowned cities
   }
+  else if (ocK == 16) {
+    // ---------------- a fire city's wall: lacquered posts at each bay, black beams with a gold line, and between them lattices with the light behind
+    float S = 3.2, st = floor(ocUV.y/S), vy = ocUV.y - st*S, bi = floor(ocUV.x/ocBw), ux = ocUV.x - (bi + .5)*ocBw, hb = ocBw*.5; vec3 RED = vec3(.46, .055, .03), BLK = vec3(.035, .03, .03);
+    float gx = fract(ux/.42 + .5), gy = fract(vy/.42 + .5), lat = max(ocLnGrid(ux/.42 + .5), ocLnGrid(vy/.42 + .5));
+    vec3 c = vec3(.10, .03, .02); float lit = step(.3, ocH1(vec2(bi, st) + vFacSeed*19.0)), post = 1.0 - step(.26, hb - abs(ux)), beam = step(S - .42, vy) + (1.0 - step(.3, vy));
+    if (ocH1(vec2(bi, st + 3.0) + vFacSeed*23.0) < .22 && st < .5 && vy < 2.5) { c = vec3(.30, .05, .02)*(.85 + .2*step(.5, fract(ux*2.2))); lit = 0.0; }      // a door
+    else { ocWinM = lit*.55*(1.0 - lat*.8); ocWinC = vec3(1.0, .42, .10); c = mix(c, BLK, lat); }
+    if (post > .5) { c = RED*(.9 + .2*ocH1(vec2(bi, 3.0))); ocWinM = 0.0; } if (beam > .5) { c = BLK; ocWinM = 0.0; if (abs(vy - (S - .22)) < .05) c = GOLD; }
+    inkW = max(inkW, max(ocLn(hb - abs(ux) - .26), max(ocLn(vy - .3), ocLn(vy - (S - .42))))); ink = max(ink, lat*.6);
+    ocC = mix(mix(vec3(.16, .05, .03), RED, .35), c, ocLodW); ocWinM *= ocLodW; ocWinM = max(ocWinM, .22*(1.0 - ocLodW)); ocEmber = 1.0; ocStoneish = false;
+  }
+  else if (ocK == 17) { ocC = vec3(.46, .055, .03)*(.92 + .16*sin(ocUV.x*2.0)); ocStoneish = false; }
   else if (ocK == 13) { ocC = vec3(.05, .045, .04); ocStoneish = false; }
   else if (ocK == 14) { ocC = vec3(.28, .18, .10)*(.86 + .22*step(.5, fract(ocUV.y*2.7 + ocH1(vec2(floor(ocUV.x*3.0), 1.0))))); ocStoneish = false; }
   else {
