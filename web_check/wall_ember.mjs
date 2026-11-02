@@ -327,6 +327,23 @@ await section(['E31'], async () => {
   line('E31', q.datum > 0.3 && q.tall < 0.25 && q.top < 200 && near(q.onRoof) && near(q.onRing) && near(q.onDeck) && q.seenFar && !real.length, `${q.boxes} boxes, ${q.signs} signs; ${(q.datum * 100).toFixed(0)}% of buildings on the 31 m roofline, ${(q.tall * 100).toFixed(0)}% over 60 m, the tallest ${q.top.toFixed(0)} m; landed ${q.onRoof.toFixed(2)} m over a tower's roof, ${q.onRing.toFixed(2)} m over the Bell Ring's floor, ${q.onDeck.toFixed(2)} m over the mast's 110 m deck; the skyline drawn from 900 m: ${q.seenFar}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// nothing turns the world black: through a raid on him far out at sea (where the flyers sputter) and a fight in the air, every light the shaders share stays a number. One NaN there drew him and every hill as a black shape (Randy, 2 Nov: "There are dark figures in the frame where the hero is supposed to be")
+await section(['E32'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, U = G.look.uniforms, s = G.world.data.spawn, bad = new Set();
+    const scan = () => { for (const k in U) { const v = U[k].value, chk = (x) => { if (typeof x === 'number') return Number.isFinite(x); if (x && (x.isVector2 || x.isVector3 || x.isVector4 || x.isColor)) return ['x', 'y', 'z', 'w', 'r', 'g', 'b'].every((c) => !(c in x) || Number.isFinite(x[c])); if (Array.isArray(x)) return x.every(chk); return true; }; if (!chk(v)) bad.add(k); } };
+    G.ember.setSide('water', { place: false, quiet: true }); Q.swimAt(s.x, s.y, -0.4); h.inv = 1e6; const f = G.ember.raidNow(2) || []; f.forEach((e, i) => { e.pos.set(h.pos.x + 7, 4 + i, h.pos.z + 7); e.state = 'circle'; e.t = 0.5; });
+    for (let i = 0; i < 300; i++) { Q.drive(i % 20 === 0 ? { atk: true } : {}); G.frame(1 / 60); scan(); }
+    G.enemies.clearAll && G.enemies.clearAll(); G.ember.setSide('fire', { place: true, quiet: true }); const V = h.pos.constructor; h.respawn(new V(410, 140, 748), 0.9); h.fireAir = true; h.air = true; h.fly = true; G.ember.raidNow(3);
+    for (let i = 0; i < 300; i++) { Q.drive(i % 25 === 0 ? { atk: true, boost: true } : { boost: true }); G.frame(1 / 60); scan(); }
+    return { bad: [...bad], lights: U.ocLightN.value };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E32', !r.bad.length && !real.length, `through a raid far out at sea and a fight in the air, shared lights not a number: ${r.bad.length ? r.bad.join(' ') : 'none'} (${r.lights} lights at the end); ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

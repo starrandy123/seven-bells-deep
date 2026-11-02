@@ -1106,9 +1106,12 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         void main() {
           vec4 mv = viewMatrix*vec4(aP.xyz, 1.0);
           float d = length(mv.xyz);
-          if (d > (aC.a > 1.5 ? 430.0 : 230.0) || d < 1.5) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+          // a glow is the deep's own light: from above the water the sea's surface carries what shows through, and a sprite this size cut by the surface or the bed reads as a lit square (Randy, 2 Nov: "the underwater lights look like squares on surface")
+          if (d > (aC.a > 1.5 ? 430.0 : 230.0) || d < 1.5 || cameraPosition.y > -0.2) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
           bool lit = aC.a > 2.5;
-          mv.xy += position.xy*aP.w;
+          // drawn in front of what it would cross, so the bed behind it never cuts it with a straight edge
+          mv.xyz += normalize(-mv.xyz)*min(aP.w*.85, d - 2.0);
+          mv.xy += position.xy*aP.w*(1.0 - min(aP.w*.85, d - 2.0)/d);
           gl_Position = projectionMatrix*mv;
           float g = lit ? .34 : aC.a > 1.5 ? .62 : aC.a > .5 ? ocLamps*.62 : (.32 + .16*sin(ocTime*1.3 + aP.x*.31 - aP.z*.23));
           vC = aC.rgb*g*exp(-ocKv*d*(aC.a > .5 && aC.a < 1.5 ? .34 : aC.a > 1.5 ? .5 : .8))*smoothstep(1.5, 6.0, d)*ocAddGain*(aC.a > 1.5 && !lit ? smoothstep(14.0, 60.0, d) : 1.0);

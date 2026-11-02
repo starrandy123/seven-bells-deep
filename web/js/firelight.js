@@ -10,7 +10,8 @@ export function createFireLight(G, grid, touch) {
   const U = G.look.uniforms, A = new Float32Array(POOL * F), order = new Int16Array(POOL), score = new Float32Array(POOL), pops = []; let n = 0, on = 0, t = 0;
   for (let i = 0; i < 12; i++) pops.push({ x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, R: 1, e: 0, age: 1, life: 0, seed: 0 });
   // this frame only. (r, g, b) is its colour, R how far it reaches in metres, e its energy, wrap how far round a face it lights: 0.2 a small flame, 0.6 a big one
-  function light(x, y, z, r, g, b, R, e, wrap = 0.3, seed = 0) { if (n >= POOL) return; const o = n * F; A[o] = x; A[o + 1] = y; A[o + 2] = z; A[o + 3] = R; A[o + 4] = r * e; A[o + 5] = g * e; A[o + 6] = b * e; A[o + 7] = wrap; A[o + 8] = seed; A[o + 9] = Math.max(r, g, b) * e; n++; }
+  // a light with a number that isn't one is dropped here: one NaN in these uniforms turns everything they light black
+  function light(x, y, z, r, g, b, R, e, wrap = 0.3, seed = 0) { if (n >= POOL || !(Number.isFinite(x + y + z + r + g + b + R + e) && e > 0)) return; const o = n * F; A[o] = x; A[o + 1] = y; A[o + 2] = z; A[o + 3] = R; A[o + 4] = r * e; A[o + 5] = g * e; A[o + 6] = b * e; A[o + 7] = wrap; A[o + 8] = seed; A[o + 9] = Math.max(r, g, b) * e; n++; }
   function pop(p, r, g, b, R, life, e, wrap = 0.5) { let f = pops[0]; for (const q of pops) if (q.age / Math.max(q.life, 1e-3) > f.age / Math.max(f.life, 1e-3)) f = q; f.x = p.x; f.y = p.y; f.z = p.z; f.r = r; f.g = g; f.b = b; f.R = R; f.e = e; f.age = 0; f.life = life; f.seed = Math.random() * 100; f.wrap = wrap; }
   // every look.flash, with no change to its callers: as bright at half its reach as it used to be
   G.look.setFlashLight((p, c, R, q) => light(p.x, p.y, p.z, c.r, c.g, c.b, R, 1.3 * q * (1 + R * R * 0.25), 0.6, R));

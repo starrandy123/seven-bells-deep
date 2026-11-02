@@ -238,7 +238,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if ((e.turfT = (e.turfT || 0) - dt) <= 0) { e.turfT = 0.5; e.out = !e.champ && (fire ? open && !landBy(e.pos, 40) : !e.friend ? false : e.pos.y > T.high_m); }
     if (fire && open && e.doused <= 0 && e.state !== 'stun' && !e.champ) { if (e.pos.y < 7) { e.vel.y = Math.max(e.vel.y, 3 + 9 * (1 - Math.max(0, e.pos.y) / 7)); if (!e.panic) { e.panic = true; G.combat.log.push({ t: G.time, type: 'turf_panic', foe: e.kind }); } } else e.panic = false; }
     if (!fire && e.friend && e.pos.y > T.high_m) e.vel.y = Math.min(e.vel.y, -2 - (e.pos.y - T.high_m) * 0.5);
-    if (fire && (e.out || (e.champ && open && e.pos.y < 7)) && (e.sputT = (e.sputT || 0) - dt) <= 0) { e.sputT = 0.6 + Math.random() * 0.8; e.spool *= 0.35; hissAt(e.pos, 0.7); }
+    if (fire && (e.out || (e.champ && open && e.pos.y < 7)) && (e.sputT = (e.sputT || 0) - dt) <= 0) { e.sputT = 0.6 + Math.random() * 0.8; e.spool = (Number.isFinite(e.spool) ? e.spool : 0.4) * 0.35; hissAt(e.pos, 0.7); }
   }
   function fallStep(e, dt) { e.up.lerp(Y, 1 - Math.exp(-2 * dt)).normalize(); e.ask.set(0, 0, 0); e.thrust = damp(e.thrust, 0, 8, dt); if ((e.steamT = (e.steamT || 0) - dt) <= 0) { e.steamT = 0.22; v1.copy(e.pos); v1.y += 0.5; if (e.state === 'dead' || e.pos.y < 2) steam(v1, 1, 0.6); } }
 
@@ -403,7 +403,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (e.jetOut && e.blowT < 0.2 && e.jetS) { e.blowT += dt; jetsOf(e.slot.jets, e.up, e.jetBlown * (1 - e.blowT * 2), e.side === 'water' ? 1 : 0, e.phase, e, dt, e.blowT / 0.2); }
     const cam = G.camera.position, far = e.pos.distanceTo(cam);
     if (lit > 0) {
-      const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(e.spool ?? 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
+      const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(Number.isFinite(e.spool) ? e.spool : 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
       jetsOf(s.jets, e.up, e.spool * lit, e.pale ? -1 : wetBody ? 1 : 0, e.phase, e, dt);
       if (e.pale) G.fireLight.light(e.pos.x, e.pos.y - 0.7, e.pos.z, 0.35, 0.55, 1, 6.5, 12 * e.spool * lit, 0.2, e.phase);
       if (!wetBody) G.fireLight.light(e.pos.x, e.pos.y - 0.7, e.pos.z, 1, 0.42, 0.1, 6.5, 12 * e.spool * lit, 0.2, e.phase);
