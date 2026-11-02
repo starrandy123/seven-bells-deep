@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { W } from './config.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { createKraken, createColossus } from './bosses2.js';
+import { createKraken, createColossus, createSeawall } from './bosses2.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * (1 - Math.exp(-k * dt));
@@ -212,7 +212,7 @@ function makeSerpent(G, C) {
 
 export function createBoss(G) {
   const R = G.combat.data.bosses, make = (id) => makeSerpent(G, { id, ...R[id] }), lev = make('leviathan');
-  make('wyrm'); createKraken(G, { id: 'kraken', ...R.kraken }); createColossus(G, { id: 'colossus', ...R.colossus });
+  make('wyrm'); createKraken(G, { id: 'kraken', ...R.kraken }); createColossus(G, { id: 'colossus', ...R.colossus }); createSeawall(G, { id: 'seawall', ...R.seawall });
   G.boss = lev;       // the one the game is about right now: wake() moves this
   return lev;
 }

@@ -101,6 +101,7 @@
     "leviathan": { "name": "The Leviathan", "intro_s": 6.6, "hint": "Parry its bite, then strike the head", "arena": true, "hp": 3400, "bite": 24, "spit": 13, "orb": 16733640, "summon": "reaver", "summon_tip": "Reavers answer its call", "roar": 16744408 },
     "wyrm": { "name": "The Frost Wyrm", "intro_s": 6.6, "hint": "Water hurts it most. Parry its bite", "hp": 3000, "bite": 22, "spit": 12, "orb": 13627135, "summon": "frost_wight", "summon_tip": "The cold stands up", "roar": 13627135, "tint": [0.62, 0.86, 1.25], "takes": { "water": 1.3, "ice": 0.5 } },
     "kraken": { "name": "The Kraken", "intro_s": 6.6, "hint": "Freeze a tentacle, then sever it", "hp": 900, "arms": 5, "arm_hp": 300, "frozen_mul": 3, "slam": 20, "tell_s": 1.0, "down_s": 2.4, "every_s": [1.8, 3.0], "radius_m": 3.4, "reach_m": 15 },
+    "seawall": { "name": "The Last Seawall", "intro_s": 3, "hint": "It kneels after a salvo. Strike the lamp", "stand_m": 18, "hp": 1300, "armour_mul": 0.12, "walk_mps": 2.6, "toss_s": 1.2, "radius_m": 5.4, "tetrapod": 16, "beam": 18, "lock_s": 1.0, "down_s": 4.0, "salvo": 3, "every_s": 2.0 },
     "colossus": { "name": "The Cinder Colossus", "intro_s": 6.6, "hint": "Cap its vents with ice, then strike the core", "stand_m": 22, "hp": 1150, "vents": 3, "armour_mul": 0.1, "slam": 14, "vent_burn": 5, "tell_s": 1.1, "every_s": [2.6, 3.8], "radius_m": 4.6, "reach_m": 14, "open_s": 9, "vent_s": 2.2, "cap_hold_s": 7 }
   },
   "status": {

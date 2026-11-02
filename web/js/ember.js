@@ -374,8 +374,16 @@ export async function createEmber(G, { foeMaterial, D }) {
     return R.list;
   }
   let CH = null;
+  // the harbour's terror: the first time he comes to the quays with a fight or two behind him, the breakwater stands up. It happens once
+  let wallDone = false; try { wallDone = localStorage.getItem('thalor.seawall') === '1'; } catch (_) { /* each visit, then */ }
+  function watchHarbour() {
+    const b = G.bosses && G.bosses.seawall, h = G.hero; if (wallDone || !b || b.active || (G.boss && G.boss.active) || G.champ || !quiet() || R.kills < 1 || h.dead) return;
+    const c = G.world.cities.cities.find((q) => q.def.id === 'sunward_harbour'); if (!c) return; const px = c.p.x + (c.def.shift ? c.def.shift[0] : 0), py = c.p.y + (c.def.shift ? c.def.shift[1] : 0), dx = h.pos.x - px, dz = h.pos.z + py; if (dx * dx + dz * dz > 80 * 80 || h.pos.y < -1) return;
+    wallDone = true; try { localStorage.setItem('thalor.seawall', '1'); } catch (_) { /* each visit, then */ }
+    const yaw = Math.atan2(-dx, -dz); b.wake(); b.centre.set(h.pos.x + Math.sin(G.camYaw) * 34, 0, h.pos.z + Math.cos(G.camYaw) * 34); void yaw; G.ui.toast(b.name, 'It kneels after a salvo. Strike the lamp', 5); G.combat.log.push({ t: G.time, type: 'seawall' });
+  }
   function raid(dt) {
-    CH.stepShow(dt);
+    CH.stepShow(dt); watchHarbour();
     if (!R.auto || G.champ) return;
     if (R.kills >= Q.raid.before_champion && !R.champed && !R.on && quiet()) { R.champed = true; CH.start(G.sideNow === 'fire' ? 'water' : 'fire'); return; }
     if (R.on) { R.list = R.list.filter((e) => e.hp > 0); if (!R.list.length) { R.on = false; R.cool = Q.raid.again_s; R.kills++; } return; }

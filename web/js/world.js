@@ -392,7 +392,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           float n3 = ocTile(P, Nbase, .083, vec2(.0), slope).b, n4 = mix(ocTile(P.zyx, Nbase.zyx, .27, wand, slope).a, .5, smoothstep(24.0, 110.0, camD));
           vec3 beach = mix(ocLandSand*(.88 + .16*macro + .10*n4), ocLandWet, wetK*.9);
           // the bands of a real shore: the bare berm, then a foredune where dune grass comes in by clumps, then the green. Dune grass is paler and drier than a meadow's, and the sand shows between it
-          float upBeach = smoothstep(1.0, 3.8, hA + (n4 - .5)*1.3), clumps = smoothstep(.42, .60, n3*.5 + n4*.5 + upBeach*.3 - .1);
+          float upBeach = smoothstep(1.0, 3.8, hA + (n4 - .5)*1.3), clumps = mix(smoothstep(.42, .60, n3*.5 + n4*.5 + upBeach*.3 - .1), .42, smoothstep(26.0, 80.0, camD));
           vec3 duneG = mix(ocLandGL*vec3(1.05, .96, .72), ocLandGD*vec3(1.1, 1.02, .78), n4); beach = mix(beach, duneG, clumps*upBeach*(1.0 - wetK));
           float mdw = ocMeadow(P.xz);
           vec3 grass = mix(ocLandGD, ocLandGL, smoothstep(.26, .74, mdw + (n4 - .5)*.12))*ocMeadowTint(P.xz);
@@ -1248,7 +1248,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   const nearGrass = (() => {
     const hasMeadow = data.instances.grass_patch && data.instances.grass_patch.length > 0;
     if (!hasMeadow) return null;
-    const N = phone ? 7000 : 15000, BOX = phone ? 13 : 18, seg = 2;                  // a blade: a tapering strip of two quads and a tip
+    const N = phone ? 5800 : 15000, BOX = phone ? 13 : 18, seg = 2;                  // a blade: a tapering strip of two quads and a tip
     const vPerBlade = seg * 2 + 1, roots = new Float32Array(N * vPerBlade * 4), shape = new Float32Array(N * vPerBlade * 2), idx = new (N * vPerBlade < 65536 ? Uint16Array : Uint32Array)(N * (seg * 2 + 1) * 3);
     let s = 41; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
     for (let b = 0, o = 0, ii = 0; b < N; b++) {
