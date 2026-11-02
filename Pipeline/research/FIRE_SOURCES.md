@@ -20,3 +20,13 @@ The named shows and games he pointed to, and the frames studied, are kept outsid
 | [Alpha erosion, VFX docs](https://vfxdoc.readthedocs.io/en/latest/shaders/alpha-erosion/) | Threshold mechanics, a linear erosion map | Study only |
 | [Overwatch FX study, realtimevfx.com](https://realtimevfx.com/t/overwatch-fx-pharah-rocket-study/758) | A greyscale shape coloured by a gradient map, plus erosion | Study only |
 | [fire-simulation](https://github.com/neungkl/fire-simulation) | Pooled flame balls and sparks in three.js | MIT, method only |
+
+## The fighting styles
+
+The named series and shipped games behind this are in the session memory, outside the repo.
+
+- **Fire** comes from Northern Shaolin: bow stance with the front knee at 90° and the rear leg straight, horse stance, drop stance. Long range, quick advance and retreat, full extension with a hard stop at the end of each blow, whirlwind kicks, low sweeps. Inhale, exhale, fire.
+- **Water** comes from Yang tai chi: rear foot at 45°, weight 60/40, arms that move because the waist moves. Pull back, then push the palms out on the exhale. Slow even flow, then one whole-body burst.
+- **Combat design:** frame data as a table (`web/data/combat.json`), a buffer, cancel windows after the hit, hitstop on both sides scaled by damage and lighter for projectiles, attack tokens so only a few foes commit at once.
+- **Clean motion capture:** CMU (free for commercial use), ACCAD (CC BY 3.0), 100STYLE (CC BY 4.0), Quaternius UAL2 (CC0).
+- **Not usable, non-commercial:** LaFAN1, Bandai Namco, SFU, UMONS-TAICHI, AIST++.
