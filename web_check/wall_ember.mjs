@@ -222,6 +222,27 @@ await section(['E26'], async () => {
   line('E26', q.at[0] !== 0 && q.quiet === 0 && q.lobs >= 3 && q.spent >= 1 && q.soft >= 19.9 && q.burst && !real.length, `hanging quiet 8 m off it for 8 s: ${q.quiet} blows; running round it 9 m off for 20 s: ${q.lobs} lobs, ${q.contacts} reached him, glands spent ${q.spent}×; a blow on spent glands: 10 did ${q.soft.toFixed(0)}; stoked past its heat its glands burst: ${q.burst}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// in flight the hands hold one place against the chest whatever the flight is doing, his and the Emberkin's, and the jets are short: about six nozzle widths at full thrust (Randy, 2 Nov: "The jet propulsion stream is too long too and the hands needs to be consistent and flail around too much")
+await section(['E27'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, B = h.bones, V = h.pos.constructor, M = new (G.camera.matrixWorld.constructor)(), a = new V(), step = (s, f) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); f && f(i); } };
+    G.ember.setSide('fire', { place: false, quiet: true }); h.endFly(); h.pos.set(700, 80, 300); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; h.inv = 1e6;
+    const means = [], spreads = []; let jetTop = 0; const J = () => G.ember.heroJets ? G.ember.heroJets() : null;
+    for (const w of [{ boost: true }, { boost: true, mx: 1 }, { boost: false }, { boost: false, mx: 0.6 }]) { const pts = []; step(2.5, (i) => { Q.drive(w); if (i < 60) return; h.root.updateMatrixWorld(true); M.copy(B.spine_3.matrixWorld).invert(); B.hand_R.getWorldPosition(a); pts.push(a.applyMatrix4(M).clone()); }); const c = pts.reduce((s, p) => s.add(p), new V()).multiplyScalar(1 / pts.length); means.push(c); spreads.push(Math.sqrt(pts.reduce((s, p) => s + p.distanceToSquared(c), 0) / pts.length)); }
+    let shift = 0; for (const m of means) shift = Math.max(shift, m.distanceTo(means[0]));
+    Q.drive({}); const L = G.ember.jetLengths ? G.ember.jetLengths() : null;
+    G.ember.setSide('water', { place: false, quiet: true }); const s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); h.inv = 1e6; const e = (G.ember.raidNow(1) || [])[0]; const by = {}; if (e) e.slot.g.traverse((o) => { if (o.isBone) by[o.name] = o; });
+    let last = '', since = 0, top = 0, prev = null, n = 0; const pts = [];
+    step(20, () => { Q.swimAt(s.x, s.y, -0.4); h.inv = 1e6; if (!e || !by.hand_R) return; if (e.state !== last) { last = e.state; since = 0; prev = null; } since++; if (e.state !== 'circle' && e.state !== 'swimTo') return; if (since < 60) return; e.slot.g.updateMatrixWorld(true); M.copy(by.spine_3.matrixWorld).invert(); by.hand_R.getWorldPosition(a); a.applyMatrix4(M); if (prev) top = Math.max(top, a.distanceTo(prev) * 60); prev = a.clone(); pts.push(prev); n++; });
+    const c = pts.length ? pts.reduce((q, p) => q.add(p), new V()).multiplyScalar(1 / pts.length) : new V(), sp = pts.length ? Math.sqrt(pts.reduce((q, p) => q + p.distanceToSquared(c), 0) / pts.length) : 1;
+    return { spreads: spreads.map((x) => +x.toFixed(3)), shift: +shift.toFixed(3), L, emb: { n, spread: +sp.toFixed(3), top: +top.toFixed(2) } };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
+  line('E27', Math.max(...q.spreads) < 0.01 && q.shift < 0.01 && q.L && q.L.hand <= 0.61 && q.L.foot <= 1.51 && q.emb.n > 60 && q.emb.spread < 0.02 && q.emb.top < 0.5 && !real.length, `his hand against his chest through cruise, turn, hover and hover with the stick: wanders ${q.spreads.map((x) => (x * 100).toFixed(1)).join(', ')} cm, moves ${(q.shift * 100).toFixed(1)} cm between them; jets at full thrust: hands ${q.L ? q.L.hand : '?'} m, feet ${q.L ? q.L.foot : '?'} m; an Emberkin flying between blows: its hand wanders ${(q.emb.spread * 100).toFixed(1)} cm, at most ${q.emb.top} m/s, over ${q.emb.n} frames; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

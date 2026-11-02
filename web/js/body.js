@@ -387,6 +387,13 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   let flyK = 0; const landLook = new THREE.Vector3(), lookNS = [0.42, 0.58], lookN = [bones.neck, bones.head]; const faceL = new THREE.Vector3(...K.qrot(K.qconj(REST.q.head), [0, 0, 1])), lookC = [bones.spine_3, bones.neck, bones.head], lookS = [0.14, 0.38, 0.48];
   const sideAxisZ = {}, flyW = [1, 0, 0, 0], FLY_CL = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'];
   const sideAxis = {}, LEG0 = 0.34, SHIN0 = -0.42;       // the legs long: what takes the swim-dodge pose's bent hips and knees out
+  // the arms in flight: one pose, held where a jet-suit pilot holds them, low and along the line of the body, whatever the trunk and legs are doing. Hover, cruise, boost and brake differ below the shoulders only. Randy, 2 Nov: "the hands needs to be consistent and flail around too much"
+  const ARMS = ['clav_L', 'arm_L', 'fore_L', 'hand_L', 'clav_R', 'arm_R', 'fore_R', 'hand_R']; let armHeld = null;
+  function holdArms(w) {
+    if (w <= 1e-4 || !CL.fly_forward) return;
+    if (!armHeld) { armHeld = []; const c = CL.fly_forward, t = c.dur * 0.25; for (const n of ARMS) { const i = index[n]; if (i === undefined) continue; const it = c.q[i]; armHeld.push([i, it ? Array.from(it.evaluate(t)) : rest[i].slice()]); } }
+    for (const [i, q] of armHeld) { const o = i * 4, tot = accW[i]; if (tot <= 0) continue; for (let k = 0; k < 4; k++) accQ[o + k] *= 1 - w; const s = accQ[o] * q[0] + accQ[o + 1] * q[1] + accQ[o + 2] * q[2] + accQ[o + 3] * q[3] < 0 ? -1 : 1; for (let k = 0; k < 4; k++) accQ[o + k] += q[k] * w * tot * s; }
+  }
   function bend(n, a) { const i = index[n]; if (i === undefined || !a) return; const ax = sideAxis[n] || (sideAxis[n] = K.qrot(K.qconj(REST.q[n]), [1, 0, 0])), q = K.qaxis(ax, a), o = i * 4, r = K.qmul([pose[o], pose[o + 1], pose[o + 2], pose[o + 3]], q); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3]; }
   // in flight: the chest goes into a turn first and the legs swing after it, the head stays with the horizon: an S from the head to the feet, as anything flying at speed has
   function rollBone(n, a) { const i = index[n]; if (i === undefined || !a) return; const ax = sideAxisZ[n] || (sideAxisZ[n] = K.qrot(K.qconj(REST.q[n]), [0, 0, 1])), q = K.qaxis(ax, a), o = i * 4, r = K.qmul([pose[o], pose[o + 1], pose[o + 2], pose[o + 3]], q); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3]; }
@@ -448,6 +455,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       airT += dc; const f = smooth(3, 18, speed), b = smooth(28, 40, speed), br = clamp(h.flyBrake || 0, 0, 1), W = [(1 - f) * (1 - br), f * (1 - b) * (1 - br), f * b * (1 - br), br];
       const lt = h.launchT ?? 9, LC = CL.fly_launch, lc = LC && lt < LC.dur ? 1 - smooth(LC.dur * 0.72, LC.dur, lt) : 0;
       flyW.forEach((w, i) => { flyW[i] = w + (W[i] - w) * (1 - Math.exp(-5 * dc)); sample(FLY_CL[i], airT % CL[FLY_CL[i]].dur, flyW[i] * (1 - lc)); });
+      holdArms(1 - lc);
       if (lc > 0) sample('fly_launch', lt, lc);
     }
     else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path

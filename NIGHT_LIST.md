@@ -57,7 +57,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 52 | Nothing of the Warden shows when the man in red flies | Fixed: at speed `wake.js` drew afterimages from the Warden's own mesh |
 | 53 | The fire side's pause says Ignite for resume | Built: the fire side reads Ignite |
 | 54 | Continue picks up where the player left off | Built: Continue goes on from where he left off, on his side |
-| 55 | The jet stream is shorter, and in flight the hands stay steady and consistent instead of flailing | Doing now |
+| 55 | The jet stream is shorter, and in flight the hands stay steady and consistent instead of flailing | Built: jets about six nozzle widths at full thrust (hands 1.1 to 0.6 m, the joined foot jet 3.1 to 1.5 m), read off real jets and jet-suit footage; one arm pose held low along the body in every flight mode, his and the Emberkin's, only blows move them. Before: his hands shifted 15-25 cm between modes, an Emberkin's whipped at 8.75 m/s while just circling; now 0 cm and 0.02 m/s. Wall E27 |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
