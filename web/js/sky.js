@@ -299,6 +299,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
       gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
       gl_Position.z = min(gl_Position.z, gl_Position.w*.99999);    // the sea runs on past the camera's far plane
       vClip = gl_Position;
+      vClip = gl_Position;
     }`;
   const SURF_N = /* glsl */`
     ${WAVE_GLSL}
@@ -372,7 +373,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
     uniforms: U, vertexShader: VS,
     fragmentShader: /* glsl */`
-      varying vec3 vP;
+      varying vec3 vP; varying vec4 vClip; uniform sampler2D tOcRefl; uniform float ocReflOn;
       ${look.glsl}
       ${AIR_GLSL}
       ${SURF_N}
@@ -385,6 +386,8 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         float F = .02 + .98*pow(1.0 - cosV, 5.0);
         vec3 R = reflect(rd, n); R.y = abs(R.y) + .001;
         vec3 sky = ocAir(R, .6);
+        // the world in the sea (mirror.js): what stands above it, stretched along the line of sight by the waves, more the lower the eye
+        if (ocReflOn > .5) { float sinE = max(-rd.y, .08); vec4 rf = texture(tOcRefl, vClip.xy/vClip.w*.5 + .5 + n.xz*vec2(.022, .022/sinE)); sky = mix(sky, rf.rgb, rf.a); }
         float mu = max(dot(R, ocSkyL), 0.0);
         float m2 = mu*mu, m4 = m2*m2, m8 = m4*m4, m16 = m8*m8, m64 = m16*m16, m256 = m64*m64;
         // the sun on the water: close to, a smooth ripple would mirror it as a white blot; it's a thousand small glints
@@ -770,6 +773,6 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   function testCross(up, speed = 12) { tUp = tDown = 9; crossed(up, speed); }
 
   look.waveAt = waveAt;                                                // for what floats
-  const api = { update, waveAt, breakAt, setBreakers, get breaks() { return breaks; }, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
+  const api = { above, update, waveAt, breakAt, setBreakers, get breaks() { return breaks; }, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
   return api;
 }

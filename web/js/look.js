@@ -109,7 +109,7 @@ uniform vec4 ocRiverM;
 uniform sampler2D tOcWet, tOcBurn;
 uniform vec4 ocWetM, ocBurnM;
 uniform sampler2D tOcSun, tOcNoise, tOcLand, tOcPool;
-uniform vec4 ocLightP[16], ocLightC[16], ocGridM;
+uniform vec4 ocLightP[16], ocLightC[16], ocGridM, ocCapA[4], ocCapB[4];
 uniform float ocLightN;
 
 // What the water scatters toward the eye along a ray: starts at depth d0, runs len metres.
@@ -217,11 +217,25 @@ vec3 ocPaintLit(vec3 alb, vec3 N, vec3 P, float depth, float lit, float caus) {
 }
 
 // The baked, static sun: the depth at which each sun ray first hits something.
+// capsule soft shadows: everyone who moves is a capsule, and what the sun ray from here passes close to shades this point, softer the higher it is. No pass and no memory, on streets, roofs and walls alike. A body doesn't take its own
+float ocCaps(vec3 P) {
+  float s = 1.0;
+#ifndef OC_NO_SELF
+  for (int i = 0; i < 4; i++) {
+    if (ocCapA[i].w <= 0.0) break;
+    vec3 a = ocCapA[i].xyz - P; if (dot(a, a) > 900.0) continue;
+    vec3 b = ocCapB[i].xyz - P, a2 = a - ocSunA*dot(a, ocSunA), b2 = b - ocSunA*dot(b, ocSunA), d = b2 - a2;
+    float t = clamp(-dot(a2, d)/max(dot(d, d), 1e-4), 0.0, 1.0), up = dot(mix(a, b, t), ocSunA), r = ocCapA[i].w + up*.03;
+    if (up > .05) s = min(s, mix(smoothstep(r*.55, r*1.45, length(a2 + d*t)), 1.0, smoothstep(9.0, 26.0, up)*.8));
+  }
+#endif
+  return s;
+}
 float ocSunLit(vec3 P, float depth) {
   if (P.y > 0.0) {                                                     // above the sea: the highest thing on each sun ray, baked once
     vec2 ql = P.xz - ocSunA.xz*(P.y/ocSunA.y);
     float hl = texture(tOcLand, (ql - ocLandM.xy)*ocLandM.zw, .5).r; hl *= hl*180.0;
-    return smoothstep(-1.9, .1, P.y - hl);
+    return smoothstep(-1.9, .1, P.y - hl)*ocCaps(P);
   }
   vec2 q = P.xz + ocSunW.xz*(depth/ocSunW.y);
   float h = texture(tOcSun, (q - ocSunM.xy)*ocSunM.zw).r; h *= h*300.0;   // stored as a square root: finest where the reef is
@@ -477,7 +491,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
-    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 },
+    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     ocAddGain: { value: phone ? 1 : .5 },
     ocRes: { value: new THREE.Vector2(0, 0) },
     ocShaft: { value: 1 },
@@ -597,7 +611,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
         fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n' + FROST_A);
         fs = fs.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FROST_N);
         fs = fs.replace('#include <opaque_fragment>', FROST_G + '\n#include <opaque_fragment>');
-        fs = 'uniform vec4 ocFrostP;\n' + fs;
+        fs = '#define OC_NO_SELF\nuniform vec4 ocFrostP;\n' + fs;
       }
       if (opts.skin) {
         shader.uniforms.ocBody = { value: opts.body || new THREE.Vector4(1, 2, 1, 1) };

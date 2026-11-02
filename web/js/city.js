@@ -524,7 +524,8 @@ export function planCities(data, heightAt, opts = {}) {
       const g = c.group || (c.group = scene.getObjectByName('city_' + c.def.id)); if (!g) continue;
       const d = Math.hypot(cam.x - c.p.x, -cam.z - c.p.y); g.visible = d < c.p.r + (c.def.view || (c.def.kind === 'land' ? (ph ? 700 : 1100) : (ph ? 300 : 560))) && !(c.def.fire && cam.y < -1);      // the Burnt Isle's cities stand in the air: nothing of them reaches a lens under the sea
       // the ink is gone by 120 m (world.js): past that its hulls are draw calls with nothing to show, two cities' worth of them in sight at once at Thalor
-      const inked = d < c.p.r + 130; if (inked !== c.inked) { c.inked = inked; for (const o of g.children) if (o.name.endsWith('_ink')) o.visible = inked; }
+      // the line round a far city costs a draw for each kind of building in it: from 90 m on a phone it's under a pixel, and the sea's mirror needs the draws (Pipeline/research/LIGHT_SOURCES.md)
+      const inked = d < c.p.r + (phone ? 90 : 130); if (inked !== c.inked) { c.inked = inked; for (const o of g.children) if (o.name.endsWith('_ink')) o.visible = inked; }
     }
   }
   return { colliders, cities, count, total, tris, why, cleared, build, update };

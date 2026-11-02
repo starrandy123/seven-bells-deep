@@ -30,5 +30,16 @@ export function createFireLight(G, grid, touch) {
     }
     U.ocGridM.value.set(gx, gz, 1 / CELL, CELLS); U.ocLightN.value = m; on = m; touch(); n = 0;
   }
-  return { light, pop, update, get count() { return on; } };
+  // who casts a capsule shadow: him, and the three nearest of those he's fighting
+  const capA = U.ocCapA.value, capB = U.ocCapB.value; let capN = 0, heroBones = null; const near = [], wp = new (G.hero.pos.constructor)(), wq = new (G.hero.pos.constructor)();
+  function cap(i, ax, ay, az, bx, by, bz, r) { capA[i].set(ax, ay, az, r); capB[i].set(bx, by, bz, 0); }
+  function casters() {
+    const h = G.hero; let i = 0; const B = h.bones;
+    if (B && B.head && B.hips && h.model && !h.dead) { B.head.getWorldPosition(wp); B.foot_L.getWorldPosition(wq); cap(i++, wp.x, wp.y, wp.z, wq.x, wq.y, wq.z, 0.42); }
+    near.length = 0; if (G.enemies && G.enemies.alive) for (const e of G.enemies.alive()) { if (e.hidden || !e.pos || (e.def && e.def.body === undefined && !e.def.flyer)) continue; const d = (e.pos.x - h.pos.x) ** 2 + (e.pos.z - h.pos.z) ** 2; if (d < 1600) near.push([d, e]); }
+    if (near.length > 1) near.sort((a, b) => a[0] - b[0]);
+    for (let k = 0; k < near.length && i < 4; k++) { const e = near[k][1], u = e.up, s = e.def && e.def.scale ? e.def.scale : 1, r = 0.44 * s, ux = (u ? u.x : 0) * s, uy = (u ? u.y : 1) * s, uz = (u ? u.z : 0) * s; cap(i++, e.pos.x + ux * 0.8, e.pos.y + uy * 0.8, e.pos.z + uz * 0.8, e.pos.x - ux * 0.9, e.pos.y - uy * 0.9, e.pos.z - uz * 0.9, r); }
+    for (let k = i; k < capN; k++) capA[k].w = 0; capN = i;
+  }
+  return { light, pop, update(dt, cam) { casters(); update(dt, cam); }, get count() { return on; } };
 }

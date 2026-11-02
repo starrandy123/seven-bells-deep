@@ -3,6 +3,7 @@
 //   world.update(dt, camera, focus) · world.setLampsLit(0..1)
 // The terrain is one instanced grid displaced by a height texture (CDLOD: patches of one mesh, morphing between levels, so nothing can
 // crack and there is no chunk to stream or hitch on). Props are one InstancedMesh a kind, refilled from visible cells inside a budget.
+import { createMirror } from './mirror.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -1616,6 +1617,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   cityMeshes = cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
   { const before = new Set(scene.children); skyRock(scene, look, U); for (const o of scene.children) if (!before.has(o)) o.traverse((q) => { if (q.isMesh) skyMeshes.push(q); }); }
   bakeSun(); bakeLand();
+  const mirror = createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities: cityMeshes, isle: ISLE, phone });
   const lava = createLava(scene, look, heightAt, phone);
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
@@ -1900,7 +1902,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // the placements as floats, read by index from here on: as plain arrays they held 3 MB of boxed numbers (a heap snapshot, 2 Nov)
   for (const k in data.instances) data.instances[k] = Float32Array.from(data.instances[k]);
   return {
-    data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
+    mirror, data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     lava, glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;
