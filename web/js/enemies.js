@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { W } from './config.js';
+import { W, retry } from './config.js';
 import { createEmber } from './ember.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -70,7 +70,7 @@ export async function createEnemies(G) {
   const shieldMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.5, metalness: 0.7 }); G.look.patch(shieldMat, {});
 
   try {
-    const gltf = await loader.loadAsync(G.tier === 'phone' ? 'assets/reaver_phone.glb' : 'assets/reaver.glb');
+    const gltf = await retry(() => loader.loadAsync(G.tier === 'phone' ? 'assets/reaver_phone.glb' : 'assets/reaver.glb'));
     let shared = null;
     gltf.scene.traverse((o) => { if (o.isMesh) { shared = shared || o.material; } });
     if (shared) G.look.patch(shared, { skinned: true });

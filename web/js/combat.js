@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { CLASS, accepts, audit, clamp, createBuffer, inFrames, resolve, wrap } from './combat_core.js';
 import { createPowers } from './powers.js';
 import { first } from './formulas/follow.js';
+import { retry } from './config.js';
 
 const damp = (cur, tgt, k, dt) => cur + (tgt - cur) * (1 - Math.exp(-k * dt));
 const FPS = 60, UP = new THREE.Vector3(0, 1, 0);
@@ -441,7 +442,7 @@ export function createCombat(G, h, api) {
   // a plain blow by name, for anyone who wants one without a press
   function startAttack(name) { const id = { atk1: 'strike1', atk2: 'strike2', atk3: 'strike3', atk_dash: 'riptide', atk_spin: 'maelstrom' }[name] || name; if (D && D.moves[id]) begin(id); }
 
-  const ready = fetch('data/combat.json').then((r) => { if (!r.ok) throw new Error('combat.json ' + r.status); return r.json(); }).then((data) => {
+  const ready = retry(() => fetch('data/combat.json').then((r) => { if (!r.ok) throw new Error('combat.json ' + r.status); return r.json(); })).then((data) => {
     const bad = audit(data); if (bad.length) console.error('combat.json:\n' + bad.join('\n'));
     D = data; buf = createBuffer(D.input.buffer_f);
     if (G.fireKit) G.fireKit.bind({ land });

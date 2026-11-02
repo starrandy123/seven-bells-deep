@@ -3,11 +3,14 @@
 const NAMES = ['missions', 'dialogue', 'people', 'relics', 'codex', 'gear', 'upgrades', 'events', 'challenges', 'cinematics'];
 
 async function one(name) {
-  try {
-    const r = await fetch(`data/${name}.json`);
-    if (r.ok) return await r.json();
-    console.warn('data', name, r.status);
-  } catch (e) { console.warn('data', name, e); }
+  for (let i = 0; i < 3; i++) {      // a phone on a bad line can miss a file once
+    try {
+      const r = await fetch(`data/${name}.json`);
+      if (r.ok) return await r.json();
+      console.warn('data', name, r.status);
+    } catch (e) { console.warn('data', name, e); }
+    await new Promise((d) => setTimeout(d, 500 * (i + 1)));
+  }
   return null;
 }
 

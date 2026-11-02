@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { FLAG, W, TOUCH } from './config.js';
+import { FLAG, W, TOUCH, retry } from './config.js';
 import { createCombat } from './combat.js';
 import { createBody } from './body.js';
 import { createWake } from './wake.js';
@@ -90,8 +90,8 @@ export async function createHero(G) {
   let moves = FALLBACK_MOVES, model = null, clips = [], inked = null;
   const bones = {};
   try {
-    const r = await fetch('assets/moves.json'); if (r.ok) moves = { ...FALLBACK_MOVES, ...(await r.json()) };
-    const gltf = await loader.loadAsync(G.tier === 'phone' ? 'assets/hero_phone.glb' : 'assets/hero.glb');      // the phone's has its textures at half size: about 16 MB less in memory
+    const r = await retry(() => fetch('assets/moves.json')); if (r.ok) moves = { ...FALLBACK_MOVES, ...(await r.json()) };
+    const gltf = await retry(() => loader.loadAsync(G.tier === 'phone' ? 'assets/hero_phone.glb' : 'assets/hero.glb'));      // the phone's has its textures at half size: about 16 MB less in memory
     model = gltf.scene; root.add(model); clips = gltf.animations;
     model.traverse((o) => {
       if (o.isBone) bones[o.name] = o;

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { retry } from './config.js';
 import { planCities } from './city.js';
 import { addIsle, raiseIsle, paintIsle, skyRock, ISLE, lavaLines } from './fireisle.js';
 import { createLava } from './lava.js';
@@ -24,8 +25,8 @@ const BIOMES = ['reef', 'kelp', 'city', 'trench'];
 const IDENTITY = new THREE.Matrix4();
 // A buffer's memory otherwise waits for a collection, and the load never gets one: its peak, where a phone's tab dies, holds everything it has already finished with. Only for an array nothing else can reach.
 const letGo = (a) => { try { if (a && a.buffer && a.buffer.transfer) a.buffer.transfer(0); } catch (e) { /* the collector has it, as it would have */ } };
-const getBin = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.arrayBuffer(); });
-const getJSON = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); });
+const getBin = (u) => retry(() => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.arrayBuffer(); }));
+const getJSON = (u) => retry(() => fetch(u).then(r => { if (!r.ok) throw new Error(u + ' ' + r.status); return r.json(); }));
 // A packed grid: a zlib stream of byte planes holding second-order deltas (along the row, then against the row before). Height and weights compress
 // hard this way, and the host sends .bin raw. The world's packer writes them; world.json's `files` names what exists, so nothing is probed.
 async function unzlib(buf, length) {
@@ -139,8 +140,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   prog(.2);
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const [propsGLB, creaturesGLB, sandTex, rockTex] = await Promise.all([
-    loader.loadAsync(base + 'props.glb').catch(() => null),
-    loader.loadAsync(base + 'creatures.glb').catch(() => null),
+    retry(() => loader.loadAsync(base + 'props.glb')).catch(() => null),
+    retry(() => loader.loadAsync(base + 'creatures.glb')).catch(() => null),
     new THREE.TextureLoader().loadAsync(base + (FILES.sand_n || 'tex/sand_n.png')).catch(() => null),
     new THREE.TextureLoader().loadAsync(base + (FILES.rock_n || 'tex/rock_n.png')).catch(() => null),
   ]);

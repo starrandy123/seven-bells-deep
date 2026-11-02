@@ -82,8 +82,9 @@ async function boot() {
   let last = performance.now(), booted = false;
   function tick(now) {
     requestAnimationFrame(tick);
-    if (!FLAG.film) { const dt = Math.min(0.1, (now - last) / 1000); last = now; frame(dt); }
-    if (!booted) { booted = true; if (window.__MOSA_BOOT) window.__MOSA_BOOT.ok = true; G.booted = true; }
+    // after a long task a frame's own timestamp can fall before the clock read just before it, so the step has a floor as well as a ceiling
+    try { if (!FLAG.film) { const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now; frame(dt); } }
+    finally { if (!booted) { booted = true; if (window.__MOSA_BOOT) window.__MOSA_BOOT.ok = true; G.booted = true; } }
   }
   requestAnimationFrame(tick);
 }
@@ -99,9 +100,13 @@ function step(dt) {
   G.enemies.step(d); G.boss.step(d); G.quest.step(dt);
 }
 
+// One part of the world throwing must not leave the player looking at a stopped picture: the frame still draws. The error isn't caught, so it's still reported.
 function frame(dt) {
+  if (G.paused) { G.look.render(); return; }
+  try { update(dt); } finally { G.look.render(); G.stats.frames++; }
+}
+function update(dt) {
   const { hero, camera, look } = G;
-  if (G.paused) { look.render(); return; }
   if (G.started) {
     advance(C, dt, step);
   } else {
@@ -117,8 +122,6 @@ function frame(dt) {
   G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);
   if (G.audio.freshwater && G.world.rivers) freshSound(hero.pos);
   G.ui.update(dt);
-  look.render();
-  G.stats.frames++;
 }
 
 // the fresh water's sound (audio.freshwater): a fall's roar from how near its foot is, a stream's chatter from how near its course is (more where it runs white).
