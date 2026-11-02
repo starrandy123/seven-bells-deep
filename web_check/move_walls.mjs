@@ -85,7 +85,7 @@ await section(['M1b', 'M1s', 'M1c', 'M6a'], async () => {
     const room = () => { const s = R.sea; R.room(() => 6); R.at(s.x - s.ax * 140, -s.y + s.ay * 140, Math.atan2(s.ax, -s.ay)); }; const starts = []; const steps = (wish, n, noSuper) => { room(); h.boostFuel = 1; Q.drive(wish); let was = b.legs.map((l) => l.down), last = -1, nth = 0; const list = []; for (let i = 0; i < n; i++) { if (noSuper) h.boostHeld = 0; G.frame(dt); b.legs.forEach((l, k) => { if (l.down && !was[k]) { if (last >= 0) { const rate = 1 / ((i - last) * dt); if (++nth > 2) list.push([h.spd, rate]); else starts.push([h.spd, rate, nth]); } last = i; } was[k] = l.down; }); } return list; };      // the first steps of a start aren't a cadence yet, so M1b leaves them out; M1s reads them, because a leg that flickers at every start is seen at every start (QA, second reader)
     const all = [...steps({ my: 0.22, mx: 0, ud: 0, boost: false }, 300), ...steps({ my: 0.55, mx: 0, ud: 0, boost: false }, 240), ...steps({ my: 1, mx: 0, ud: 0, boost: false }, 240), ...steps({ my: 1, mx: 0, ud: 0, boost: true }, 300), ...steps({ my: 1, mx: 0, ud: 0, boost: true }, 300, true)];
     for (const [s, rate] of all) { if (s <= 9.2 && rate > out.top) { out.top = rate; out.topAt = s.toFixed(1); } }
-    out.starts = starts.map((x) => [+x[0].toFixed(1), +x[1].toFixed(2), x[2]]); R.room(null); const fast = all.filter((x) => x[0] > 34); out.fast = fast.length ? fast.reduce((a, x) => a + x[1], 0) / fast.length : 0; out.n = all.length;
+    out.starts = starts.map((x) => [+x[0].toFixed(1), +x[1].toFixed(2), x[2]]); R.room(null); const fast = all.filter((x) => x[0] > 34); out.fast = fast.length ? fast.reduce((a, x) => a + x[1], 0) / fast.length : 0; out.n = all.length; out.vmax = all.reduce((a, x) => Math.max(a, x[0]), 0);
     out.at = [1.3, 3.9, 5.9, 9.1, 20, 36].map((s) => { const near = all.filter((x) => Math.abs(x[0] - s) < 1.2); return near.length ? `${s} m/s ${(near.reduce((a, x) => a + x[1], 0) / near.length).toFixed(2)}/s` : ''; }).filter(Boolean);
     // the hips over a walk, and where in the step they're lowest
     const walk = () => { room(); Q.drive({ my: 0.22, mx: 0, ud: 0, boost: false }); for (let i = 0; i < 70; i++) G.frame(dt); const ys = [], marks = []; let was = b.legs.map((l) => l.down); for (let i = 0; i < 150; i++) { G.frame(dt); hips.getWorldPosition(v); ys.push(v.y - G.world.heightAt(h.pos.x, -h.pos.z)); b.legs.forEach((l, k) => { if (l.down && !was[k]) marks.push(i); was[k] = l.down; }); } let sum = 0, n = 0; for (let m = 0; m + 1 < marks.length; m++) { const a = marks[m], c = marks[m + 1]; let lo = a; for (let i = a; i < c; i++) if (ys[i] < ys[lo]) lo = i; sum += (lo - a) / (c - a); n++; } return { bob: (Math.max(...ys) - Math.min(...ys)) * 100, low: n ? sum / n : -1 }; };
@@ -94,7 +94,12 @@ await section(['M1b', 'M1s', 'M1c', 'M6a'], async () => {
   line('M1b', r.top <= 5 && r.top > 3 && r.n > 20, `the step rate stays at or under 5 a second up to sprint: most ${r.top.toFixed(2)}, at ${r.topAt} m/s; ${r.at.join(', ')}`);
   { const top = r.starts.reduce((a, x) => (x[1] > a[1] ? x : a), [0, 0, 0]); line('M1s', r.starts.length >= 8 && top[1] <= 5, `a start's first two steps, which M1b leaves out, at or under M1b's own 5 a second: most ${top[1].toFixed(2)}/s, step ${top[2]} of a start, at ${top[0]} m/s, over ${r.starts.length} steps: ${r.starts.map((x) => x[1].toFixed(1)).join(' ')}`); }
   line('M1c', r.walk.bob >= 2 && r.walk.low >= 0 && r.walk.low <= 0.34, `the hips rise and fall with the steps: ${r.walk.bob.toFixed(1)} cm at a walk (≥ 2), lowest ${(r.walk.low * 100).toFixed(0)} % of the way from one contact to the next (just after it)`);
-  line('M6a', r.fast >= 6, `past sprint the step rate climbs to at least 6 a second at 36 m/s: ${r.fast.toFixed(2)}/s`);
+  // Randy, 1 Nov: "The water on land is unnatural and I can't sprint or climb uphill." f850eb1 made his decision the design: "he walks up to 50 degrees, slowing, scrambles to 68,
+// and only a cliff stops him; on land Boost is a steady sprint with no tank and no super speed (that stays the sea's)". These walls hold that, not what came before it
+  // held on the real ground, as a player holds it: his top over 5 s
+  r.vmax = await o.page.evaluate(() => { const Q = window.__qa, G = window.__game, h = G.hero, R = window.__rig, L = R.line; R.room(null); R.at(L.x, L.z, L.yaw); h.boostFuel = 1; Q.drive({ my: 1, mx: 0, ud: 0, boost: true }); let top = 0; for (let i = 0; i < 300; i++) { G.frame(1 / 60); top = Math.max(top, Math.hypot(h.vel.x, h.vel.z)); } return top; });
+  // and 3f840fb, the same day, made a held sprint roll into a ride on its own water ("for the boost in land, we need the water animation and movement surf"): 19 m/s at most on the flat
+  line('M6a', r.vmax >= 12 && r.vmax <= 20 && r.fast === 0, `on land Boost is a sprint that rolls into his water ride, never the sea's super speed (f850eb1, 3f840fb): held 5 s his top is ${r.vmax.toFixed(1)} m/s (12 to 20; the ride's top is 19, the sea's super speed 36), ${r.fast ? 'steps past 34 m/s at ' + r.fast.toFixed(2) + '/s' : 'no step past 34 m/s'}`);
   await o.close();
 });
 
@@ -301,7 +306,9 @@ await section(['M6b'], async () => {
   const r = await o.page.evaluate(() => {
     const Q = window.__qa, G = window.__game, h = G.hero, R = window.__rig, L = R.line, dt = 1 / 60; R.at(L.x, L.z, L.yaw); h.boostFuel = 1; Q.drive({ my: 1, mx: 0, ud: 0, boost: true }); let g = 0, d = 0, sp = 0; const under = []; for (let i = 0; i < 230; i++) { G.frame(dt); const a = h.wake ? h.wake.active : { ghosts: 0, dust: 0 }; if (h.spd > 22) { g = Math.max(g, a.ghosts); d = Math.max(d, a.dust); sp = Math.max(sp, h.spd); } else if (h.spd < 12) under.push(a.ghosts); } return { g, d, sp, quiet: under.every((x) => x === 0) };
   });
-  line('M6b', r.g >= 1 && r.d >= 20 && r.quiet, `past the match limit he leaves afterimages and a dust wake: ${r.g} ghosts, ${r.d} puffs at ${r.sp.toFixed(0)} m/s; none below it: ${r.quiet}. Blur: fx.js, over surge 0.03, not read here`);
+  // Randy, 1 Nov: "The water on land is unnatural and I can't sprint or climb uphill." f850eb1 made his decision the design: "he walks up to 50 degrees, slowing, scrambles to 68,
+// and only a cliff stops him; on land Boost is a steady sprint with no tank and no super speed (that stays the sea's)". These walls hold that, not what came before it
+  line('M6b', r.sp === 0 && r.g === 0 && r.quiet, `on land Boost stays under the match limit (22 m/s), so he leaves no afterimages and no dust wake there; they're the sea's super speed's (f850eb1): over 22 m/s ${r.sp ? r.sp.toFixed(0) + ' m/s, ' + r.g + ' ghosts, ' + r.d + ' puffs' : 'never'}; none at a run: ${r.quiet}`);
   await o.close();
 });
 
@@ -311,7 +318,7 @@ await section(['M7', 'M7b', 'M7c', 'M7d'], async () => {
   const r0 = await o.page.evaluate(() => {
     const Q = window.__qa, G = window.__game, h = G.hero, R = window.__rig, s = R.sea, dt = 1 / 60, FLOOR = 6, ax = s.ax, az = -s.ay, X0 = s.x, Z0 = -s.y, yaw = Math.atan2(ax, az);
     const out = [];
-    for (const deg of [20, 35, 40, 45, 55]) {
+    for (const deg of [20, 35, 45, 55, 65, 75]) {
       const t = Math.tan((deg * Math.PI) / 180), rise = 8, run_ = rise / t;
       R.room((x, z) => { const a = (x - X0) * ax + (z - Z0) * az; return a < 0 ? FLOOR : a < run_ ? FLOOR + a * t : FLOOR + rise; });
       for (const [name, my] of [['walk', 0.3], ['run', 1]]) {
@@ -324,22 +331,26 @@ await section(['M7', 'M7b', 'M7c', 'M7d'], async () => {
     }
     // the bank stops him cleanly, and he isn't stuck; a run up 35° is slower than on the flat
     const ramp = (deg) => { const t = Math.tan((deg * Math.PI) / 180); R.room((x, z) => { const a = (x - X0) * ax + (z - Z0) * az; return a < 0 ? FLOOR : FLOOR + Math.min(a, 30) * t; }); };
-    ramp(55); R.at(X0 - ax * 12, Z0 - az * 12, yaw); Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); let t0 = -1, tStop = -1; for (let i = 0; i < 180; i++) { const was = h.spd; G.frame(dt); if (t0 < 0 && i > 8 && h.spd < was - 0.3) t0 = i; if (t0 >= 0 && tStop < 0 && h.spd < 0.05) tStop = i; }
-    G.camYaw = yaw + Math.PI; const p0 = h.pos.clone(); for (let i = 0; i < 12; i++) G.frame(dt); const free = h.pos.distanceTo(p0);
+    ramp(75); R.at(X0 - ax * 12, Z0 - az * 12, yaw); Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); let t0 = -1, tStop = -1; for (let i = 0; i < 180; i++) { const was = h.spd; G.frame(dt); if (t0 < 0 && i > 8 && h.spd < was - 0.3) t0 = i; if (t0 >= 0 && tStop < 0 && h.spd < 0.05) tStop = i; }
+    G.camYaw = yaw + Math.PI; const p0 = h.pos.clone(); for (let i = 0; i < 30; i++) G.frame(dt); const free = h.pos.distanceTo(p0);
     const speedOn = (deg) => { ramp(deg); R.at(X0 + ax * (deg ? 3 : -30), Z0 + az * (deg ? 3 : -30), yaw); Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); let m = 0; for (let i = 0; i < 90; i++) { G.frame(dt); m = Math.max(m, Math.hypot(h.pos.x - h.prev.x, h.pos.z - h.prev.z) * 60); } return m; };
     R.room(() => FLOOR); const flat = (R.at(X0 - ax * 30, Z0 - az * 30, yaw), Q.drive({ my: 1, mx: 0, ud: 0, boost: false }), (() => { for (let i = 0; i < 90; i++) G.frame(dt); return h.spd; })()); const hill = speedOn(35);
     R.room(null);
     // a wall: a real solid on land, run into head on, then the stick away
     let wall = null; const W = G.world, H = (x, z) => W.heightAt(x, -z);
     for (const c of W.data.colliders) { if (c.t !== 'box' || c.hx < 2 || c.hy < 2) continue; const cs = Math.cos(c.yaw || 0), sn = Math.sin(c.yaw || 0), nx = cs, ny = sn, px = c.x + nx * (c.hx + 7), py = c.y + ny * (c.hx + 7), g = W.heightAt(px, py); if (g < 1 || c.z1 < g + 2 || c.z0 > g + 0.4) continue; let clear = true; for (let k = 1; k <= 7 && clear; k++) { const q = { x: c.x + nx * (c.hx + 0.5 + k), y: c.y + ny * (c.hx + 0.5 + k), z: W.heightAt(c.x + nx * (c.hx + 0.5 + k), c.y + ny * (c.hx + 0.5 + k)) + 1 }; if (W.collide(q, 0.6) || Math.abs(q.z - 1 - g) > 1) clear = false; } if (clear) { wall = { x: px, z: -py, yaw: Math.atan2(-nx, ny) }; break; } }
-    let hitT = -1, wallStop = -1, wFree = 0; if (wall) { R.at(wall.x, wall.z, wall.yaw); Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); let was = 0, t1 = -1; for (let i = 0; i < 150; i++) { G.frame(dt); if (t1 < 0 && h.spd < was - 0.5) t1 = i; if (t1 >= 0 && wallStop < 0 && h.spd < 0.05) wallStop = (i - t1) * dt; was = h.spd; } G.camYaw = wall.yaw + Math.PI; const p1 = h.pos.clone(); for (let i = 0; i < 12; i++) G.frame(dt); wFree = h.pos.distanceTo(p1); }
+    let hitT = -1, wallStop = -1, wFree = 0; if (wall) { R.at(wall.x, wall.z, wall.yaw); Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); let was = 0, t1 = -1; for (let i = 0; i < 150; i++) { G.frame(dt); if (t1 < 0 && h.spd < was - 0.5) t1 = i; if (t1 >= 0 && wallStop < 0 && h.spd < 0.05) wallStop = (i - t1) * dt; was = h.spd; } G.camYaw = wall.yaw + Math.PI; const p1 = h.pos.clone(); for (let i = 0; i < 30; i++) G.frame(dt); wFree = h.pos.distanceTo(p1); }
     return { rows: out, extra: { stop: tStop >= 0 && t0 >= 0 ? (tStop - t0) * dt : -1, free, flat, hill, wall: !!wall, wallStop, wFree } };
   });
   const ex = r0.extra, r = r0.rows;
-  line('M7c', ex.stop >= 0 && ex.stop <= 0.25 && ex.free > 0.15 && ex.wall && ex.wallStop >= 0 && ex.wallStop <= 0.25 && ex.wFree > 0.15, `at the limit and at a wall his speed reaches zero within 0.25 s and he isn't stuck: limit ${ex.stop.toFixed(2)} s, then the stick away moves him ${ex.free.toFixed(2)} m in 0.2 s; wall ${ex.wall ? `${ex.wallStop.toFixed(2)} s, ${ex.wFree.toFixed(2)} m` : 'none found'}`);
-  line('M7d', ex.hill <= ex.flat * 0.6, `a run up 35° is at most 60 % of flat speed: ${ex.hill.toFixed(1)} of ${ex.flat.toFixed(1)} m/s`);
-  const up = r.filter((x) => x.deg <= 40), no = r.filter((x) => x.deg >= 45);
-  line('M7', up.every((x) => x.top > 3.5) && up.filter((x) => x.name === 'run').every((x) => x.top > x.reach - 0.3) && no.every((x) => x.top < 0.6), `he climbs what's climbable and nothing else: ${r.map((x) => `${x.deg}° ${x.name} ${x.top.toFixed(1)} m`).join(', ')} of 8`);
+  // Randy, 1 Nov: "The water on land is unnatural and I can't sprint or climb uphill." f850eb1 made his decision the design: "he walks up to 50 degrees, slowing, scrambles to 68,
+// and only a cliff stops him; on land Boost is a steady sprint with no tank and no super speed (that stays the sea's)". These walls hold that, not what came before it
+  line('M7c', ex.stop >= 0 && ex.stop <= 0.25 && ex.free > 0.15 && ex.wall && ex.wallStop >= 0 && ex.wallStop <= 0.25 && ex.wFree > 0.15, `at a cliff (75°, past the 68° he scrambles to) and at a wall his speed reaches zero within 0.25 s and he isn't stuck: cliff ${ex.stop.toFixed(2)} s, then the stick away moves him ${ex.free.toFixed(2)} m in 0.5 s (a start is the capture's now, M4s and M4w: 0.42 m/s by 0.2 s); wall ${ex.wall ? `${ex.wallStop.toFixed(2)} s, ${ex.wFree.toFixed(2)} m` : 'none found'}`);
+  line('M7d', ex.hill < ex.flat * 0.95 && ex.hill > ex.flat * 0.5, `a run up 35° slows him and doesn't stop him (f850eb1: "he walks up to 50 degrees, slowing"; he stood frozen at 40° before it): ${ex.hill.toFixed(1)} of ${ex.flat.toFixed(1)} m/s (50 to 95 %)`);
+  // Randy, 1 Nov: "The water on land is unnatural and I can't sprint or climb uphill." f850eb1 made his decision the design: "he walks up to 50 degrees, slowing, scrambles to 68,
+// and only a cliff stops him; on land Boost is a steady sprint with no tank and no super speed (that stays the sea's)". These walls hold that, not what came before it
+  const up = r.filter((x) => x.deg <= 65), no = r.filter((x) => x.deg >= 70);
+  line('M7', up.every((x) => x.top > 3.5) && up.filter((x) => x.name === 'run').every((x) => x.top > x.reach - 0.3) && no.every((x) => x.top < 0.6), `he walks up to 50°, scrambles to 68° and a cliff stops him (f850eb1): ${r.map((x) => `${x.deg}° ${x.name} ${x.top.toFixed(1)} m`).join(', ')} of 8`);
   const j = Math.max(...r.map((x) => x.jit)); line('M7b', j <= 1, `no stair-step jitter at a bank: a move taken and given back at most ${j.toFixed(2)} cm a frame (≤ 1)`);
   await o.close();
 });
@@ -417,8 +428,10 @@ await section(['M10a', 'M10b', 'M10c', 'M10d', 'M10f', 'M10g'], async () => {
     // up on it: a boost along the surface
     const up = (y = -0.6) => { Q.swimAt(X0 - ax * 60, -(Z0 - az * 60), y); h.place(); G.camYaw = yaw; G.camPitch = 0; h.heading = yaw; h.boostFuel = 1; Q.drive({ my: 1, mx: 0, ud: 0, boost: true }); let f = 0; for (; f < 240 && h.state !== 'surf'; f++) { G.frame(dt); h.boostFuel = 1; if (h.pos.y < -0.8) h.pos.y = -0.6; } return f; };
     out.frames = up(); out.state = h.state; out.noted = noted.slice();
-    let top = 0, onWave = 99, t = 0; for (let i = 0; i < 240; i++) { G.frame(dt); h.boostFuel = 1; top = Math.max(top, h.speed); if (i > 90) onWave = Math.min(onWave, h.pos.y - 0.92 * 0.86 - G.sky.waveAt(h.pos.x, h.pos.z)); if (h.state === 'surf') t++; }
-    out.top = top; out.onWave = onWave; out.held = t;
+    // M10c read the top anywhere; since the surfable breakers (1 Nov) a breaking wave's face carries him on past Boost's top, up to 6 m/s more, by design. Boost's own top is read
+    // off a face, and a face's push is held to its own bound (2 Nov)
+    let top = 0, faceTop = 0, onWave = 99, t = 0; for (let i = 0; i < 240; i++) { G.frame(dt); h.boostFuel = 1; if (h.surf && h.surf.onFace) faceTop = Math.max(faceTop, h.speed); else top = Math.max(top, h.speed); if (i > 90) onWave = Math.min(onWave, h.pos.y - 0.92 * 0.86 - G.sky.waveAt(h.pos.x, h.pos.z)); if (h.state === 'surf') t++; }
+    out.top = top; out.faceTop = faceTop; out.onWave = onWave; out.held = t;
     // the stick carves: half stick, full stick
     const rate = (mx) => { Q.drive({ my: 0, mx, ud: 0, boost: false }); for (let i = 0; i < 50; i++) G.frame(dt); const y0 = h.heading; for (let i = 0; i < 30; i++) G.frame(dt); return Math.atan2(Math.sin(h.heading - y0), Math.cos(h.heading - y0)) * 2; };
     out.half = rate(0.5); out.full = rate(1); out.left = rate(-1); out.stateAfter = h.state;
@@ -430,17 +443,19 @@ await section(['M10a', 'M10b', 'M10c', 'M10d', 'M10f', 'M10g'], async () => {
     { const ride = () => { up(); Q.drive({ my: 0, mx: 0, ud: 0, boost: false }); let n = 0, v = 0, sw = 0, on = true; for (let i = 0; i < 180; i++) { G.frame(dt); if (h.state !== 'surf') on = false; if (i >= 150) { v += h.speed; sw += h.swellY || 0; n++; } } return { v: v / n, sw: sw / n, on }; }; out.calm = ride(); G.sky.setWeather('storm', 0.01); out.storm = ride(); out.named = G.sky.weather; G.sky.setWeather('calm', 0.01); }
     // out of speed
     up(); Q.drive({ my: -1, mx: 0, ud: 0, boost: false }); let ended = false; for (let i = 0; i < 240; i++) { G.frame(dt); if (h.state !== 'surf') { ended = true; break; } } out.slowEnds = ended;
-    // up a beach
+    // up a beach. M10g held that a ride into the shallows put him on his feet with Boost still held; since his 1 Nov word ("for the boost in land, we need the water animation and
+    // movement surf") a sea ride with Boost held runs on up the beach on its own water, and it's letting go of Boost there that puts him on his feet. The wall holds that now (2 Nov)
     R.room((x, z) => { const a = (x - X0) * ax + (z - Z0) * az; return a < 20 ? -14 : -14 + (a - 20) * 0.5; });
-    up(); Q.drive({ my: 1, mx: 0, ud: 0, boost: true }); let beach = false; for (let i = 0; i < 300; i++) { G.frame(dt); h.boostFuel = 1; if (h.land && !h.air) { beach = true; break; } } out.beach = beach; R.room(null); G.quest.note = qn;
+    up(); Q.drive({ my: 1, mx: 0, ud: 0, boost: true }); let rode = false, beach = false; for (let i = 0; i < 360; i++) { G.frame(dt); h.boostFuel = 1; if (h.surf && h.surf.land) { rode = true; break; } }
+    Q.drive({ my: 1, mx: 0, ud: 0, boost: false }); for (let i = 0; i < 300; i++) { G.frame(dt); if (h.land && !h.air && h.state !== 'surf') { beach = true; break; } } out.rode = rode; out.beach = beach; R.room(null); G.quest.note = qn;
     return out;
   });
   line('M10a', r.state === 'surf' && r.held > 200 && r.onWave > 0.2, `a boost along the surface puts him up on a swell, a state of its own: ${r.state} after ${r.frames} frames, held ${r.held} of 240, feet ${r.onWave.toFixed(2)} m over the sea at the lowest; quest told ${JSON.stringify(r.noted)}`);
   line('M10b', Math.abs(r.full) > Math.abs(r.half) * 1.4 && Math.abs(r.full) > 0.8 && r.full * r.left < 0, `the stick carves his heading: ${r.half.toFixed(2)} rad/s at half stick, ${r.full.toFixed(2)} at full, ${r.left.toFixed(2)} the other way`);
-  line('M10c', r.top > 20 && r.top <= 26.001, `boost sets the surf's speed, up to 26 m/s: at most ${r.top.toFixed(2)}`);
+  line('M10c', r.top > 20 && r.top <= 26.001 && r.faceTop <= 32.001, `boost sets the surf's speed, up to 26 m/s: at most ${r.top.toFixed(2)} off a breaking face; on a face the wave carried him to ${r.faceTop.toFixed(2)} (up to 32)`);
   line('M10d', r.air && r.high > 1.2, `jump launches him off the wave: ${r.high.toFixed(2)} m over the swell`);
   line('M10f', r.storm.on && r.calm.on && r.named === 'storm' && r.storm.v > r.calm.v + 3 && r.storm.sw > r.calm.sw * 1.4, `the storm's waves carry him, ours: ${r.calm.v.toFixed(1)} m/s on a swell of ${r.calm.sw.toFixed(2)} m in calm, ${r.storm.v.toFixed(1)} m/s on ${r.storm.sw.toFixed(2)} m in the storm, no boost`);
-  line('M10g', r.dive && r.slowEnds && r.beach, `a ride ends in a dive or on a beach: down dives (${r.dive}), out of speed he goes under (${r.slowEnds}), into the shallows he's on his feet (${r.beach})`);
+  line('M10g', r.dive && r.slowEnds && r.rode && r.beach, `a ride ends in a dive or on a beach: down dives (${r.dive}), out of speed he goes under (${r.slowEnds}); into the shallows with Boost held it runs on up the beach on its water (${r.rode}), and let go of Boost there he's on his feet (${r.beach})`);
   await o.close();
 });
 

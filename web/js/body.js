@@ -28,6 +28,7 @@ const SLOPE_STRIDE = 0.45;     // the most a hill shortens his steps, up or down
 const KNEE_RATE = 24.4;      // rad/s, 1,400°/s: a knee has a top speed. Past the capture's it's the solver's, near the straight, where a small move of the ankle is a big turn of the knee
 const FOOT_RATE = 20;        // rad/s: and the foot's. A handover can leave a foot in the air with no swing left to get flat in
 const TOE_RATE = 24;         // rad/s: the toe joint is the capture's, without the capture's noise, 1,576°/s at his rate on a joint this small
+const HOVER_DROP = 6;      // m/s: a lift let go past the bent leg's reach comes down at this (ours), well under a fast foot's 12
 const HOVER_OUT = 1.5;     // m/s: a hard landing's feet come the last of the way to the ground at this
 const CLIP_LEGS = new Set(['death', 'jump', 'jump2', 'leap_super', 'surf_jump', 'glacier_stomp', 'dodge_land', 'atk_dash_land', 'e_side', 'e_kick', 'e_lunge', 'e_rev', 'e_double', 'e_hook', 'e_cross', 'e_jab', 'e_blast', 'up_back', 'up_front', 'w_rise', 'w_push', 'w_push2', 'w_whip']);      // a land dodge goes off at 18 m/s in a frame or two, Riptide at 34: no foot could stay planted, and the slide's in the clip
 // how a switch dies away: an offset is given the time it needs to die at this rate at most, radians a second, so a big difference takes longer than a small one and nothing pops (M3b)
@@ -283,8 +284,9 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     }
     // past what a stride can follow nothing holds them: the legs are the clip's, and the wake and the ghosts show the rest
     if (hold < 1) { const k = 1 - hold, mixed = (a, b) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; for (const l of legs) { l.A = mixed(l.A, l.cA); l.fw = K.unit(mixed(l.fw, l.cfw)); l.nw = K.unit(mixed(l.nw, l.cnw)); } }
-    // standing still with the feet apart: the stride's last foot comes up to the other, a settling step
-    if (!gaitOn && !legs.some((l) => l.solo > 0)) {
+    // standing still with the feet apart: the stride's last foot comes up to the other, a settling step. Only standing: a landing at a run turns the stride off for a frame,
+    // and a settling step taken at 7 m/s chased a stance place running away from it (the knee at 56 to 82 rad/s)
+    if (!gaitOn && speed < 0.6 && !legs.some((l) => l.solo > 0)) {
       let worst = null, far = 0.17;
       for (const l of legs) { const E = aim(l), d = Math.hypot(E[0] - l.G[0], E[2] - l.G[2]); if (d > far) { far = d; worst = l; } }
       if (worst) { worst.down = false; worst.S = worst.A.slice(); worst.pitch0 = worst.rock; worst.soloT = worst.solo = 0.26; }
@@ -299,7 +301,10 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     legs.forEach((l, k) => {
       const s = l.s, S0 = hipJ[k];
       // a hard landing: the feet stay up under him, knees bent, until the ground comes to them. A near-straight leg is the one that spins fastest
-      if (fall.mode === 1) { const most = lerp(1, 0.76, smooth(3, 9, fall.hit || 0)) * l.L, dx = S0[0] - l.A[0], dz = S0[2] - l.A[2], r2 = most * most - dx * dx - dz * dz; l.hover = r2 > 0 ? Math.max(0, S0[1] - Math.sqrt(r2) - l.A[1]) : 0; }
+      // A foot carried past the bent leg's reach can't be held under him: it comes up and swings, as a foot run out of leg does in the stride, keeping the lift it had.
+      // It was dropped to the ground in the frame it passed that reach, and the knee straightened at 61 rad/s at the bottom of a landing at a run (M3, 3,384°/s).
+      // Its lift comes down at HOVER_DROP, not in a frame. Inside the reach the lift is what it always was, so an ordinary landing doesn't change
+      if (fall.mode === 1) { const most = lerp(1, 0.76, smooth(3, 9, fall.hit || 0)) * l.L, dx = S0[0] - l.A[0], dz = S0[2] - l.A[2], r2 = most * most - dx * dx - dz * dz; if (r2 > 0) l.hover = Math.max(0, S0[1] - Math.sqrt(r2) - l.A[1]); else { l.hover = Math.max(0, (l.hover || 0) - HOVER_DROP * dt); if (l.down && gaitOn) lift(l); } }
       else l.hover = Math.max(0, (l.hover || 0) - HOVER_OUT * (1 / 60));
       if (l.hover > 0) l.A = [l.A[0], l.A[1] + l.hover, l.A[2]];
       // the capture's leg, turned only as far as reaching this place takes: left alone it's the capture to the degree, twist and all
