@@ -1553,7 +1553,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     tGlow.image.data = tGlow.remake(); freeAfter(tGlow); tGlow.needsUpdate = true;
     if (tPool) { tPool.image.data = tPool.remake(); freeAfter(tPool); tPool.needsUpdate = true; }
     bakeSun(); bakeLand();
-    const again = (t, name, file) => { (FILES[name] ? weightFile(base + FILES[name], bn) : getBin(base + file)).then((b) => { t.image.data = smaller(new Uint8Array(b)); freeAfter(t); t.needsUpdate = true; }).catch(() => {}); };
+    const again = (t, name, file) => { (FILES[name] ? weightFile(base + FILES[name], bn) : getBin(base + file)).then((b) => { const u = new Uint8Array(b); t.image.data = smaller(name === 'biome2' ? paintIsle(u, bn, 2 * cell, ox, oy) : u); freeAfter(t); t.needsUpdate = true; }).catch(() => {}); };
     tBiome.image.data = new Uint8Array(wN * wN * 4); tBiome.needsUpdate = true; again(tBiome, 'biome', 'biome.bin');
     if (biome2Bytes) { tBiome2.image.data = new Uint8Array(wN * wN * 4); tBiome2.needsUpdate = true; again(tBiome2, 'biome2', 'biome2.bin'); }
   });

@@ -28,6 +28,6 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
 
-Owed from before: two real thumbs on Boost and Jump, a real iPhone, a lost graphics context repainting the isle, Q7 107 at Thalor, the merge of `fire` into `part2`.
+Owed from before: two real thumbs on Boost and Jump, a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
 Added by me as owed work: fire side objectives (road.js), Build 51. Lava burns the water side, Build 51. Basalt columns, Build 51.
