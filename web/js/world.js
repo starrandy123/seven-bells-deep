@@ -408,7 +408,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           ground = mix(ground, stone*(.6 + 1.2*bw.b + .2*bw.r) + black*bw.a*.5, steep*(1.0 - bw.r*.4));
           ground = mix(ground, vec3(.40, .43, .48)*(.90 + .16*macro), b2.g*(1.0 - steep*.7));          // snow: a little under what the sun will make white
           // ash and black rock: basalt where it's bare, a rust of oxidised lava in patches, sulphur near the vents, as a real lava field has
-          vec3 ashC = mix(vec3(.034, .031, .034)*(.8 + .7*n3), vec3(.10, .052, .036)*(.7 + .6*n4), smoothstep(.5, .72, n3*.6 + macro*.4)); ashC = mix(ashC, vec3(.24, .19, .06)*(.7 + .5*n4), smoothstep(.68, .82, n4*.5 + macro*.5)*smoothstep(38.0, 70.0, P.y));
+          vec3 ashC = mix(vec3(.034, .031, .034)*(.8 + .7*n3), vec3(.062, .040, .034)*(.8 + .5*n4), .55*smoothstep(.46, .78, n3*.45 + n4*.3 + macro*.25)); ashC = mix(ashC, vec3(.24, .19, .06)*(.7 + .5*n4), smoothstep(.68, .82, n4*.5 + macro*.5)*smoothstep(38.0, 70.0, P.y));
           ground = mix(ground, ashC, b2.r);
           if (camD < 60.0) ground *= mix(.82 + .36*ocTile(P, Nbase, 1.7, wand, slope).a, 1.0, smoothstep(34.0, 60.0, camD));
           alb = mix(alb, ground, smoothstep(-2.8, -.5, P.y));
