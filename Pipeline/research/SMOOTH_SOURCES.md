@@ -23,3 +23,9 @@ The fix (`inertial.js`, `pre` and `mark`) keeps the mixer's own pose as it comes
 - A slam goes from where it was raised to its mark over the strike's own time, on a constant acceleration (ours), so it is fastest at the hit. Before, it was a first-order lerp at 40 to 44 a second, which covers half the way in the first frame. The timing of the hit is unchanged.
 - The serpent's lunge reaches its 27 m/s over a tenth of a second on the same spring, instead of in one frame.
 - Measured but left alone: a slam's reach has no limit. An arm or a fist sent at a Warden 50 m away still covers about 11 m in its last frame. Limiting it is a design call, because it changes who can be hit.
+
+## The Warden's and the man in red's bodies
+
+- Kovar, Schreiner and Gleicher, "Footskate Cleanup for Motion Capture Editing", SCA 2002 (`[Kovar02]` in STANDARDS.md): per-frame IK jumps when a foot's constraint switches on or off. Here one did. In a stop clip, a foot that ran out of leg was let go plainly while the clip still wanted it down. It was planted again the next frame at the clip's place, up to 45 cm away. It is now let go "early", the clip's own way of reaching out, so it swings to the clip's next contact.
+- The same inertialization as every other switch (Bollo, GDC 2018; Holden's spring.h, MIT; `POSE_SOURCES.md`), on three switches that skipped it: the jets' poses coming on or off, the side changing, and the fire side's guard at its 3 s mark. The guard now has a weight of its own.
+- The rule `inertial.js` keeps for the mixers, 40 rad/s, now holds for the Warden's trunk and arms too. A joint past it becomes an offset that dies away on the quintic, for that bone alone. The fire side's capture turns a wrist up to 3 rad between two of its 30 fps frames (`e_rev`, `e_side`, `e_lunge`), which was 91 rad/s at 240 Hz. The legs are left to the foot solver.

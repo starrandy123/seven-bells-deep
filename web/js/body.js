@@ -101,8 +101,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   }
   function offsets(group, t) {
     for (const i of group) {
-      const f = offs[i]; if (!f) continue; const a = at(f.c, t);
-      if (a === 0 && t >= f.c.T) { offs[i] = null; continue; }
+      const f = offs[i]; if (!f) continue; const u = t - (f.t0 || 0), a = at(f.c, u);
+      if (a === 0 && u >= f.c.T) { offs[i] = null; continue; }
       const o = i * 4, s = Math.sin(a / 2), q = [f.ax[0] * s, f.ax[1] * s, f.ax[2] * s, Math.cos(a / 2)], r = K.qmul(q, [pose[o], pose[o + 1], pose[o + 2], pose[o + 3]]);
       pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3];
     }
@@ -110,7 +110,24 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   function captureP(T) { offP = [0, 1, 2].map((k) => { const x0 = lastP[k] - poseP[k], xp = last2P[k] - poseP[k]; return quintic(x0, (x0 - xp) / Math.max(prevDt, 1 / 240), clamp(Math.sqrt((20 * Math.abs(x0)) / HIPS_EASE), T, 0.6)); }); }      // the hips' place: a quintic starts at its hardest, 20 x0 / T², so T is what keeps that under HIPS_EASE
   function offsetsP(t) { if (!offP) return; for (let k = 0; k < 3; k++) poseP[k] += at(offP[k], t); if (t >= Math.max(offP[0].T, offP[1].T, offP[2].T)) offP = null; }
   const inertia = (T = 0.22) => { pendingT = Math.max(pendingT, T); };
-  let pendingA = 0, inertA = 9;
+  let pendingA = 0, inertA = 9, caught = 2;
+  // No joint of the trunk or the arms turns faster than a body can, 40 rad/s (POSE_SOURCES.md, the rule inertial.js keeps for the mixers): whatever gets past the switches,
+  // a clip's own bad frame among them (the fire side's capture turns a wrist 3 rad between two of its frames, 91 rad/s), is a jump, and gets a switch's treatment for that
+  // bone alone: what it would have jumped becomes an offset dying away on the quintic, from the pose it had. Checked without making anything; an offset is made only on a jump
+  const POP = 40;
+  function catchJumps(dt, clock) {
+    if (caught > 0) { caught--; return; }
+    const lim = Math.cos(Math.min(1.4, POP * Math.max(dt, 1 / 240)) * 0.5);
+    for (const i of groupA) {
+      const o = i * 4; if (Math.abs(pose[o] * last[o] + pose[o + 1] * last[o + 1] + pose[o + 2] * last[o + 2] + pose[o + 3] * last[o + 3]) >= lim) continue;
+      const n = [pose[o], pose[o + 1], pose[o + 2], pose[o + 3]]; let d = K.qmul([last[o], last[o + 1], last[o + 2], last[o + 3]], K.qconj(n)); if (d[3] < 0) d = [-d[0], -d[1], -d[2], -d[3]];
+      const sn = Math.hypot(d[0], d[1], d[2]); if (sn < 1e-5) continue; const ax = [d[0] / sn, d[1] / sn, d[2] / sn], x0 = 2 * Math.atan2(sn, d[3]);
+      let e = K.qmul([last2[o], last2[o + 1], last2[o + 2], last2[o + 3]], K.qconj(n)); if (e[3] < 0) e = [-e[0], -e[1], -e[2], -e[3]];
+      const xp = 2 * Math.atan2(e[0] * ax[0] + e[1] * ax[1] + e[2] * ax[2], e[3]);
+      offs[i] = { ax, c: quintic(x0, (x0 - xp) / Math.max(prevDt, 1 / 240), clamp((1.875 * x0) / SWITCH_RATE, 0.12, 0.6)), t0: clock };
+      const s2 = Math.sin(x0 / 2), r = K.qmul([ax[0] * s2, ax[1] * s2, ax[2] * s2, Math.cos(x0 / 2)], n); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3];
+    }
+  }
   // a switch of the trunk only. The legs are solved from where the feet are: an offset on them would drag a foot that's down
   const trunk = (T) => { pendingA = Math.max(pendingA, T); };
 
@@ -365,7 +382,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     fall.last = out; return out;
   }
   // ---------------------------------------------------------------- the trident on his back. One leaf bone: each frame its local pose is set so that in the world it sits at a place fixed to the chest, and it blends from the fist to there and back
-  const sheath = { k: 1, p0: new THREE.Vector3(), slotP: new THREE.Vector3(), slotQ: new THREE.Quaternion() }; let guardT = 0;
+  const sheath = { k: 1, p0: new THREE.Vector3(), slotP: new THREE.Vector3(), slotQ: new THREE.Quaternion() }; let guardT = 0, fGuardT = 0, guardK = 0, flyWas = false, fireWas = false;
   const wp = new THREE.Vector3(), wq = new THREE.Quaternion(), hq = new THREE.Quaternion(), sq = new THREE.Quaternion(), hm = new THREE.Matrix4();
   if (bones.weapon && REST.p.weapon_tip) {
     sheath.p0.copy(bones.weapon.position);
@@ -458,6 +475,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     // ---- which pose is the base
     const m = onGround ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     if (m !== mode) { inertia(m === 'land' ? 0.16 : 0.24); mode = m; loco = null; }
+    // the jets' poses coming on or off, or the side changing, is a new pose too, so it goes through the blend. Off at the end of a takeoff, the hands turned 154 rad/s in a frame
+    if (!!h.flyPose !== flyWas || !!h.fireBody !== fireWas) { flyWas = !!h.flyPose; fireWas = !!h.fireBody; inertia(0.24); }
     // how far the palms are turned to the ground: all the way whenever the jets hold him up, less only as the takeoff hands over. Set in the flight's own branch below
     let palmWant = 0;
     if (shot && shot.auto && shot.t >= shot.dur) clear(0.18);
@@ -466,8 +485,10 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       advance(dt, speed);
       standT = (standT + dc) % (CL.stand ? CL.stand.dur : 3);
       const pace = chase(P.pace, F.pace, Math.min(speed, 12), dt), st = 1 - smooth(0.1, 0.8, pace), go = 1 - st;
-      if (h.fireBody && CL.e_guard && h.combatT < 3) { guardT = (guardT + dc) % CL.e_guard.dur; sample('e_guard', guardT, st); }      // a fighter's guard, from capture: fists up, weight low
-      else if (sheath.k < 0.995 && CL.idle_combat) { guardT = (guardT + dc) % CL.idle_combat.dur; sample('stand', standT, st * (0.5 + 0.5 * sheath.k)); sample('idle_combat', guardT, st * 0.5 * (1 - sheath.k)); } else sample('stand', standT, st);
+      // a fighter's guard on the fire side, from capture: fists up, weight low. It comes and goes on a weight of its own: switched at the 3 s mark, or with the side, the arms jumped (fore_R 117 rad/s)
+      guardK += ((h.fireBody && CL.e_guard && h.combatT < 3 ? 1 : 0) - guardK) * (1 - Math.exp(-6 * dc));
+      if (guardK > 1e-3 && CL.e_guard) { fGuardT = (fGuardT + dc) % CL.e_guard.dur; sample('e_guard', fGuardT, st * guardK); }
+      if (guardK < 0.999) { const rs = st * (1 - guardK); if (sheath.k < 0.995 && CL.idle_combat) { guardT = (guardT + dc) % CL.idle_combat.dur; sample('stand', standT, rs * (0.5 + 0.5 * sheath.k)); sample('idle_combat', guardT, rs * 0.5 * (1 - sheath.k)); } else sample('stand', standT, rs); }
       if (loco) { accQ.fill(0); accW.fill(0); accP[0] = accP[1] = accP[2] = 0; accP.w = 0; sample(loco.name, Math.min(loco.t, loco.dur - 1e-3), 1); }
       else { const pR = warp(phase, S), pL = warp((phase - S.onL + 1) % 1, S); for (const [n, w] of [['walk', S.wa], ['run', S.ru], ['sprint', S.sp]]) if (CL[n]) sample(n, phase * CL[n].dur, go * w, pR * CL[n].dur, ((pL + GAITS[n].on_L) % 1) * CL[n].dur); }
       settle(); held.set(pose); heldP = poseP.slice();
@@ -549,7 +570,9 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
         // on a hill the hips start down before the foot that's coming lands, instead of dropping when it does
         if (!l.down) { if (gaitOn && room > 0) soon = Math.max(soon, (J[1] - (h.groundAt(l.A[0], l.A[2]) + FT.h + Math.sqrt(room))) * smooth(0.25, 0.9, l.sw || 0) * smooth(0.1, 0.3, F.slope.y)); return; }
         if (room > 0) need = Math.max(need, (J[1] - (l.A[1] + Math.sqrt(room))) * smooth(-0.5, -0.12, l.rock));       // a foot pushing off lets go of him by degrees: it doesn't pull him down after it, and he doesn't spring up off it in a frame
-        if (room <= 0 || J[1] - (l.A[1] + Math.sqrt(Math.max(room, 0))) > MAX_DROP) { if (gaitOn) lift(l); }      // run out of leg: it comes up, he doesn't go down after it
+        // a foot a start or stop clip still wants down is let go early, as the clip's own reach-out is, so it swings to the clip's next contact: lifted plain, it was put back down
+        // the very next frame at the clip's place, a jump of up to 45 cm in a frame (40 m/s at the foot, 77 to 103 rad/s at the hip, in every stop that pulled a leg out of reach)
+        if (room <= 0 || J[1] - (l.A[1] + Math.sqrt(Math.max(room, 0))) > MAX_DROP) { if (gaitOn) { if (loco && onNow(loco.on[l.s], loco.t)) l.early = true; lift(l); } }
       });
       need = Math.min(need, MAX_DROP);
       const dropNow = Math.max(chase(P.drop, F.drop, Math.max(0, need, Math.min(soon, MAX_DROP)), dt), need - 0.004);
@@ -562,6 +585,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     inertT += dc; inertA += dc; inertP += dc;
 
     // ---- the bones
+    catchJumps(dt, inertA - dc);
     for (const i of ACT) { const o = i * 4, b = bones[names[i]]; b.quaternion.set(pose[o], pose[o + 1], pose[o + 2], pose[o + 3]); for (let k = 0; k < 4; k++) { last2[o + k] = last[o + k]; last[o + k] = pose[o + k]; } }
     hb.position.set(poseP[0], poseP[1], poseP[2]); last2P = lastP; lastP = poseP.slice();
     wear(dc);
@@ -589,7 +613,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const sY = Math.sin(h.heading), cY = Math.cos(h.heading); fwd[0] = sY; fwd[2] = cY; left[0] = cY; left[2] = -sY; body[0] = h.drawPos.x; body[2] = h.drawPos.z; vel[0] = vel[2] = 0; seen[0] = seen[2] = 0; fall.mode = 0; fall.was = 0;
     F.yaw = follower(h.heading); F.ground = follower(h.drawPos.y - STAND); F.stride = follower(0); lastYaw = h.heading; facing = h.heading; lastSpeed = 0; gaitOn = false;
     for (const l of legs) { const E = aim(l); plantAt(l, E, 0); l.A = ankleOn(l); l.cA = l.A; l.solo = 0; l.hover = 0; l.err = null; }
-    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null;       // what the last pose was doing doesn't follow him
+    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null; caught = 2; flyWas = !!h.flyPose; fireWas = !!h.fireBody;       // what the last pose was doing doesn't follow him
     palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1];
     legClip = !(h.land && !h.air); mode = h.land && !h.air ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     ready = true;
