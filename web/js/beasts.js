@@ -115,7 +115,10 @@ export function createBeasts(G, { foeMaterial, D }) {
     if (hot && e.gape <= 0) { e.gape = 3.5; X.dropToken(e); X.endTell(e); e.state = 'circle'; e.t = 3.5; G.combat.teach('monitor_hot', 'Overheated', 'Its throat is open: strike the front'); }
     if (e.gape > 0) e.gape -= dt;
     if (torpid && e.state !== 'stun') { X.dropToken(e); X.endTell(e); e.state = 'stun'; e.t = 3; }
-    const toWater = groundAt(e.pos.x + e.vel.x * 0.6, e.pos.z + e.vel.z * 0.6) < 0.6;
+    // turf (R63): a fire animal holds 8 m back from the waterline, and thrown into the sea it scrambles out for 1.5 s, steaming
+    const sp = Math.hypot(e.vel.x, e.vel.z), ahead = sp > 0.3 ? 8 / sp : 0, toWater = groundAt(e.pos.x + e.vel.x * ahead, e.pos.z + e.vel.z * ahead) < 0.3;
+    if (groundAt(e.pos.x, e.pos.z) < 0.3 && !(e.fleeT > 0) && e.state !== 'dead') { e.fleeT = 1.5; e.flee = landDir(e); if (e.flee) { X.dropToken(e); X.endTell(e); e.state = 'circle'; e.t = 1.6; G.combat.log.push({ t: G.time, type: 'turf_flee', foe: e.kind }); } }
+    if (e.fleeT > 0) { e.fleeT -= dt; if (e.flee) { e.vel.x = damp(e.vel.x, e.flee.x * 6, 6, dt); e.vel.z = damp(e.vel.z, e.flee.z * 6, 6, dt); } if ((e.puffT = (e.puffT || 0) - dt) <= 0) { e.puffT = 0.12; v1.set(e.pos.x + (Math.random() - 0.5), e.pos.y + 0.3, e.pos.z + (Math.random() - 0.5)); G.fx.sp('smoke', v1, 1.2, 0.9, STEAM, { s0: 0.5, s1: 1.6, a: 0.28, add: 0, hot: 0, vy: 2.4 }); } e.vel.y = 0; return; }
     switch (e.state) {
       case 'swimTo': case 'patrol': {
         if (dist < 34 && h.pos.y - groundAt(h.pos.x, h.pos.z) < 14) { e.state = 'stalk'; break; }
@@ -151,6 +154,9 @@ export function createBeasts(G, { foeMaterial, D }) {
     if (toWater) { e.vel.x *= -0.5; e.vel.z *= -0.5; }
     e.vel.y = 0;
   }
+  // the way back to dry ground: the nearest of eight ways out to 12 m
+  function landDir(e) { for (const r of [4, 8, 12]) for (let k = 0; k < 8; k++) { const a = k * 0.785, x = Math.cos(a), z = Math.sin(a); if (groundAt(e.pos.x + x * r, e.pos.z + z * r) > 0.6) return new THREE.Vector3(x, 0, z); } return null; }
+  const STEAM = new THREE.Color(0.92, 0.94, 0.96);
   function draw(e, dt) {
     const s = e.slot, U = s.mat.U; s.g.position.set(0, 0, 0); s.g.quaternion.identity();
     if (e.state === 'dead') U.uFade.value = Math.min(1, U.uFade.value + dt * 1.25);

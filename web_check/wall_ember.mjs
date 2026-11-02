@@ -178,6 +178,27 @@ await section(['E24'], async () => {
   line('E24', a.tell >= 1.99 && a.dragged && a.hp >= 1 && a.hp <= 71 && a.dis > 2.5 && a.jets && a.denied >= 1 && a.stayed && a.out > 3 && b.told && !b.grabbed && b.through && !c.deepNear && !c.seen.includes('spout') && !real.length, `${real.length || !a.dragged || a.dis < 2.5 ? JSON.stringify([a.L, a.now, a.y]) : ''} told ${a.tell.toFixed(2)} s on the water, then it took him and dragged him under: ${a.hp.toFixed(0)} HP left, disarmed ${a.dis.toFixed(1)} s, a power refused ${a.denied}×, the first Jump kept him in (${a.stayed}), the one after 1.6 s took him out to ${a.out.toFixed(1)} m; flown off at its tell: taken ${b.grabbed}; inland (bed ${c.inland.toFixed(0)} m, sea near ${c.deepNear}) he chose ${c.seen.join(' ')}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// turf for foes: fire won't go into the sea after a man under it and fights him on it from range, holding 7 m up; a fire animal thrown in the sea scrambles out; a hilltop isn't the sky and a sky city is
+await section(['E25'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, W = G.world, step = (s, f) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); f && f(); } };
+    const s = W.data.spawn; Q.swimAt(s.x, s.y, -5); h.inv = 1e6; const foes = G.ember.raidNow(2) || []; let low = 1e9, outSeen = false; G.combat.log.length = 0;
+    step(30, () => { Q.swimAt(s.x, s.y, -5); for (const e of foes) { if (e.hp <= 0) continue; if (W.heightAt(e.pos.x, -e.pos.z) < -0.5 && e.state !== 'dead' && e.doused <= 0 && e.state !== 'swimTo') low = Math.min(low, e.pos.y); if (e.out) outSeen = true; } });
+    const under = G.combat.log.filter((q) => q.type === 'tell').map((q) => q.blow), panics = G.combat.log.filter((q) => q.type === 'turf_panic').length;
+    G.combat.log.length = 0; step(20, () => { Q.swimAt(s.x, s.y, -0.4); h.inv = 1e6; }); const surf = G.combat.log.filter((q) => q.type === 'tell').map((q) => q.blow);
+    for (const e of foes) e.hp = 0; G.enemies.clearAll && G.enemies.clearAll(); step(0.5);
+    const m = G.enemies.spawn('monitor', h.pos.clone().set(400, 5, 700)); let flee = 0, outT = -1; if (m) { let x = m.pos.x; const z = m.pos.z; for (let i = 0; i < 300 && W.heightAt(x, -z) > -0.8; i++) x += 1; m.pos.set(x, 0.2, z); m.vel.set(0, 0, 0); G.combat.log.length = 0; let t = 0; step(4, () => { t += 1 / 60; if (outT < 0 && W.heightAt(m.pos.x, -m.pos.z) > 0.3) outT = t; }); flee = G.combat.log.filter((q) => q.type === 'turf_flee').length; }
+    G.ember.setSide('water', { place: false, quiet: true }); let hill = null; for (let i = 0; i < 4000 && !hill; i++) { const x = (Math.random() - 0.5) * 2400, z = (Math.random() - 0.5) * 2400, g = W.heightAt(x, -z); if (g > 40) { let wet = false; for (let k = 0; k < 16; k++) if (W.heightAt(x + Math.cos(k * 0.39) * 60, -(z + Math.sin(k * 0.39) * 60)) < -0.5) wet = true; if (!wet) hill = { x, z, g }; } }
+    let onHill = 'none'; if (hill) { Q.walkAt(hill.x, -hill.z); h.inv = 0; step(1.2); onHill = G.turf.where; }
+    const fort = (W.data.poi || []).find((q) => q.fort || q.id === 'sky_city'); let onFort = 'none'; if (fort) { h.endFly && h.endFly(); step(1.2, () => Q.leapAt(fort.x, fort.y, fort.z + 3, 0, 0, 0)); onFort = G.turf.where; }
+    return { low, outSeen, under, panics, surf, m: !!m, flee, outT, hill: !!hill, onHill, onFort };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
+  line('E25', q.low >= 6 && q.outSeen && !q.under.length && q.surf.length >= 3 && !q.surf.some((b) => b !== 'bolt' && b !== 'strafe') && q.m && q.flee >= 1 && q.outT > 0 && q.outT < 3 && q.hill && q.onHill !== 'sky' && q.onFort === 'sky' && !real.length, `two fire flyers over a man 5 m under the sea, far out: lowest ${q.low.toFixed(1)} m over open water, ${q.panics} panics up, out of their element ${q.outSeen}, ${q.under.length} blows told at him; at the surface ${q.surf.length} blows, all from range (${[...new Set(q.surf)].join(' ')}); a monitor thrown in the sea fled ${q.flee}× and was out in ${q.outT.toFixed(2)} s; a hilltop reads '${q.onHill}', the sky city '${q.onFort}'; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

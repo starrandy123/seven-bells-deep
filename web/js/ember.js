@@ -75,7 +75,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function faceHim(e, dt, k = 7) { const h = (e.foe || G.hero).pos, y = Math.atan2(h.x - e.pos.x, h.z - e.pos.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-k * dt))); }
   function faceGoing(e, dt) { if (e.vel.lengthSq() > 1) { const y = Math.atan2(e.vel.x, e.vel.z); e.heading = wrap(e.heading + wrap(y - e.heading) * (1 - Math.exp(-5 * dt))); } }
   // how high he holds: over the water, or over the land under him, and over the Warden wherever he's standing
-  const heightFor = (e) => { const f = floorAt(e.pos.x, e.pos.z), Fl = Q.flight; if (fights(e)) return f + Fl.duel_m + Math.sin(G.time * 0.5 + e.phase) * 2.2; return Math.max(f + Fl.hover_m, (e.foe || G.hero).pos.y + Fl.over_m); };
+  const heightFor = (e) => { const f = floorAt(e.pos.x, e.pos.z), Fl = Q.flight; if (fights(e)) return f + Fl.duel_m + Math.sin(G.time * 0.5 + e.phase) * 2.2; const y = Math.max(f + Fl.hover_m, (e.foe || G.hero).pos.y + Fl.over_m); return (e.side === 'fire' || e.pale) && !e.champ && groundAt(e.pos.x, e.pos.z) < -0.5 ? Math.max(y, 8.5) : y; };
   function goto(e, x, y, z, speed, most, dt) {
     want.set(x - e.pos.x, y - e.pos.y, z - e.pos.z); const d = want.length() || 1; want.multiplyScalar(Math.min(speed, d * 1.3) / d); aim(e, want, most, dt); return d;
   }
@@ -197,7 +197,10 @@ export async function createEmber(G, { foeMaterial, D }) {
   function begin(e) {
     const h = e.foe || G.hero, B = e.def.blows, by = (id) => B.find((b) => b.id === id), under = h.pos.y < -2.5, r = Math.random();
     if (fights(e)) return tellOf(e, by(r < 0.5 ? 'bolt' : r < 0.72 ? 'strafe' : 'swoop'));
-    if (under) { if (h.pos.y > -Q.flight.dive_m && r < 0.7) return X.beginTell(e, by('swoop')); e.t = 1.2; X.dropToken(e); return; }
+    // fire won't go into the sea after him: under it he's out of reach, and on it he's fought from the air
+    const sea = fearsSea(e) && groundAt(h.pos.x, h.pos.z) < -0.5;
+    if (under) { if (!sea && h.pos.y > -Q.flight.dive_m && r < 0.7) return X.beginTell(e, by('swoop')); e.t = 1.2; X.dropToken(e); return; }
+    if (sea) return X.beginTell(e, by(r < 0.6 ? 'bolt' : 'strafe'));
     if (groundAt(h.pos.x, h.pos.z) > 0.6 && r < 0.3) { const a = Math.random() * 6.283; e.spot = (e.spot || new THREE.Vector3()).set(h.pos.x + Math.cos(a) * 7, 0, h.pos.z + Math.sin(a) * 7); e.spot.y = groundAt(e.spot.x, e.spot.z) + 1.0; if (e.spot.y > 1.5) return X.beginTell(e, by('slam')); }
     X.beginTell(e, by(r < 0.45 ? 'bolt' : r < 0.75 ? 'strafe' : 'swoop'));
   }
@@ -219,10 +222,22 @@ export async function createEmber(G, { foeMaterial, D }) {
     const was = e.up; if (was.dot(push) < 0.999) { const a = was.angleTo(push), most = Q.flight.turn_rad * dt; was.lerp(push, Math.min(1, most / Math.max(a, 1e-4))).normalize(); }
     e.thrust = damp(e.thrust, clamp(thrust, 0.5, 4), 9, dt);
     const inWater = e.pos.y < 0.3;
+    if (e.state !== 'dead' && !e.rag) turfOf(e, dt);
     if (e.side === 'water') return;
     if (inWater && !e.wetNow) { e.wetNow = true; hissAt(e.pos, 2.2); fx().sheet && fx().sheet(v1.copy(e.pos).setY(0), 2, 0); G.combat.log.push({ t: G.time, type: 'hiss', foe: e.kind }); }
     if (!inWater) e.wetNow = false;
     if (inWater) { e.vel.multiplyScalar(Math.exp(-Q.flight.water_drag * dt)); e.heat = Math.max(0, e.heat - H.sea_per_s * dt); if ((e.steamT = (e.steamT || 0) - dt) <= 0) { e.steamT = 0.09; steam(e.pos, 1, 1.1); } if (e.heat <= 0) douse(e); }
+  }
+  // Turf for them as for him (Randy, 2 Nov: "The fire elementals must be afraid of the water and water elementals must be afraid of the sky ones but they can reach each other"). Pipeline/research/WORLD_RESPONSE_SOURCES.md R61-R64:
+  // fire holds 7 m or more over open water and panics up under it, and fights a man in the sea from range; more than 40 m out from land it's out of its element, deals and takes as he does there, and shows it, the jets sputtering and hissing. Water keeps under the sky line. A champion crosses when he means to, and shows it hurting
+  const landBy = (p, r) => { for (const q of [r * 0.5, r]) for (let k = 0; k < 8; k++) { const a = k * 0.785; if (groundAt(p.x + Math.cos(a) * q, p.z + Math.sin(a) * q) > 0) return true; } return false; };
+  const fearsSea = (e) => e.side === 'fire' || !!e.pale;
+  function turfOf(e, dt) {
+    const T = G.combat.data.turf, fire = fearsSea(e), open = groundAt(e.pos.x, e.pos.z) < -0.5;
+    if ((e.turfT = (e.turfT || 0) - dt) <= 0) { e.turfT = 0.5; e.out = !e.champ && (fire ? open && !landBy(e.pos, 40) : !e.friend ? false : e.pos.y > T.high_m); }
+    if (fire && open && e.doused <= 0 && e.state !== 'stun' && !e.champ) { if (e.pos.y < 7) { e.vel.y = Math.max(e.vel.y, 3 + 9 * (1 - Math.max(0, e.pos.y) / 7)); if (!e.panic) { e.panic = true; G.combat.log.push({ t: G.time, type: 'turf_panic', foe: e.kind }); } } else e.panic = false; }
+    if (!fire && e.friend && e.pos.y > T.high_m) e.vel.y = Math.min(e.vel.y, -2 - (e.pos.y - T.high_m) * 0.5);
+    if (fire && (e.out || (e.champ && open && e.pos.y < 7)) && (e.sputT = (e.sputT || 0) - dt) <= 0) { e.sputT = 0.6 + Math.random() * 0.8; e.spool *= 0.35; hissAt(e.pos, 0.7); }
   }
   function fallStep(e, dt) { e.up.lerp(Y, 1 - Math.exp(-2 * dt)).normalize(); e.ask.set(0, 0, 0); e.thrust = damp(e.thrust, 0, 8, dt); if ((e.steamT = (e.steamT || 0) - dt) <= 0) { e.steamT = 0.22; v1.copy(e.pos); v1.y += 0.5; if (e.state === 'dead' || e.pos.y < 2) steam(v1, 1, 0.6); } }
 
@@ -245,7 +260,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ fire: a bolt flies, leaves its trail, and meets something
   function bolt(e, b) {
     const s = shots.find((x) => !x.on); if (!s) return; const h = e.foe || G.hero, side = e.warden ? 0 : (e.nextHand = (e.nextHand || 0) ^ 1), hand = e.slot.jets[side][1];
-    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage * (e.super ? Q.super.damage : 1); s.t = 3.2; s.trailT = 0; s.blow = b.id; s.ice = !!e.warden; s.pale = !!e.pale;
+    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage * (e.super ? Q.super.damage : 1) * (e.out ? G.combat.data.turf.dealt_k : 1); s.t = 3.2; s.trailT = 0; s.blow = b.id; s.ice = !!e.warden; s.pale = !!e.pale;
     v1.copy(h.pos); if (h === G.hero) v1.y = Math.max(h.pos.y + 0.3, 0.3); const l = s.p.distanceTo(v1) / b.speed_mps; v1.addScaledVector(h.vel, l * b.lead); s.v.subVectors(v1, s.p).normalize().multiplyScalar(b.speed_mps); s.side = e.side; s.friendly = !!e.friend;
     fx().sparks(s.p, 6, e.side === 'water' ? 0xbdf7ff : 0xffa040, 5); A().fwoosh && A().fwoosh(); G.combat.log.push({ t: G.time, type: 'bolt', foe: e.kind, blow: b.id });
   }

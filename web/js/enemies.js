@@ -226,7 +226,7 @@ export async function createEnemies(G) {
     // the thornback: spines up, a blow at arm's length comes back on him. Reach it from afar, or wait for them to lie flat
     if (F.spined && e.spine && info.melee && e.frozen <= 0) { e.u.uFlash.value = 0.4; G.combat.log.push({ t: G.time, type: 'thorn', foe: e.kind }); G.hero.damage(F.spined.thorn, e.pos, {}); return 'blocked'; }
     let mul = 1;
-    if (F.flyer) { ember.struck(e, info); if (e.doused > 0) mul *= D.ember.heat.doused_mul; }
+    if (F.flyer) { ember.struck(e, info); if (e.doused > 0) mul *= D.ember.heat.doused_mul; if (e.out) mul *= D.turf.taken_k; }
     if (e.frozen > 0) {
       if (info.move === 'riptide') { sendMissile(e, from); e.hp -= dmg; return e.hp <= 0 ? (die(e), 'dead') : 'missile'; }
       if (e.soaked > 0 || info.shatters) {
