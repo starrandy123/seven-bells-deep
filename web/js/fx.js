@@ -131,10 +131,12 @@ export function createFx(G) {
       transparent: true, depthWrite: false, depthTest, side: THREE.DoubleSide, toneMapped: false,
       blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
       uniforms: { tA: { value: atlas } },
-      vertexShader: `attribute vec3 iP, iX, iY; attribute vec4 iUV, iC; attribute vec2 iM; varying vec2 vU; varying vec4 vC; varying vec2 vM;
-        void main() { vU = iUV.xy + (position.xy * 0.5 + 0.5) * iUV.zw; vC = iC; vM = iM; vec3 w = iP + iX * position.x + iY * position.y; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }`,
-      fragmentShader: `uniform sampler2D tA; varying vec2 vU; varying vec4 vC; varying vec2 vM;
-        void main() { vec2 t = texture2D(tA, vU).rg; float body = t.g, hotS = t.r * vM.x; vec3 rgb = (vC.rgb * body + vec3(hotS) * 1.25) * vC.a; float a = body * vC.a * (1.0 - vM.y);
+      // a puff by the lens fades out before it covers the frame: the camera fade of Unity's particle shader (near fade) and Unreal's CameraDepthFade, 1.2 m to 3.5 m.
+      // Randy, 2 Nov, on the trailer: "we need good looking frames"; a Firewheel's smoke by the lens veiled the whole frame
+      vertexShader: `attribute vec3 iP, iX, iY; attribute vec4 iUV, iC; attribute vec2 iM; varying vec2 vU; varying vec4 vC; varying vec2 vM; varying float vZ;
+        void main() { vU = iUV.xy + (position.xy * 0.5 + 0.5) * iUV.zw; vC = iC; vM = iM; vec3 w = iP + iX * position.x + iY * position.y; vec4 mv = viewMatrix * vec4(w, 1.0); vZ = -mv.z; gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `uniform sampler2D tA; varying vec2 vU; varying vec4 vC; varying vec2 vM; varying float vZ;
+        void main() { vec2 t = texture2D(tA, vU).rg; float body = t.g, hotS = t.r * vM.x, near = smoothstep(1.2, 3.5, vZ); vec3 rgb = (vC.rgb * body + vec3(hotS) * 1.25) * vC.a * near; float a = body * vC.a * (1.0 - vM.y) * near;
           gl_FragColor = vec4(rgb, a); }`,
     });
     const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = order; mesh.visible = false; scene.add(mesh);

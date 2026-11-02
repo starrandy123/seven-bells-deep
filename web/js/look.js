@@ -128,10 +128,13 @@ vec3 ocScatter(vec3 rd, float d0, float len) {
 }
 
 // A surface colour seen through the water.
-// fire glows in the air: the two strongest lights, at the nearest point on the visible stretch of the ray, so a wall in front cuts it with no depth read
+// fire glows in the air: what the two strongest lights scatter toward the eye along the visible stretch of the ray, so a wall in front cuts it with no depth read.
+// The closed-form airlight of a point light in a thin medium (Sun, Ramamoorthi, Narasimhan and Nayar, "A Practical Analytic Single Scattering Model for Real Time Rendering",
+// SIGGRAPH 2005): along the ray, 1/(h^2 + s^2) integrates to atan(s/h)/h, h the light's distance from the ray, softened by a metre. Clear air scatters little, so the glow
+// stays close round the fire; the old broad falloff laid a veil over the whole frame at every Firewheel (Randy, 2 Nov, on the trailer: "we need good looking frames")
 vec3 ocHalo(vec3 C, vec3 rd, float D) {
   vec3 S = vec3(0.0);
-  for (int i = 0; i < 2; i++) { vec3 q = ocLightP[i].xyz - C; float t = clamp(dot(q, rd), 0.0, D); vec3 e = q - rd*t; S += ocLightC[i].rgb*.012/(1.0 + dot(e, e)*.09); }
+  for (int i = 0; i < 2; i++) { vec3 q = ocLightP[i].xyz - C; float t0 = dot(q, rd), h = sqrt(max(dot(q, q) - t0*t0, 0.0) + 1.0); S += ocLightC[i].rgb*(.012/12.566)*(atan((D - t0)/h) + atan(t0/h))/h; }
   return S;
 }
 vec3 ocApply(vec3 col, vec3 P) {
@@ -277,6 +280,10 @@ vec3 ocFire(vec3 P, vec3 N) {
     float win = 1.0 - q*q, w = ocLightC[i].w, ndl = dot(N, d)*inversesqrt(d2 + 1e-4);
     E += ocLightC[i].rgb*(win*win/(d2 + 1.0))*max((ndl + w)/(1.0 + w), 0.0);
   }
+  // a fire beside him lights him warm, never white: past 0.6 of a surface's own colour the light rolls off to 1.5 at most, its hue kept, as a film's shoulder does to a highlight
+  // (Randy, 2 Nov, on the trailer: "we need good looking frames"; his suit read white and the plaza peach under his own Firewheel)
+  float L = max(E.r, max(E.g, E.b));
+  if (L > .6) { float x = L - .6; E *= (.6 + x/(1.0 + x/.9))/L; }
   return E;
 }
 
@@ -905,7 +912,9 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
       const on = f.age < f.life, q = on ? 1 - f.age / f.life : 0, e = q * q;
       if (on && flashLight) flashLight(f.p, f.c, f.r, e);
       gp.setXYZW(i, f.p.x, f.p.y, f.p.z, Math.min(f.r, 26) * (.34 + .3 * (1 - q)));
-      gc.setXYZ(i, f.c.r * e * .2, f.c.g * e * .2, f.c.b * e * .2);
+      // the glow is light scattered by water: in clear air a flash shows no volume, so above the sea it keeps a trace of it, or every hit veils the whole frame
+      const med = f.p.y > 0.3 ? 0.12 : 1;
+      gc.setXYZ(i, f.c.r * e * .2 * med, f.c.g * e * .2 * med, f.c.b * e * .2 * med);
       any = any || on;
     });
     flashGlow.visible = any;

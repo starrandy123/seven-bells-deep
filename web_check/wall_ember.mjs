@@ -344,6 +344,28 @@ await section(['E32'], async () => {
   line('E32', !r.bad.length && !real.length, `through a raid far out at sea and a fight in the air, shared lights not a number: ${r.bad.length ? r.bad.join(' ') : 'none'} (${r.lights} lights at the end); ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// a Firewheel on the plaza lights the man in red and the ground round him, and leaves the far city and the sky as they were: the fire's glow in the air is the closed-form airlight of a point light, close round the fire, never a veil over the frame
+// (Randy, 2 Nov, on the trailer: "we need good looking frames"; the old glow lifted the far half of the frame by a fifth)
+await section(['E33'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero;
+    G.ember.setSide('fire', { place: false, quiet: true }); if (h.endFly) h.endFly(); h.fly = false; h.fireAir = false; Q.walkAt(246, -760); h.inv = 1e6; G.camYaw = 0.6; G.camPitch = 0.05; if (G.sky.setHour) G.sky.setHour(0.42);
+    // a lens held still behind him, so only the light can change what the far half shows
+    { const fx = Math.sin(G.camYaw), fz = Math.cos(G.camYaw), p = h.pos.clone(); G.filmCam = () => { const c = G.camera; c.position.set(p.x - fx * 7, p.y + 2.2, p.z - fz * 7); c.up.set(0, 1, 0); c.lookAt(p.x + fx * 40, p.y + 6, p.z + fz * 40); c.updateMatrixWorld(); }; }
+    const gl = G.renderer.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, px = new Uint8Array(W * 4);
+    // the far half of the frame: rows across its top half, as a mean of light
+    const far = () => { let sum = 0, n = 0; for (let k = 1; k <= 8; k++) { const y = Math.floor(H * (0.55 + 0.05 * k)); gl.readPixels(0, Math.min(H - 1, y), W, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); for (let i = 0; i < W * 4; i += 16) { sum += (px[i] * 0.2126 + px[i + 1] * 0.7152 + px[i + 2] * 0.0722) / 255; n++; } } return sum / n; };
+    for (let i = 0; i < 40; i++) { Q.drive({}); G.frame(1 / 60); }
+    const before = far(); let most = 0;
+    for (let i = 0; i < 70; i++) { Q.drive(i === 2 ? { spin: true } : {}); G.frame(1 / 60); if (i > 4) most = Math.max(most, far() - before); }
+    G.filmCam = null; return { before: +before.toFixed(3), lift: +most.toFixed(3), lights: G.look.uniforms.ocLightN.value };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E33', r.lift < 0.06 && !real.length, `a Firewheel on the Ash City's plaza: the far half of the frame lifts by ${r.lift} at most (from ${r.before}; the old glow lifted it by 0.071 here), ${r.lights} fire lights; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });
