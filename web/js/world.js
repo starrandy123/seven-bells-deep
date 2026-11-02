@@ -105,7 +105,7 @@ const MEADOW_V = (uReach) => /* glsl */`
     vec2 ocWu = vec2(ocWp.x - ocWetM.x, ocWetM.y - ocWp.z)*ocWetM.z + .5;
     if (ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996) { vec2 ocWv = texture(tOcWet, ocWu).rg; ocFade *= (1.0 - .8*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y)); }      // laid flat where a ride ran, under water in a puddle (wetmap.js)
     vec2 ocBu = vec2(ocWp.x - ocBurnM.x, ocBurnM.y - ocWp.z)*ocBurnM.z + .5;
-    if (ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99) ocFade *= smoothstep(.05, .35, 1.0 - texture(tOcBurn, ocBu).r);      // gone where it burnt (scorch.js)
+    if (ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99) ocFade *= smoothstep(.05, .35, 1.0 - texture(tOcBurn, ocBu*vec2(1.0, .5)).r);      // gone where it burnt (scorch.js)
     float ocW1 = sin(dot(ocWp.xz, vec2(.23, .14)) - ocTime*1.75), ocW2 = sin(dot(ocWp.xz, vec2(-.11, .31)) - ocTime*1.13 + 1.3), ocW3 = sin(dot(ocWp.xz, vec2(.91, .67)) - ocTime*3.4);
     float ocGust = ocW1*.62 + ocW2*.38;
     vOcGust = vec2(ocGust, min(ocH*1.4, 1.0));
@@ -116,7 +116,7 @@ const MEADOW_V = (uReach) => /* glsl */`
     vOcP = ocWp.xyz;`;
 // Sway written in world space, so a yawed instance sways with the same current as its neighbours.
 const TREE_BURN = /* glsl */`
-    { vec2 ocBu = vec2(ocB.x - ocBurnM.x, ocBurnM.y - ocB.z)*ocBurnM.z + .5; vBurnT = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu).r : 0.0; }`;
+    { vec2 ocBu = vec2(ocB.x - ocBurnM.x, ocBurnM.y - ocB.z)*ocBurnM.z + .5; vBurnT = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu*vec2(1.0, .5)).r : 0.0; }`;
 const SWAY = (amp, freq, up) => /* glsl */`
     vec4 ocWp = modelMatrix*instanceMatrix*vec4(transformed, 1.0);
     vec3 ocB = (modelMatrix*instanceMatrix*vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -443,7 +443,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           // what fire and ice left (scorch.js): black ground with a net of red points in it, a sheet of frost, both broken up by the ground's own grain, never a soft circle
           vec2 bu = vec2(P.x - ocBurnM.x, ocBurnM.y - P.z)*ocBurnM.z + .5;
           if (ocBurnM.w > 0.0 && bu.x > .01 && bu.y > .01 && bu.x < .99 && bu.y < .99) {
-            vec4 bm = texture(tOcBurn, bu); float be = (n4 - .5)*.34 + (m2 - .5)*.22, bf = smoothstep(.44, .56, bm.b + be*1.3);
+            vec4 bm = texture(tOcBurn, bu*vec2(1.0, .5)); float be = (n4 - .5)*.34 + (m2 - .5)*.22, bf = smoothstep(.44, .56, bm.b + be*1.3);
             alb = mix(alb, vec3(.018, .016, .015) + vec3(.03)*n4, smoothstep(.44, .56, bm.r + be));
             alb = mix(alb, mix(vec3(.50, .60, .68), vec3(.78, .86, .92), m2), bf);
             float bn = texture(tOcNoise, P.xz*.73).g*.6 + n4*.4; ocEmb = bm.a*smoothstep(.80 - .17*bm.a, .84 - .15*bm.a, bn)*(1.0 - bf);
@@ -474,7 +474,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         float lit = ocSunLit(P, D);
         float ca = ocCaustics(P, D, ndl);
         vec3 down = exp(-ocKd*D/ocSunW.y)*ocSunGain;
-        vec3 c = alb*(ocSunCol*.45*down*ndl*lit*blob*ca + ocAmbient(N, D)*.36*(.35 + .65*ao) + ocFlash(P) + ocNearFill(P, D));
+        vec3 c = alb*(ocSunCol*.45*down*ndl*lit*blob*ca + ocAmbient(N, D)*.36*(.35 + .65*ao) + ocNearFill(P, D));
         float airK = smoothstep(-.25, .25, P.y);
         if (airK > 0.0) {
           // in the air the sun is the sun, and the sky is the fill
@@ -517,7 +517,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         vec4 gw = texture(tGlow, uv);
         float beat = .72 + .28*sin(ocTime*1.1 + P.x*.05 + P.z*.07);
         c += alb*(vec3(.16, 1.3, 1.15)*gw.r*beat + vec3(1.5, .3, 1.0)*gw.g*beat)*(1.0 + 8.0*bw.a)*1.6 + (alb + .05)*vec3(1.5, .82, .30)*(gw.b*ocLamps + gw.a)*2.8;
-        c += (alb + .03)*(ocPool(P, N) + ocNear(P, N)) + vec3(1.0, .22, .04)*ocEmb*2.0;
+        c += (alb + .03)*(ocPool(P, N) + ocNear(P, N) + ocFire(P, N)) + vec3(1.0, .22, .04)*ocEmb*2.0;
         c = ocApply(c, P);
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
@@ -630,7 +630,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         vec4 ocWp = modelMatrix*instanceMatrix*vec4(transformed, 1.0);
         vec3 ocB = (modelMatrix*instanceMatrix*vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         vec2 ocBu = vec2(ocB.x - ocBurnM.x, ocBurnM.y - ocB.z)*ocBurnM.z + .5;
-        vLeafB = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu).rb : vec2(0.0);      // what fire and ice did at the foot of the tree (scorch.js)
+        vLeafB = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu*vec2(1.0, .5)).rb : vec2(0.0);      // what fire and ice did at the foot of the tree (scorch.js)
         float ocPh = dot(ocWp.xyz, vec3(.21, .17, .13));
         ocWp.xyz += vec3(.83, .1, .55)*(sin(ocTime*1.7 + ocPh) + .6*sin(ocTime*.9 + ocPh*.6))*.14;
         vec4 mvPosition = viewMatrix*ocWp;
@@ -1300,7 +1300,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         vec2 ocWu = vec2(ocW2.x - ocWetM.x, ocWetM.y - ocW2.y)*ocWetM.z + .5;
         vec2 ocWv = ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996 ? texture(tOcWet, ocWu).rg : vec2(0.0);      // laid flat where a ride ran, under water in a puddle (wetmap.js)
         vec2 ocBu = vec2(ocW2.x - ocBurnM.x, ocBurnM.y - ocW2.y)*ocBurnM.z + .5;
-        vec4 ocBm = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu) : vec4(0.0);      // gone where it burnt, and back blade by blade (scorch.js)
+        vec4 ocBm = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu*vec2(1.0, .5)) : vec4(0.0);      // gone where it burnt, and back blade by blade (scorch.js)
         float ocH = (.28 + .46*aRoot.z)*ocFade*(1.0 - .82*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y))*smoothstep(aRoot.w*.4 + .05, aRoot.w*.4 + .2, 1.0 - ocBm.r);
         float ocAng = aRoot.w*6.283, ocT = aShape.y;
         vec2 ocDir = vec2(cos(ocAng), sin(ocAng));

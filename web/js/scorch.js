@@ -9,7 +9,8 @@ const WIND = 8, WX = 0.83, WZ = 0.55, UP = new THREE.Vector3(0, 1, 0);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = (a, b) => a + Math.random() * (b - a);
 
 export function createScorch(G) {
-  const W = G.world, U = G.look.uniforms, px = new Uint8Array(N * N * 4), tex = new THREE.DataTexture(px, N, N, THREE.RGBAFormat, THREE.UnsignedByteType);
+  // the top half of the texture is firelight.js's grid: one more sampler would be one too many for the ground
+  const W = G.world, U = G.look.uniforms, px = new Uint8Array(N * N * 8), tex = new THREE.DataTexture(px, N, N * 2, THREE.RGBAFormat, THREE.UnsignedByteType), grid = px.subarray(N * N * 4);
   tex.minFilter = tex.magFilter = THREE.LinearFilter; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.generateMipmaps = false; tex.needsUpdate = true; U.tOcBurn.value = tex;
   const st = new Uint8Array(N * N), veg = new Float32Array(N * N), hgt = new Float32Array(N * N), left = new Float32Array(N * N), wet = new Float32Array(N * N), hold = new Float32Array(N * N), ice = new Float32Array(N * N), dist = new Float32Array(N * N);
   const crown = new Float32Array(N * N), tall = new Float32Array(N * N); let trees = null;
@@ -68,6 +69,12 @@ export function createScorch(G) {
       if (Math.random() < p && burning < MOST) ignite(j, run);
     }
   }
+  const fires = [{ x: 0, y: 0, z: 0, n: 0 }, { x: 0, y: 0, z: 0, n: 0 }, { x: 0, y: 0, z: 0, n: 0 }, { x: 0, y: 0, z: 0, n: 0 }], blockN = new Float32Array(36), blockX = new Float32Array(36), blockZ = new Float32Array(36), blockY = new Float32Array(36);
+  function groupFires() {
+    blockN.fill(0); blockX.fill(0); blockZ.fill(0); blockY.fill(0);
+    for (let r = 0, i = 0; r < N; r++) for (let c = 0; c < N; c++, i++) { if (st[i] !== BURN && crown[i] <= 0) continue; const b = ((r / 11) | 0) * 6 + ((c / 11) | 0), up = crown[i] > 0 ? 6 : 1; blockN[b]++; blockX[b] += toX(c); blockZ[b] += toZ(r); blockY[b] += hgt[i] + up; }
+    for (const f of fires) { let best = -1, most = 0; for (let b = 0; b < 36; b++) if (blockN[b] > most) { most = blockN[b]; best = b; } f.n = most; if (best >= 0) { f.x = blockX[best] / most; f.y = blockY[best] / most; f.z = blockZ[best] / most; blockN[best] = 0; } }
+  }
   function tick() {
     let any = 0, tongues = 0; const flames = G.flames;
     for (let r = 0, i = 0; r < N; r++) for (let c = 0; c < N; c++, i++) {
@@ -84,16 +91,17 @@ export function createScorch(G) {
       if (px[o]) { any = 1; if (hold[i] > 0) hold[i] -= TICK; else { px[o] = Math.max(0, px[o] - (TICK / SCORCH_BACK) * 255 * (wet[i] > 0 ? 2 : 1)); if (px[o] === 0 && st[i] === DONE) st[i] = FUEL; } }
       if (px[o + 2]) { any = 1; if (ice[i] > 0) ice[i] -= TICK; else px[o + 2] = Math.max(0, px[o + 2] - (TICK / FROST_BACK) * 255); }
     }
-    active = any; dirty = true;
+    active = any; dirty = true; groupFires();
   }
   return {
     hit,
     update(dt, x, z) {
       if (!live) return; if (active) follow(x, z); acc += dt;
       if (acc >= TICK) { acc = 0; if (active) tick(); if (dirty) { tex.needsUpdate = true; dirty = false; } }
+      if (active && G.fireLight) for (const f of fires) if (f.n) G.fireLight.light(f.x, f.y + 1.2, f.z, 1, 0.42, 0.1, 10 + Math.min(10, f.n * 0.4), 16 + f.n, 0.6, f.x);
     },
-    restore() { tex.needsUpdate = true; },
-    get burning() { return burning; }, get live() { return live; },
+    restore() { tex.needsUpdate = true; }, grid, touch() { tex.needsUpdate = true; },
+    get burning() { return burning; }, get live() { return live; }, get fires() { return fires; },
     cell(x, z) { if (!live) return null; const c = Math.round((x - ox) / CELL + N / 2 - 0.5), r = Math.round((oz - z) / CELL + N / 2 - 0.5); if (c < 0 || r < 0 || c >= N || r >= N) return null; const i = r * N + c, o = i * 4; return { st: st[i], scorch: px[o], flame: px[o + 1], frost: px[o + 2], ember: px[o + 3], wet: wet[i] }; },
     get count() { let f = 0, b = 0, d = 0; for (let i = 0; i < N * N; i++) { if (st[i] === FUEL) f++; else if (st[i] === BURN) b++; else if (st[i] === DONE) d++; } return { fuel: f, burning: b, burnt: d }; },
   };

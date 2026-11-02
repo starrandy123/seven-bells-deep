@@ -264,7 +264,7 @@ export async function createEmber(G, { foeMaterial, D }) {
       if ((s.trailT -= dt) <= 0) {
         s.trailT = 0.03;
         if (wet) { fx().sp('dot', s.p, 0.34, 0.24, SEA, { s0: 0.34, s1: 0.08, hot: 0.6, add: 0.5 }); fx().sp('bead', s.p, 0.1, 0.5, FOAM, { s0: 0.1, s1: 0.04, hot: 0.4, add: 0.3, vy: 1, grav: 7 }); }
-        else { fx().sp('dot', s.p, 0.42, 0.26, FIRE, { s0: 0.42, s1: 0.1, hot: 0.7, add: 0.8 }); if (Math.random() < 0.35) fx().sp('smoke', s.p, 0.3, 0.6, SMOKE, { s0: 0.22, s1: 0.6, a: 0.28, add: 0, hot: 0, rot: Math.random() * 6.28 }); }
+        else { G.fireLight.pop(s.p, 1, 0.5, 0.16, 11, 0.06, 26); fx().sp('dot', s.p, 0.42, 0.26, FIRE, { s0: 0.42, s1: 0.1, hot: 0.7, add: 0.8 }); if (Math.random() < 0.35) fx().sp('smoke', s.p, 0.3, 0.6, SMOKE, { s0: 0.22, s1: 0.6, a: 0.28, add: 0, hot: 0, rot: Math.random() * 6.28 }); }
       }
       if (s.friendly) { for (const o of emberkin()) if (!done && o.pos.distanceTo(s.p) < 1.6) { o.onHit(s.dmg, s.p, 'water', { element: 'water', status: { soak: 1 }, knock: 3, stun: 0.25, poise: 14 }); fx().sparks(s.p, 10, 0xbdf7ff, 7); steam(s.p, 4, 0.9); done = true; } }
       else {
@@ -376,6 +376,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (lit > 0) {
       const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(e.spool ?? 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
       jetsOf(s.jets, e.up, e.spool * lit, wetBody ? 1 : 0, e.phase, e, dt);
+      if (!wetBody) G.fireLight.light(e.pos.x, e.pos.y - 0.7, e.pos.z, 1, 0.42, 0.1, 6.5, 12 * e.spool * lit, 0.2, e.phase);
       // the crown of fire: it stands straight up off his head and his speed lays it back. The man has none
       if ((e.super || e.friend) && !e.warden) { s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
       G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, JET, 1, 0.9, AIRY); }
@@ -483,7 +484,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (h.combatT < 3 && !h.dead && (H2.fistT = (H2.fistT || 0) - dt) <= 0) { H2.fistT = 0.09; for (const b of [B.hand_R, B.hand_L]) { b.getWorldPosition(v1); FL.puff(v1, 0.2 + Math.random() * 0.12, 0.2, rand(-0.4, 0.4), rand(0.8, 1.8), rand(-0.4, 0.4), 2, 2, 1.3); } }
     if (!burning && !sup) return;
     h.root.updateMatrixWorld(true); B.spine_3.getWorldPosition(v1); B.hips.getWorldPosition(v2); H2.up.subVectors(v1, v2).normalize();
-    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1, H2, dt);
+    const thrust = h.fly ? 1 + Math.min(h.speed / 12, 3) : h.glide ? 0.7 : burning ? 2 : 0.5, flick = 0.82 + 0.3 * Math.random(); H2.spool = Math.max(damp(H2.spool ?? 0, burning ? clamp(h.flyThrottle ?? 0.5, 0.3, 1) : 0.3, 3.2, dt), burning ? 0.4 : 0); h.flyUp && H2.up.copy(h.flyUp); jetsOf(H2.pairs, H2.up, H2.spool, 0, 3.1, H2, dt); G.fireLight.light(h.pos.x, h.pos.y - 0.7, h.pos.z, 1, 0.42, 0.1, 6.5, 12 * H2.spool, 0.2, 3.1);
     if (sup) { const cam = G.camera.position; B.head.getWorldPosition(v1); v1.addScaledVector(H2.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(h.vel, -0.5).normalize(); const Lc = 0.42 * flick, Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize(); G.fx.now(G.stats.frames % 3 ? 'flame2' : 'flame', v1.x + v3.x * Lc, v1.y + v3.y * Lc, v1.z + v3.z * Lc, viewX.x * Wc, viewX.y * Wc, viewX.z * Wc, v3.x * -Lc, v3.y * -Lc, v3.z * -Lc, FIRE, 1, 0.9, 0.55); }
     if (burning) { washUnder(h.pos, H2.spool, dt, H2); loud = Math.max(loud, 0.25 + 0.2 * thrust); if ((H2.smokeT = (H2.smokeT || 0) - dt) <= 0) { H2.smokeT = h.speed > 14 ? 0.09 : 0.18; v1.copy(h.pos).addScaledVector(H2.up, -3.2); G.fx.sp('smoke', v1, 0.5, 1, SMOKE, { s0: 0.14, s1: 0.5, a: 0.06, add: 0, hot: 0, vy: 0.5, drag: 0.7, rot: Math.random() * 6.28 }); } }
   }

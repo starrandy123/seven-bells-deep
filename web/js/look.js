@@ -109,8 +109,8 @@ uniform vec4 ocRiverM;
 uniform sampler2D tOcWet, tOcBurn;
 uniform vec4 ocWetM, ocBurnM;
 uniform sampler2D tOcSun, tOcNoise, tOcLand, tOcPool;
-uniform vec4 ocFlashP[NF];
-uniform vec4 ocFlashC[NF];
+uniform vec4 ocLightP[16], ocLightC[16], ocGridM;
+uniform float ocLightN;
 
 // What the water scatters toward the eye along a ray: starts at depth d0, runs len metres.
 vec3 ocScatter(vec3 rd, float d0, float len) {
@@ -128,11 +128,18 @@ vec3 ocScatter(vec3 rd, float d0, float len) {
 }
 
 // A surface colour seen through the water.
+// fire glows in the air: the two strongest lights, at the nearest point on the visible stretch of the ray, so a wall in front cuts it with no depth read
+vec3 ocHalo(vec3 C, vec3 rd, float D) {
+  vec3 S = vec3(0.0);
+  for (int i = 0; i < 2; i++) { vec3 q = ocLightP[i].xyz - C; float t = clamp(dot(q, rd), 0.0, D); vec3 e = q - rd*t; S += ocLightC[i].rgb*.012/(1.0 + dot(e, e)*.09); }
+  return S;
+}
 vec3 ocApply(vec3 col, vec3 P) {
   vec3 C = cameraPosition;
   vec3 v = P - C;
   float D = length(v);
   vec3 rd = v/max(D, .001);
+  if (ocLightN > .5) col += ocHalo(C, rd, D);
   float s0 = 0.0, s1 = D;
   if (C.y > 0.0) s0 = rd.y < -.0001 ? min(C.y/-rd.y, D) : D;           // from the air: the path starts at the surface
   else if (P.y > 0.0) s1 = rd.y > .0001 ? min(-C.y/rd.y, D) : D;       // up out of the water: it ends there
@@ -241,15 +248,20 @@ float ocCaustics(vec3 P, float depth, float facing) {
   return mix(1.0, ocCausticsRaw(P, depth), smoothstep(-.05, .55, facing));
 }
 
-vec3 ocFlash(vec3 P) {
-  vec3 L = vec3(0.0);
-  for (int i = 0; i < NF; i++) {
-    if (ocFlashC[i].a <= 0.0) continue;
-    vec3 d = P - ocFlashP[i].xyz;
-    float a = max(1.0 - dot(d, d)/(ocFlashP[i].w*ocFlashP[i].w), 0.0);
-    L += ocFlashC[i].rgb*ocFlashC[i].a*a*a;
+// the fire on the world (firelight.js): the lights this 4 m cell can see, each with a real N·L wrapped round a little, because a fire is a volume, and a window on inverse square. No lights, no cost
+vec3 ocFire(vec3 P, vec3 N) {
+  if (ocLightN < .5) return vec3(0.0);
+  vec2 g = (P.xz - ocGridM.xy)*ocGridM.z;
+  if (min(g.x, g.y) < 0.0 || max(g.x, g.y) >= ocGridM.w) return vec3(0.0);
+  uvec4 id = uvec4(texelFetch(tOcBurn, ivec2(g) + ivec2(0, 64), 0)*255.0 + .5);
+  vec3 E = vec3(0.0);
+  for (int k = 0; k < 4; k++) {
+    uint n = id[k]; if (n == 0u) break;
+    int i = int(n) - 1; vec3 d = ocLightP[i].xyz - P; float d2 = dot(d, d), q = d2/(ocLightP[i].w*ocLightP[i].w); if (q >= 1.0) continue;
+    float win = 1.0 - q*q, w = ocLightC[i].w, ndl = dot(N, d)*inversesqrt(d2 + 1e-4);
+    E += ocLightC[i].rgb*(win*win/(d2 + 1.0))*max((ndl + w)/(1.0 + w), 0.0);
   }
-  return L;
+  return E;
 }
 
 // Close to the eye the water hasn't taken the colours yet: at 3 m a stone keeps its own, whatever the depth.
@@ -465,8 +477,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
-    ocFlashP: { value: Array.from({ length: NF }, () => new THREE.Vector4(0, 0, 0, 1)) },
-    ocFlashC: { value: Array.from({ length: NF }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 },
     ocAddGain: { value: phone ? 1 : .5 },
     ocRes: { value: new THREE.Vector2(0, 0) },
     ocShaft: { value: 1 },
@@ -547,7 +558,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
       vec2 ocUv = (vec2(ocP.x - ocMap.x, -ocP.z - ocMap.y)/ocMap.z + .5)/ocMap.w;
       float ocAbove = ocP.y - texture(tOcHeight, ocUv).r;
       float ocG = .42 + .58*smoothstep(0.0, 3.2, ocAbove);
-      reflectedLight.indirectDiffuse += diffuseColor.rgb*(ocAmbient(ocN, ocD)*ocG + ocFlash(ocP) + ocNearFill(ocP, ocD));
+      reflectedLight.indirectDiffuse += diffuseColor.rgb*(ocAmbient(ocN, ocD)*ocG + ocNearFill(ocP, ocD));
       // Light thrown back up by sunlit sand: it dances on undersides, on bellies, under arches.
       float ocUnder = max(-ocN.y, 0.0);
       if (ocUnder > 0.0) reflectedLight.indirectDiffuse += diffuseColor.rgb*ocSunCol*.17*ocDown*ocUnder*ocCR*ocCR*smoothstep(46.0, 3.0, ocAbove)*ocAmb;
@@ -561,7 +572,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
         reflectedLight.directSpecular *= 1.0 - ocPaint*.75;
         reflectedLight.indirectSpecular *= 1.0 - ocPaint*.75;
       }
-      reflectedLight.directDiffuse += (diffuseColor.rgb + .03)*(ocPool(ocP, ocN) + ocNear(ocP, ocN));
+      reflectedLight.directDiffuse += (diffuseColor.rgb + .03)*(ocPool(ocP, ocN) + ocNear(ocP, ocN) + ocFire(ocP, ocN));
     }`;
   const WRAP = /* glsl */`
       { float ocW = clamp((ocF + WRAPK)/(1.0 + WRAPK), 0.0, 1.0);
@@ -727,6 +738,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     scene.add(mesh);
     return mesh;
   })();
+  let flashLight = null; const setFlashLight = (fn) => { flashLight = fn; };
   function flash(pos, colour = 0xffffff, radius = 8, life = .35) {
     let f = flashes[0]; for (const x of flashes) if (x.age / Math.max(x.life, 1e-3) > f.age / Math.max(f.life, 1e-3)) f = x;
     f.age = 0; f.life = life; f.r = radius; f.p.copy(pos); f.c.set(colour);
@@ -844,8 +856,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     flashes.forEach((f, i) => {
       if (f.age < f.life) f.age += dt;
       const on = f.age < f.life, q = on ? 1 - f.age / f.life : 0, e = q * q;
-      U.ocFlashP.value[i].set(f.p.x, f.p.y, f.p.z, f.r);
-      U.ocFlashC.value[i].set(f.c.r * 1.3, f.c.g * 1.3, f.c.b * 1.3, e);
+      if (on && flashLight) flashLight(f.p, f.c, f.r, e);
       gp.setXYZW(i, f.p.x, f.p.y, f.p.z, Math.min(f.r, 26) * (.34 + .3 * (1 - q)));
       gc.setXYZ(i, f.c.r * e * .2, f.c.g * e * .2, f.c.b * e * .2);
       any = any || on;
@@ -1099,5 +1110,5 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
   function setSunMap(texture, m) { U.tOcSun.value = texture; U.ocSunM.value.copy(m); }
   function setLandMap(texture, m) { U.tOcLand.value = texture; U.ocLandM.value.copy(m); }
 
-  return { get inkBg() { return inkBg; }, bakeGrid, upload: (t) => renderer.initTexture(t), causticRT, uniforms: U, tier, stats, precompile, kick, onCross, crossed, addOutline, setFrost, waterMat, iceMat, setLook, setSky, onRestore, skyTable: (n) => LOOKS[n].sky, get lookName() { return lookName; }, looks: Object.keys(LOOKS), patch, update, flash, setMood, setRegion, render, resize, setSunMap, setLandMap, glsl: OCEAN_GLSL, sunA, sunW, sun, hemi, shafts, snow, setLandMap };
+  return { setFlashLight, get inkBg() { return inkBg; }, bakeGrid, upload: (t) => renderer.initTexture(t), causticRT, uniforms: U, tier, stats, precompile, kick, onCross, crossed, addOutline, setFrost, waterMat, iceMat, setLook, setSky, onRestore, skyTable: (n) => LOOKS[n].sky, get lookName() { return lookName; }, looks: Object.keys(LOOKS), patch, update, flash, setMood, setRegion, render, resize, setSunMap, setLandMap, glsl: OCEAN_GLSL, sunA, sunW, sun, hemi, shafts, snow, setLandMap };
 }
