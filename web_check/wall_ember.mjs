@@ -268,6 +268,27 @@ await section(['E28'], async () => {
   line('E28', q.scoutOut && q.killed && q.quiet && q.marked > 0 && q.swarm > q.marked && q.swarm - q.marked < 9 && q.members >= 4 && q.burnt && q.gaveUp && !real.length, `a scout came out (${q.scoutOut}); killed in two blows (${q.killed}) nothing followed (${q.quiet}); the next marked him at ${q.marked} s and the swarm came at ${q.swarm} s, ${q.members} strong, telling ${q.blows.join(' ')}; a fire blast burnt one's wings (${q.burnt}); cruising away he lost them (${q.gaveUp}) ${q.gaveUp ? '' : JSON.stringify(q.dbg)}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the Tephra Winder: under the ash it can't be struck; close in and it comes up and strikes after its tell; sidewinding, the parts of it on the ground hold still while it goes
+await section(['E29'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, W = G.world, L = () => G.combat.log, step = (s, f) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); f && f(i); } };
+    G.ember.setSide('fire', { place: true, quiet: true }); for (const q of G.enemies.encounters) q.cleared = true; G.enemies.clearAll && G.enemies.clearAll();
+    const c = G.winders.apron(), e = G.enemies.spawn('winder', c.clone()); e.state = 'patrol'; Q.walkAt(c.x + 30, -c.z); h.inv = 1e6; step(3, () => { h.inv = 1e6; });
+    const buried = e.state === 'buried' && !G.enemies.alive().includes(e);
+    L().length = 0; Q.walkAt(e.pos.x + 6, -e.pos.z); let tell = 0; step(3, () => { h.inv = 1e6; const q = L().find((x) => x.type === 'tell' && x.foe === 'winder'); if (q && !tell) tell = q.tell_s; });
+    const ambush = L().some((x) => x.type === 'ambush'), struck = L().some((x) => x.type === 'contact' && x.foe === 'winder');
+    // sidewinding: watch the joints on the ground and how far they slide while the body moves
+    const T = e.slot.mat.U.uPath.value.image.data, row = e.slot.row, prev = []; let slide = 0, n = 0, moved = 0; e.state = 'patrol'; e.home.set(e.pos.x + 30, e.pos.y, e.pos.z + 10); Q.walkAt(e.pos.x - 60, -e.pos.z); const p0 = e.pos.clone();
+    step(3, (i) => { h.inv = 1e6; for (let j = 0; j < 16; j++) { const o = (row * 16 + j) * 4, x = T[o], y = T[o + 1], z = T[o + 2], g = W.heightAt(x, -z), down = y - g < 0.125; if (prev[j] && prev[j].down && down && i > 20) { slide += Math.hypot(x - prev[j].x, z - prev[j].z) * 60; n++; } prev[j] = { x, z, down }; } });
+    moved = e.pos.distanceTo(p0) / 3;
+    return { buried, ambush, tell, struck, slip: n ? slide / n : -1, speed: moved, contacts: n };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
+  line('E29', q.buried && q.ambush && q.tell >= 0.69 && q.speed > 2 && q.slip >= 0 && q.slip < q.speed * 0.35 && !real.length, `buried it can't be struck (${q.buried}); close in and it came up (${q.ambush}) with a ${q.tell} s tell, reached him ${q.struck}; sidewinding at ${q.speed.toFixed(1)} m/s its joints on the ground slid ${q.slip.toFixed(2)} m/s on average over ${q.contacts} contacts; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

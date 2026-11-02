@@ -119,7 +119,8 @@ export async function createEnemies(G) {
   const ember = G.ember = await createEmber(G, { foeMaterial, D }); pools.emberkin = ember.pool;
   const beasts = G.beasts = createBeasts(G, { foeMaterial, D }); pools.monitor = beasts.pool;
   const newts = G.newts = createBeasts(G, { foeMaterial, D, kind: 'newt' }); pools.newt = newts.pool;
-  const beastOf = (e) => (e.def.body === 'newt' ? newts : beasts);
+  const winders = G.winders = createBeasts(G, { foeMaterial, D, kind: 'winder' }); pools.winder = winders.pool;
+  const beastOf = (e) => (e.def.body === 'newt' ? newts : e.def.body === 'winder' ? winders : beasts);
   for (const k in FOES) { if (k !== '_doc' && FOES[k].body !== 'reaver' && !FOES[k].flyer && !FOES[k].beast) fishPool(FOES[k].body); }
   const sharkPool = pools.shark;
 
@@ -137,6 +138,7 @@ export async function createEnemies(G) {
   // the Scoria Monitors' ground: the black plain on the Burnt Isle between the lava channels. Pipeline/research/LIFE_SOURCES.md
   { const p = G.beasts.home(410, 700); if (p) encounters.push({ id: 'monitors', kind: 'monitor', n: 3, r: 26, spread: 9, land: true, c: p, state: 'idle', list: [], cleared: false, cool: 0 }); }
   // the newts live in the lava: three where the east river runs out over the black plain
+  { const p = winders.apron(); if (p) encounters.push({ id: 'winders', kind: 'winder', n: 2, r: 20, spread: 9, land: true, c: p, state: 'idle', list: [], cleared: false, cool: 0 }); }
   encounters.push({ id: 'newts', kind: 'newt', n: 3, r: 24, spread: 10, land: true, c: new THREE.Vector3(456, G.world.heightAt(456, -862) + 1, 862), state: 'idle', list: [], cleared: false, cool: 0 });
   // the fights on land: soldiers only, each at a named place (combat.json `land`). `at` is a poi or land id; dx, dy move it off that spot, onto ground that's open from where he arrives
   for (const f of (D.land && D.land.fights) || []) { const q = [...(data.poi || []), ...(data.land || [])].find((o) => o.id === f.at); if (!q) { console.error('a land fight at no place', f.id, f.at); continue; } const x = q.x + (f.dx || 0), y = q.y + (f.dy || 0), z = G.world.heightAt(x, y); encounters.push({ id: f.id, kind: 'reaver', mix: f.mix, n: f.mix.length, r: f.r || 30, spread: f.spread || 8, x, y, z, c: W(x, y, z + 0.92), state: 'idle', list: [], cleared: false, cool: 0, tied_to: null, land: true }); }
@@ -617,7 +619,7 @@ export async function createEnemies(G) {
   }
   ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, drawRag, throwBody, freeze, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
   const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain, beast: (e, dt) => beastOf(e).brain(e, dt) };
-  for (const B of [beasts, newts]) B.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, steer });
+  for (const B of [beasts, newts, winders]) B.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, steer });
 
   // what holds a foe outside its own head: ice, a lash, being thrown. True means its brain sits this step out
   function held(e, dt) {
@@ -750,7 +752,7 @@ export async function createEnemies(G) {
         if (e.state === 'tell' && G.fx.glint) { tipW.copy(e.pos); tipW.y += 0.5; tipW.x += Math.sin(e.heading) * 1.4; tipW.z += Math.cos(e.heading) * 1.4; G.fx.glint(tipW, 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
       }
       if (e.stagger > 0 && G.fx.glint) { tipW.copy(e.pos); tipW.y += 1.5; G.fx.glint(tipW, 0xfff0a0, 0.12 + 0.1 * Math.sin(G.time * 11)); }
-    }    beasts.frame(); newts.frame();
+    }    beasts.frame(); newts.frame(); winders.frame();
   }
 
   return {

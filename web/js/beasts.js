@@ -16,10 +16,12 @@ const NEWT = [[0, 0.03, 0.012], [0.03, 0.1, 0.04], [0.07, 0.135, 0.055], [0.11, 
 // the newt's skin: glossy black, and its glands where a real fire salamander carries them, the pair of big bumps behind the eyes and two broken rows down the back, in a hot yellow-orange. They brighten head to tail as it readies a lob, and go dark when they're spent
 const NEWT_LOOK = (J, L) => ({ key: 'newt', skinned: true,
   vertexDecl: 'attribute vec4 aS;\nuniform sampler2D uPath; uniform float uRow, uJaw;\nvarying vec4 vS;\n',
+  // the body follows a Catmull-Rom curve through the spine's points, not straight lines between them, so a tight wave bends smoothly
   vertexBend: /* glsl */`{
-    vS = aS; float f = aS.x*${(J - 1).toFixed(1)}; int i = int(floor(f)), j = min(i + 1, ${J - 1}); int r = int(uRow + .5);
-    vec3 a = texelFetch(uPath, ivec2(i, r), 0).xyz, b = texelFetch(uPath, ivec2(j, r), 0).xyz, c = mix(a, b, fract(f));
-    vec3 T = normalize(a - b + vec3(0.0, 0.0, 1e-4)), R = normalize(cross(vec3(0.0, 1.0, 0.0), T)), Up = cross(T, R);
+    vS = aS; float f = aS.x*${(J - 1).toFixed(1)}; int i = int(floor(f)), j = min(i + 1, ${J - 1}), h = max(i - 1, 0), k = min(i + 2, ${J - 1}); int r = int(uRow + .5); float t = fract(f);
+    vec3 p0 = texelFetch(uPath, ivec2(h, r), 0).xyz, a = texelFetch(uPath, ivec2(i, r), 0).xyz, b = texelFetch(uPath, ivec2(j, r), 0).xyz, p3 = texelFetch(uPath, ivec2(k, r), 0).xyz;
+    vec3 c = .5*(2.0*a + (b - p0)*t + (2.0*p0 - 5.0*a + 4.0*b - p3)*t*t + (3.0*a - p0 - 3.0*b + p3)*t*t*t), dc = .5*((b - p0) + 2.0*(2.0*p0 - 5.0*a + 4.0*b - p3)*t + 3.0*(3.0*a - p0 - 3.0*b + p3)*t*t);
+    vec3 T = normalize(-dc + vec3(0.0, 0.0, 1e-4)), R = normalize(cross(vec3(0.0, 1.0, 0.0), T)), Up = cross(T, R);
     vec3 q = position; if (aS.x < .1 && aS.z < 0.0) q.y -= uJaw*(.1 - aS.x)*${(L * 3).toFixed(2)};
     transformed = c + R*q.x + Up*q.y; objectNormal = normalize(R*normal.x + Up*normal.y + T*normal.z); }`,
   fragmentPars: /* glsl */`varying vec4 vS; uniform float uHeat, uBeat, uLob, uSpent;
@@ -31,6 +33,16 @@ const NEWT_LOOK = (J, L) => ({ key: 'newt', skinned: true,
   glow: /* glsl */`{ float g = gland(vS), lob = uLob > 0.0 ? smoothstep(vS.x - .06, vS.x, .06 + uLob*.62)*2.6 : 0.0; ocGlow = vec3(1.0, .42, .04)*g*(.45 + 1.1*uHeat*uHeat*(.6 + .4*uBeat) + lob)*(1.0 - .92*uSpent)*(1.0 - .55*smoothstep(.2, .13, vS.x)); }`,
 });
 
+// a 6 m sidewinder, ten times life size: a flat head wider than the neck, a thick body, a tail tapering to a rattle of four rings
+const SNAKE = [[0, 0.006, 0.004], [0.01, 0.025, 0.012], [0.03, 0.034, 0.016], [0.045, 0.026, 0.015], [0.07, 0.03, 0.022], [0.15, 0.04, 0.03], [0.3, 0.045, 0.034], [0.5, 0.045, 0.034], [0.7, 0.038, 0.03], [0.85, 0.025, 0.022], [0.93, 0.014, 0.013], [0.955, 0.009, 0.009], [0.96, 0.013, 0.012], [0.98, 0.013, 0.012], [1, 0.004, 0.004]];
+// ash-grey, a row of darker saddles down the back as a sidewinder has, the belly scales seamed with heat, the rattle dark
+const SNAKE_LOOK = (J, L) => ({ ...NEWT_LOOK(J, L), key: 'winder',
+  fragmentPars: 'varying vec4 vS; uniform float uHeat, uBeat, uLob, uSpent;\n',
+  albedo: /* glsl */`{ float s = vS.x, up = vS.z, sad = smoothstep(.25, .1, abs(fract(s*38.0) - .5))*smoothstep(-.2, .4, up)*smoothstep(.06, .1, s), ra = step(.955, s);
+    vec3 ash = vec3(.16, .15, .135), dark = vec3(.06, .05, .04); diffuseColor.rgb = mix(mix(ash*(.85 + .15*fract(sin(floor(s*140.0)*17.0)*431.0)), dark, sad*.85), vec3(.025, .022, .02), ra)*(up < -.3 ? 1.15 : 1.0); }`,
+  glow: /* glsl */`{ float belly = 1.0 - smoothstep(-.55, -.3, vS.z), seam = smoothstep(.82, 1.0, fract(vS.x*150.0)); ocGlow = vec3(1.0, .35, .05)*belly*seam*(.25 + .75*uHeat)*(1.0 - step(.955, vS.x)); }`,
+});
+
 function bodyGeo(L, TAB = BODY, wk = 0.42, hk = 0.48) {
   const P = [], S = [], I = [], ring = 10, BODY = TAB;
   // the table's widths and heights are full sizes as a share of the length: a monitor 3 m long is about 0.4 m across the trunk
@@ -40,12 +52,12 @@ function bodyGeo(L, TAB = BODY, wk = 0.42, hk = 0.48) {
 }
 
 export function createBeasts(G, { foeMaterial, D, kind = 'monitor' }) {
-  const NW = kind === 'newt', MAXB = 4, FOE = D.foes[kind], K = NW ? FOE.length_m / 3 : FOE.scale_k || 1.5, L = NW ? FOE.length_m : 3 * K, hip = NW ? 0.13 : 0.4 * K, upper = NW ? 0.15 : 0.3 * K, lower = NW ? 0.15 : 0.32 * K, stride = 0.24 * L, OUT = NW ? 0.26 : 0.55 * K;
+  const NW = kind === 'newt', SN = kind === 'winder', MAXB = 4, FOE = D.foes[kind], K = NW || SN ? FOE.length_m / 3 : FOE.scale_k || 1.5, L = NW || SN ? FOE.length_m : 3 * K, hip = NW ? 0.13 : 0.4 * K, upper = NW ? 0.15 : 0.3 * K, lower = NW ? 0.15 : 0.32 * K, stride = 0.24 * L, OUT = NW ? 0.26 : 0.55 * K;
   const tex = new Float32Array(J * MAXB * 4), path = new THREE.DataTexture(tex, J, MAXB, THREE.RGBAFormat, THREE.FloatType); path.minFilter = path.magFilter = THREE.NearestFilter; path.needsUpdate = true;
-  const geo = NW ? bodyGeo(L, NEWT, 1.3, 1.15) : bodyGeo(L);
+  const geo = SN ? bodyGeo(L, SNAKE, 1, 1) : NW ? bodyGeo(L, NEWT, 1.3, 1.15) : bodyGeo(L);
   // basalt-black beaded plates, the glow only in the gaps between them; the cracks pulse at its heart rate, so its heat reads across a fight
   const base = new THREE.MeshStandardMaterial({ color: 0x1a1614, roughness: NW ? 0.5 : 0.78, metalness: 0, envMapIntensity: NW ? 0.35 : 1 });
-  G.look.patch(base, NW ? NEWT_LOOK(J, L) : { key: 'monitor', skinned: true,
+  G.look.patch(base, SN ? SNAKE_LOOK(J, L) : NW ? NEWT_LOOK(J, L) : { key: 'monitor', skinned: true,
     vertexDecl: 'attribute vec4 aS;\nuniform sampler2D uPath; uniform float uRow, uJaw;\nvarying vec4 vS;\n',
     vertexBend: /* glsl */`{
       vS = aS; float f = aS.x*${(J - 1).toFixed(1)}; int i = int(floor(f)), j = min(i + 1, ${J - 1}); int r = int(uRow + .5);
@@ -77,6 +89,8 @@ export function createBeasts(G, { foeMaterial, D, kind = 'monitor' }) {
     e.onHit = (dmg, from, type, info = {}) => {
       const el = info.element || (G.sideNow === 'fire' ? 'fire' : 'water'); e.heat = clamp(e.heat + (el === 'fire' ? 0.12 : el === 'ice' ? -0.35 : -0.25), 0, 1);
       // a newt: fire fills its glands until they burst and go dark, its skin soft; water sets a wet crust on it that slows it
+      // a winder: the neck just behind the head is soft while it lies stretched out after a strike; fire glazes the ash and water muds it, so for a while it can't bury there
+      if (SN) { if (el === 'fire') e.glazeT = 6; else e.mudT = 6; if (e.state === 'buried') { e.state = 'circle'; e.hidden = false; e.t = 0.3; } return take(dmg * (e.state === 'recover' ? 1.5 : 1), from, type, info); }
       if (NW) { if (el === 'fire' && e.heat >= 0.85 && !(e.spent > 0)) { e.spent = e.def.spent_s; e.heat = 0.5; e.lobs = 0; G.combat.teach('newt_spent', 'Glands spent', 'Its skin is soft: strike now'); G.fireKit && G.fireKit.burst(v1.copy(e.pos), 0.8, null); G.combat.log.push({ t: G.time, type: 'newt_spent', foe: e.kind }); } if (el !== 'fire') e.crustT = 4; return take(dmg * (e.spent > 0 ? 2 : 1), from, type, info); }
       v1.subVectors(from, e.pos).setY(0).normalize(); const front = v1.x * Math.sin(e.heading) + v1.z * Math.cos(e.heading), throat = front > 0.5 && (e.gape > 0 || e.stagger > 0);
       const mul = throat ? 2 : e.heat <= 0.25 ? 0.8 : front < -0.3 ? 0.35 : 1; return take(dmg * mul, from, type, info);
@@ -92,6 +106,7 @@ export function createBeasts(G, { foeMaterial, D, kind = 'monitor' }) {
 
   // the chain: the head goes where the body's heading and position say, and each joint follows the one ahead at its length, its bend held to 22.5°, with the walking wave laid across it
   function spine(e, dt) {
+    if (SN) return winderSpine(e, dt);
     const sp = Math.hypot(e.vel.x, e.vel.z), seg = L / (J - 1), hx = Math.sin(e.heading), hz = Math.cos(e.heading), S = e.chain;
     const swim = NW && e.inLava; e.gait += swim ? 0.85 * dt : (sp * dt) / (stride * 2); const travel = swim ? 1 : clamp((sp / L - 1.5) / 1.5, 0, 1), amp = swim ? 0.09 * L : clamp(sp / 4, 0.15, 1) * 0.14 * K;
     S[0].set(e.pos.x + hx * L * 0.28, 0, e.pos.z + hz * L * 0.28);
@@ -189,11 +204,11 @@ export function createBeasts(G, { foeMaterial, D, kind = 'monitor' }) {
     if (e.state === 'dead') U.uFade.value = Math.min(1, U.uFade.value + dt * 1.25);
     // its heart: 0.5 beats a second cold, 1.67 hot
     e.beat = (e.beat || 0) + dt * (0.5 + 1.4 * e.heat); U.uBeat.value = Math.max(0, Math.sin(e.beat * TAU)) ** 3; U.uHeat.value = damp(U.uHeat.value, e.heat, 6, dt); U.uJaw.value = e.jaw;
-    if (e.state !== 'dead' && e.frozen <= 0) { spine(e, dt); stepFeet(e, dt); }
+    if (e.state !== 'dead' && e.frozen <= 0) { spine(e, dt); if (!SN) stepFeet(e, dt); }
     if (e.state === 'tell') G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
   }
   // every frame, after all of them have moved: the legs of the living, in one draw
-  function frame() { let n = 0; for (const s of pool) if (s.busy && s.e && s.e.state !== 'dead' && !(NW && s.e.inLava)) { drawLegs(s.e, n); n += 8; } legs.count = n; legs.instanceMatrix.needsUpdate = n > 0; if (NW) stepBlobs(); }
+  function frame() { let n = 0; for (const s of pool) if (s.busy && s.e && s.e.state !== 'dead' && !(NW && s.e.inLava) && !SN) { drawLegs(s.e, n); n += 8; } legs.count = n; legs.instanceMatrix.needsUpdate = n > 0; if (NW) stepBlobs(); }
   const chanAt = (x, z) => chan(x, -z);
 
   // ------------------------------------------------------------------ the newt's mind. It can't see: as a giant salamander feels for movement in the water, it goes for thumps, his feet on the ground, his landings, his blows, within hear_m. A flyer who hangs quiet over it is safe until he strikes. Pipeline/research/LIFE_SOURCES.md R-2
@@ -265,5 +280,60 @@ export function createBeasts(G, { foeMaterial, D, kind = 'monitor' }) {
       if (hit) { o.on = false; v1.set(o.p.x, Math.max(o.p.y, g + 0.1), o.p.z); G.fireKit && G.fireKit.burst(v1.clone(), 0.7, null); G.fireLight && G.fireLight.pop(v1, 1, 0.5, 0.12, 9, 0.05, 20); G.dmg && G.dmg.hit(v1, o.b.ring_m, 'fire', 0.8); }
     }
   }
-  return { pool, brain: NW ? newtBrain : brain, born, draw, frame, blobs, lavaAt: (x, z) => chanAt(x, z), use(x) { X = x; }, home: (x, z) => { for (let R = 0; R < 60; R += 6) for (let a = 0; a < TAU; a += 0.5) { const px = x + Math.cos(a) * R, pz = z + Math.sin(a) * R; if (groundAt(px, pz) > 2) return new THREE.Vector3(px, groundAt(px, pz) + 1, pz); } return null; } };
+  // ------------------------------------------------------------------ the Winder. Sidewinding as it was measured on real sidewinders climbing sand: a side-to-side wave and a lifting wave down the body, 1.51 rad apart, so the body touches the ground at two places at a time and those places don't slide; the snake goes sideways to its own length, its tracks at 33° to its way. Pipeline/research/LIFE_SOURCES.md R-3
+  // With a wave of k over the body and a reach a to each side, the parts touching hold still when the body moves sideways at a·ω, and the tracks lie at atan(1/(a·k)) to the way it goes: 33° asks a·k = 1.54
+  function winderSpine(e, dt) {
+    const F = e.def, sp = Math.hypot(e.vel.x, e.vel.z), k = (TAU * F.waves) / L, a = F.amp_m, chord = L / Math.sqrt(1 + (a * k) * (a * k) / 2);
+    // its length lies across its way; engaged, its head is toward him
+    const h = G.hero, engaged = e.state !== 'patrol' && e.state !== 'swimTo' && e.state !== 'buried';
+    let want = e.ayaw ?? e.heading; if (engaged) want = Math.atan2(e.pos.x - h.pos.x, e.pos.z - h.pos.z); else if (sp > 0.4) { const vy = Math.atan2(e.vel.x, e.vel.z), p1 = vy + Math.PI / 2, p2 = vy - Math.PI / 2, d1 = Math.abs(Math.atan2(Math.sin(p1 - (e.ayaw ?? p1)), Math.cos(p1 - (e.ayaw ?? p1)))), d2 = Math.abs(Math.atan2(Math.sin(p2 - (e.ayaw ?? p1)), Math.cos(p2 - (e.ayaw ?? p1)))); want = d1 < d2 ? p1 : p2; }
+    if (e.ayaw === undefined) e.ayaw = want; let dd = want - e.ayaw; dd = Math.atan2(Math.sin(dd), Math.cos(dd)); e.ayaw += dd * (1 - Math.exp(-(engaged ? 5 : 2.5) * dt));
+    const Ax = Math.sin(e.ayaw), Az = Math.cos(e.ayaw), Nx = Az, Nz = -Ax, side = sp > 0.3 ? Math.sign(-(Nx * e.vel.x + Nz * e.vel.z)) || 1 : 1;
+    e.wph = (e.wph || 0) + side * (sp / a) * dt; e.heading = Math.atan2(-Ax, -Az);
+    const buried = e.state === 'buried', coil = e.coil || 0, lunge = e.lunge || 0, B = e.blow, reach = B ? B.reach_m : 2.4, moving = sp > 0.5 && !buried;
+    if (moving && (e.dustT = (e.dustT || 0) - dt) <= 0) e.dustT = 0.12;
+    for (let i = 0; i < J; i++) {
+      const s = i / (J - 1), psi = k * s * L - e.wph, taper = s < 0.12 ? s / 0.12 : 1, lat = moving ? a * Math.sin(psi) * taper : a * 0.25 * Math.sin(k * s * L * 0.7) * taper, lift = moving ? (F.lift_m * Math.max(0, Math.sin(psi + 1.51) + 0.88)) / 1.88 : 0;
+      let x = e.pos.x + Ax * (s - 0.45) * chord + Nx * lat, z = e.pos.z + Az * (s - 0.45) * chord + Nz * lat, up = 0;
+      // the neck drawn back into an S while it tells, the head lifted; then the head flung out along its line to reach
+      if (s < 0.28) { const w = 1 - s / 0.28; x += Ax * 0.9 * coil * w + Nx * 0.4 * coil * w * Math.sin(w * TAU * 1.5); z += Az * 0.9 * coil * w + Nz * 0.4 * coil * w * Math.sin(w * TAU * 1.5); up = (0.35 * coil + 0.25 * (engaged ? 1 : 0)) * w; x -= Ax * reach * lunge * w; z -= Az * reach * lunge * w; }
+      if (s < 0.06 && moving) up += 0.12;
+      let y = groundAt(x, z) + 0.12 * K * 0.5 + lift + up;
+      if (buried) y = groundAt(x, z) - (s < 0.04 ? 0.05 : 0.24);
+      const o = (e.slot.row * J + i) * 4; tex[o] = x; tex[o + 1] = y; tex[o + 2] = z;
+      // a puff where it presses into the ash
+      if (moving && e.dustT === 0.12 && lift === 0 && i % 5 === 2 && G.fx.scuff) G.fx.scuff(v1.set(x, y - 0.1, z), 0.35, 1);
+    }
+    path.needsUpdate = true;
+  }
+  const headAt = (e, out) => { const o = (e.slot.row * J) * 4; return out.set(tex[o], tex[o + 1], tex[o + 2]); };
+  // its mind: under the ash with its horns showing until he's close, then up at him, side-on, round him, the neck coiled before it strikes
+  function winderBrain(e, dt) {
+    const h = G.hero, F = e.def, d = e.pos.distanceTo(h.pos); e.t -= dt; e.glazeT = Math.max(0, (e.glazeT || 0) - dt); e.mudT = Math.max(0, (e.mudT || 0) - dt);
+    const pace = (e.mudT > 0 ? 0.5 : 1) * e.slow, run = F.speed_mps * pace, near = d < F.ambush_m && !h.dead && h.pos.y - groundAt(h.pos.x, h.pos.z) < 6;
+    switch (e.state) {
+      case 'swimTo': case 'patrol': {
+        e.coil = damp(e.coil || 0, 0, 6, dt); e.lunge = damp(e.lunge || 0, 0, 6, dt); const dh = Math.hypot(e.pos.x - e.home.x, e.pos.z - e.home.z);
+        if (near) { e.state = 'circle'; e.hidden = false; e.t = 0.3; break; }
+        if (dh > 3) X.steer(e, e.home, run * 0.6, 2, dt); else { e.vel.multiplyScalar(Math.exp(-4 * dt)); if (e.glazeT <= 0 && Math.hypot(e.vel.x, e.vel.z) < 0.4) { e.state = 'buried'; e.hidden = true; } }
+        break; }
+      case 'buried': e.vel.set(0, 0, 0); winderSpine(e, dt); if (near) { e.hidden = false; for (let i = 0; i < J; i += 3) { const o = (e.slot.row * J + i) * 4; G.fx.scuff && G.fx.scuff(v1.set(tex[o], tex[o + 1] + 0.2, tex[o + 2]), 1.1, 2); } G.combat.log.push({ t: G.time, type: 'ambush', foe: e.kind }); if (X.takeToken(e)) X.beginTell(e, F.blows[0]); else { e.state = 'circle'; e.t = 0.4; } } break;
+      case 'circle': {
+        e.coil = damp(e.coil || 0, 0, 6, dt); e.lunge = damp(e.lunge || 0, 0, 6, dt); if (d > F.leave_m || h.dead) { e.state = 'patrol'; break; }
+        v1.subVectors(e.pos, h.pos).setY(0); const l = v1.length() || 1; v1.multiplyScalar(1 / l); v2.set(-v1.z, 0, v1.x).multiplyScalar(e.circleDir); v3.copy(v2).multiplyScalar(run * 0.55).addScaledVector(v1, (F.hold_m - l) * 1.6);
+        e.vel.x = damp(e.vel.x, v3.x, 3, dt); e.vel.z = damp(e.vel.z, v3.z, 3, dt);
+        if (e.t <= 0 && l < F.blows[0].reach_m + 2.3 && X.takeToken(e)) { X.beginTell(e, F.blows[0]); break; }
+        if (e.t <= 0) e.t = 0.5; break; }
+      case 'tell': { e.vel.multiplyScalar(Math.exp(-6 * dt)); const b = e.blow; e.coil = clamp(e.clock / b.tell_s, 0, 1); if (X.tellStep(e, dt)) { X.beginStrike(e); e.lunge = 0; } break; }
+      case 'strike': { const b = e.blow; e.clock += dt; e.lunge = clamp(e.clock / b.strike_s, 0, 1); e.coil = 1 - e.lunge; headAt(e, v1); if (!e.hitDone && v1.distanceTo(h.pos) < 1.4) X.blowLands(e, b, v1); if (e.clock >= b.strike_s) { e.state = 'recover'; e.clock = 0; } break; }
+      case 'recover': { const b = e.blow; e.clock += dt; e.coil = 0; e.lunge = clamp(1 - (e.clock / b.recover_s) * 1.2 + 0.2, 0, 1); e.vel.multiplyScalar(Math.exp(-4 * dt)); if (e.clock >= b.recover_s) { X.dropToken(e); X.endTell(e); e.state = 'circle'; e.t = 0.8 + Math.random() * 0.8; } break; }
+      case 'stun': e.vel.multiplyScalar(Math.exp(-3 * dt)); e.coil = damp(e.coil || 0, 0, 6, dt); e.lunge = damp(e.lunge || 0, 0, 6, dt); if (e.t <= 0) { e.state = 'circle'; e.t = 0.6; } break;
+    }
+    // a fire animal keeps off the sea (R63)
+    if (groundAt(e.pos.x + e.vel.x * 0.6, e.pos.z + e.vel.z * 0.6) < 0.3) { e.vel.x *= -0.5; e.vel.z *= -0.5; }
+    e.vel.y = 0;
+  }
+  // where it lives: the ash apron round the cone, 96 to 150 m from the vent, where the slope is 11 to 33°
+  function apron() { const vx = 378, vz = 874; for (let a = -0.9; a < -0.9 + TAU; a += 0.2) { const x = vx + Math.cos(a) * 122, z = vz + Math.sin(a) * 122, g = groundAt(x, z); if (g < 6) continue; const sl = Math.atan(Math.hypot(groundAt(x + 4, z) - groundAt(x - 4, z), groundAt(x, z + 4) - groundAt(x, z - 4)) / 8) * 57.3; if (sl > 11 && sl < 33) return new THREE.Vector3(x, g + 0.5, z); } return null; }
+  return { pool, brain: SN ? winderBrain : NW ? newtBrain : brain, apron, headAt, born, draw, frame, blobs, lavaAt: (x, z) => chanAt(x, z), use(x) { X = x; }, home: (x, z) => { for (let R = 0; R < 60; R += 6) for (let a = 0; a < TAU; a += 0.5) { const px = x + Math.cos(a) * R, pz = z + Math.sin(a) * R; if (groundAt(px, pz) > 2) return new THREE.Vector3(px, groundAt(px, pz) + 1, pz); } return null; } };
 }
