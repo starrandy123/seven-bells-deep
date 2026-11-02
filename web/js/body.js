@@ -458,7 +458,11 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     // the drawn heading follows the rules' heading: nothing that sets a facing can snap the body
     const wanted = chase(P.yaw, F.yaw, nearAngle(F.yaw.y, h.drawHeading === undefined ? h.heading : h.drawHeading), dt), turnBy = nearAngle(0, wanted - facing), most_ = FACE_RATE * dt; facing += clamp(turnBy, -most_, most_); const yaw = facing;
     root.position.copy(h.drawPos);
-    const free = h.drawPos.y - STAND * Math.cos(h.tilt);
+    // what the rules set at their own 60 Hz, drawn between the last two steps as his place is (main.js keepDrawn): at 120 Hz these moved every other frame
+    const W = h.was, ab = W && G.alpha !== undefined ? G.alpha : 1, tiltI = W ? W.tilt + (h.tilt - W.tilt) * ab : h.tilt, bankI = W ? W.bank + (h.bank - W.bank) * ab : h.bank, rollI = W ? W.roll + ((h.roll || 0) - W.roll) * ab : h.roll || 0;
+    const pitchI = W ? W.pitch + (h.pitchT - W.pitch) * ab : h.pitchT, bodyPitchI = h.pitchT !== 0 ? (h.bodyPitch / h.pitchT) * pitchI : h.bodyPitch, leanI = W ? W.lean + ((h.surfLean || 0) - W.lean) * ab : h.surfLean || 0, rakeI = W ? W.rake + ((h.surfRake || 0) - W.rake) * ab : h.surfRake || 0, dodgeI = W && W.dodge > 0 && h.dodgeT > 0 ? W.dodge + (h.dodgeT - W.dodge) * ab : h.dodgeT || 0;
+    const flyQI = W ? qFly.copy(W.q).slerp(h.flyQ, ab) : h.flyQ, flyUpI = upFly.set(0, 1, 0).applyQuaternion(flyQI);
+    const free = h.drawPos.y - STAND * Math.cos(tiltI);
     if (onGround) root.position.y = chase(P.ground, F.ground, h.drawPos.y - STAND, dt);
     else { root.position.y = free; F.ground = follower(root.position.y); }
     root.position.y = fallen(dt, onGround, free, root.position.y);
@@ -525,7 +529,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     if (sheath.k > 0.002 && sheath.k < 0.998) { const r = Math.sin(Math.PI * sheath.k); bend('arm_R', -1.5 * r); bend('fore_R', -1.15 * r); }      // the hand goes back over the shoulder for it
     if (m === 'air' && h.breach) arc();
     if (m === 'air' && h.flyPose) flyLean();
-    else if (m === 'water' && !shot) { const g = clamp((h.tiltTo ?? h.tilt) - h.tilt, -1.4, 1.4); if (Math.abs(g) > 0.02) leadIn(g); }
+    else if (m === 'water' && !shot) { const g = clamp((h.tiltTo ?? h.tilt) - tiltI, -1.4, 1.4); if (Math.abs(g) > 0.02) leadIn(g); }
     palmsOver(palmWant);
 
     // ---- switches: the difference dies away on the quintic
@@ -548,16 +552,16 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
 
     // ---- write the trunk, then stand it on its feet
     const hb = bones.hips, hi = index.hips * 4;
-    qY.setFromAxisAngle(AY, yaw + adrift * 0.12 * Math.sin(t0 * 0.23)); qX.setFromAxisAngle(AX, h.tilt - h.bodyPitch * (h.tilt > 0.5 ? 1 : 0.4) + adrift * (0.2 + 0.05 * Math.sin(t0 * 0.31 + 1))); qB.setFromAxisAngle(AY, h.bank + (h.roll || 0) + adrift * 0.06 * Math.sin(t0 * 0.43));
+    qY.setFromAxisAngle(AY, yaw + adrift * 0.12 * Math.sin(t0 * 0.23)); qX.setFromAxisAngle(AX, tiltI - bodyPitchI * (tiltI > 0.5 ? 1 : 0.4) + adrift * (0.2 + 0.05 * Math.sin(t0 * 0.31 + 1))); qB.setFromAxisAngle(AY, bankI + rollI + adrift * 0.06 * Math.sin(t0 * 0.43));
     root.quaternion.copy(qY).multiply(qX).multiply(qB);
     // in the air on the jets he stands along the thrust (hero.js), turned about that line, pivoting at his hips, with the slow breath of a body held up
     flyK += ((h.flyPose ? 1 : 0) - flyK) * (1 - Math.exp(-7 * dt));
-    if (flyK > 0.002) { root.quaternion.slerp(h.flyQ, flyK); tv.copy(h.drawPos).addScaledVector(h.flyUp, -STAND); const still = 1 - smooth(1, 7, h.speed); tv.y += still * (0.05 * Math.sin(t0 * 1.7) + 0.028 * Math.sin(t0 * 2.9 + 1)); tv.x += still * 0.03 * Math.sin(t0 * 1.1); tv.z += still * 0.03 * Math.sin(t0 * 0.9 + 2); root.position.lerp(tv, flyK); }
+    if (flyK > 0.002) { root.quaternion.slerp(flyQI, flyK); tv.copy(h.drawPos).addScaledVector(flyUpI, -STAND); const still = 1 - smooth(1, 7, h.speed); tv.y += still * (0.05 * Math.sin(t0 * 1.7) + 0.028 * Math.sin(t0 * 2.9 + 1)); tv.x += still * 0.03 * Math.sin(t0 * 1.1); tv.z += still * 0.03 * Math.sin(t0 * 0.9 + 2); root.position.lerp(tv, flyK); }
     // the air dodge's roll, round his own length through his middle
     dodgeRoll = 0;
-    if (h.dodgeT > 0 && flyK > 0.002) { const q = 1 - h.dodgeT / 0.36; dodgeRoll = h.dodgeSide * -6.2832 * q * q * (3 - 2 * q); qL.setFromAxisAngle(AZ, dodgeRoll); root.quaternion.multiply(qL); tv.copy(h.drawPos).addScaledVector(h.flyUp, -STAND); root.position.lerp(tv, 1); }
+    if (dodgeI > 0 && flyK > 0.002) { const q = 1 - dodgeI / 0.36; dodgeRoll = h.dodgeSide * -6.2832 * q * q * (3 - 2 * q); qL.setFromAxisAngle(AZ, dodgeRoll); root.quaternion.multiply(qL); tv.copy(h.drawPos).addScaledVector(flyUpI, -STAND); root.position.lerp(tv, 1); }
     // the ride's lean and rake (hero.js): the root stands at his feet, so he tips from there and they stay on the water
-    if (h.surfLean || h.surfRake) { qL.setFromAxisAngle(AZ, h.surfLean || 0); qR.setFromAxisAngle(AX, h.surfRake || 0); root.quaternion.multiply(qL).multiply(qR); }
+    if (leanI || rakeI) { qL.setFromAxisAngle(AZ, leanI); qR.setFromAxisAngle(AX, rakeI); root.quaternion.multiply(qL).multiply(qR); }
     if (!wantClip) {
       stepLegs(dt, speed);
       hb.position.set(poseP[0], poseP[1], poseP[2]); hb.quaternion.set(pose[hi], pose[hi + 1], pose[hi + 2], pose[hi + 3]); hb.updateWorldMatrix(true, false);
@@ -598,7 +602,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     swing(dt, speed, onGround);
     if (h.ride) { root.updateWorldMatrix(true, false); bones.hand_R.updateWorldMatrix(true, false); bones.hand_L.updateWorldMatrix(true, false); tv.setFromMatrixPosition(bones.hand_R.matrixWorld); tv2.setFromMatrixPosition(bones.hand_L.matrixWorld); h.handsR = tv.clone(); h.handsL = tv2.clone(); gripRel.copy(tv).add(tv2).multiplyScalar(0.5).sub(root.position); }
   }
-  const qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qB = new THREE.Quaternion(), qL = new THREE.Quaternion(), qR = new THREE.Quaternion(), AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
+  const qFly = new THREE.Quaternion(), upFly = new THREE.Vector3(), qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), qB = new THREE.Quaternion(), qL = new THREE.Quaternion(), qR = new THREE.Quaternion(), AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 
   // the feet come down from the air: each lands where it is, on the ground under it
   function landFeet() {
@@ -613,7 +617,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const sY = Math.sin(h.heading), cY = Math.cos(h.heading); fwd[0] = sY; fwd[2] = cY; left[0] = cY; left[2] = -sY; body[0] = h.drawPos.x; body[2] = h.drawPos.z; vel[0] = vel[2] = 0; seen[0] = seen[2] = 0; fall.mode = 0; fall.was = 0;
     F.yaw = follower(h.heading); F.ground = follower(h.drawPos.y - STAND); F.stride = follower(0); lastYaw = h.heading; facing = h.heading; lastSpeed = 0; gaitOn = false;
     for (const l of legs) { const E = aim(l); plantAt(l, E, 0); l.A = ankleOn(l); l.cA = l.A; l.solo = 0; l.hover = 0; l.err = null; }
-    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null; caught = 2; flyWas = !!h.flyPose; fireWas = !!h.fireBody;       // what the last pose was doing doesn't follow him
+    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null; caught = 2; flyWas = !!h.flyPose; fireWas = !!h.fireBody; if (h.was) { const k = h.was; k.tilt = h.tilt; k.bank = h.bank; k.pitch = h.pitchT; k.roll = h.roll || 0; k.lean = h.surfLean || 0; k.rake = h.surfRake || 0; k.dodge = h.dodgeT || 0; k.q.copy(h.flyQ); }       // what the last pose was doing doesn't follow him
     palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1];
     legClip = !(h.land && !h.air); mode = h.land && !h.air ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     ready = true;

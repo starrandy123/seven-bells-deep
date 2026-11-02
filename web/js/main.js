@@ -91,19 +91,36 @@ async function boot() {
   function tick(now) {
     requestAnimationFrame(tick);
     // after a long task a frame's own timestamp can fall before the clock read just before it, so the step has a floor as well as a ceiling
-    try { if (!FLAG.film) { const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now; frame(dt); } }
+    try { if (!FLAG.film) { const dt = paced((now - last) / 1000); last = now; frame(dt); } }
     finally { if (!booted) { booted = true; if (window.__MOSA_BOOT) window.__MOSA_BOOT.ok = true; G.booted = true; } }
   }
   requestAnimationFrame(tick);
 }
 
 const C = clock(STEP, 5);
+// The frame's time as the display paces it: Tyler Glaiel, "How to make your game run at 60fps", and his FrameTimingControl (MIT, github.com/dbechrd/FrameTimingControl).
+// A time within SNAP_ERR of a common refresh is that refresh exactly; the last four are averaged; a frame past eight steps (a tab coming back) counts as one.
+// With the clock's own wobble a 60 Hz screen ran no rule step in some frames and two in the next: 58 of 720 frames in Chromium here, 27 pairs, each a stutter
+// for whatever isn't drawn between steps. SNAP_ERR is ours, wider than his 0.2 ms because a page's clock is coarsened (100 µs, MDN) and its frames carry their own jitter
+const SNAPS = [1 / 60, 1 / 120, 1 / 30, 1 / 90, 1 / 144, 1 / 20], SNAP_ERR = 0.001, PACE = [STEP, STEP, STEP, STEP]; let paceI = 0;
+function paced(raw) {
+  let dt = raw > STEP * 8 ? STEP : Math.max(0, raw);
+  for (let i = 0; i < SNAPS.length; i++) if (Math.abs(dt - SNAPS[i]) < SNAP_ERR) { dt = SNAPS[i]; break; }
+  PACE[paceI] = dt; paceI = (paceI + 1) & 3;
+  return Math.min(0.1, (PACE[0] + PACE[1] + PACE[2] + PACE[3]) / 4);
+}
+// what the body draws from the rules, kept from the step before, so it's drawn between the last two steps as his place is (Fiedler, "Fix Your Timestep!", its last section):
+// his tilt, bank and pitch, the surf's lean and rake, the jets' attitude and the air dodge's roll. At 120 Hz they moved every other frame, the body's turn jumping 10 to 52 rad/s a frame
+function keepDrawn(h) {
+  const k = h.was || (h.was = { tilt: 0, bank: 0, pitch: 0, roll: 0, lean: 0, rake: 0, dodge: 0, q: h.flyQ.clone() });
+  k.tilt = h.tilt; k.bank = h.bank; k.pitch = h.pitchT; k.roll = h.roll || 0; k.lean = h.surfLean || 0; k.rake = h.surfRake || 0; k.dodge = h.dodgeT || 0; k.q.copy(h.flyQ);
+}
 function step(dt) {
   G.time += dt;
   let scale = 1; if (G.hitstop > 0) { G.hitstop -= dt; scale = 0.1; }
   if (G.slowT > 0) { G.slowT -= dt; scale = Math.min(scale, G.slowK || 0.28); }
   const d = dt * scale;
-  G.hero.prev.copy(G.hero.pos); G.enemies.keep();
+  G.hero.prev.copy(G.hero.pos); keepDrawn(G.hero); G.enemies.keep();
   if (G.bot) { const u = G.ui.input; const s = G.ui.sample; G.ui.sample = () => { const v = s(); G.bot.drive(v, dt); return v; }; G.hero.step(d); G.ui.sample = s; } else G.hero.step(d);
   G.enemies.step(d); G.hornets.step(d); G.boss.step(d); G.quest.step(dt); G.turf.step(dt);
 }
@@ -121,7 +138,7 @@ function update(dt) {
     G.time += dt; G.camYaw += dt * 0.03;     // the title: the camera drifts round him
   }
   // the rules tick at 60 Hz, the screen at whatever it likes: every moving thing is drawn between its last two steps
-  const alpha = G.started ? blendOf(C) : 1;
+  const alpha = G.started ? blendOf(C) : 1; G.alpha = alpha;
   hero.drawPos.lerpVectors(hero.prev, hero.pos, alpha); G.enemies.blend(alpha);
   hero.animate(dt); G.enemies.animate(dt); G.boss.draw();
   if (G.filmCam) G.filmCam(dt); else if (!(G.quest.cineOn && G.quest.cineOn())) hero.camera(dt);
