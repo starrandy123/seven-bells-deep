@@ -35,17 +35,17 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 40 | Thrusters look alive: they bend, trail and kick when the body moves or is hit, not painted on | Built: hose-model jets that bend, trail and blow off |
 | 29 | Body and movement requirements read off real fight frames, from the two references he named | Done: Souls and film studies read, numbers in `Pipeline/research/RAGDOLL_SOURCES.md`, `POSE_SOURCES.md` |
 | 31 | Ice in the fights and the duel, the water side's second element | Built: Frost Lance volleys and a frost cone in the duel; the man in red held in ice until his fire breaks it |
-| 32 | The blue foes are their own people, separate from the water elementals, and fight and fly better | To do |
+| 32 | The blue foes are their own people, separate from the water elementals, and fight and fly better | Built: the Pale Flame, a fire hot enough to burn blue, with blue jets and bolts that burn what they land on; they burst aside from his blows in the air as he can from theirs. The Tidecaller and the Warden stay water |
 | 33 | Fire burns and breaks the world; water puts fire out, freezes and breaks it; buildings recover | Part: fire runs through grass and trees as a cell fire and stops, water puts it out and soaks, frost, all grows back (`scorch.js`). Buildings next |
 | 34 | Dodge in the air | Built: Jump tapped in flight dodges in the nose's plane |
-| 35 | Near the sea, the water tornado drags fire and other foes in: henchmen drown, bosses and the main character are disarmed and badly hurt | To do |
+| 35 | Near the sea, the water tornado drags fire and other foes in: henchmen drown, bosses and the main character are disarmed and badly hurt | Built: soldiers drown and champions are disarmed (×2, one multiplier, never ×4). The Tidecaller raises one on a fire player by the sea after a 2 s tell read off a real spout's life; a Rankine pull a sprint or a dodge across it escapes; dragged under he loses 30 HP (never the last), his jets for 1.5 s and his powers for 3 s. The fire boss is reached only while open: 10% of his health, half again inside 20 s, then nothing, never across a phase. Wall E24 |
 | 36 | Turf: fire fears the water, water fears the sky, and they can still reach each other | Built for the player; fire and water foes keeping to their turf still to do |
 | 37 | A great water tornado, summoned near water, lifts a water elemental to the sky cities | Built |
-| 38 | Fire animals the fire side fights, as the water side has its beasts and bosses | To do |
-| 39 | Peaceful birds to fly with, and beautiful views | To do |
+| 38 | Fire animals the fire side fights, as the water side has its beasts and bosses | Part: the Scoria Monitor (a 16-joint spine, diagonal-pair legs, body heat). Three more animals and four bosses still to do |
+| 39 | Peaceful birds to fly with, and beautiful views | Built: flocks with real flap rates and a V you can join; lift at the plume |
 | 41 | Lava with real body and motion, not a sheet of paper; the ground burns round it | Part: skin-age surface, Planck colour, lit crust, Jeffreys' speeds, levee walls. Falls and rerouting still to do |
 | 42 | Earth to ocean transitions as good games do them, on every coast | To do |
-| 43 | Better foliage textures, leaves in the wind, leaves falling in some places | After the rest |
+| 43 | Better foliage textures, leaves in the wind, leaves falling in some places | Part: leaves fall where trees stand, turning as they come down. Better foliage textures still to do |
 | 44 | The boss health bar stops blocking the screen on phones | After the rest |
 | 45 | Fire can't raise water tornadoes; in the sea he blasts himself up instead | Built |
 | 46 | Flight controls as flight games have them: the stick points, Fly only drives forward | Built: flight-sim law, Invert flight in the settings |

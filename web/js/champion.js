@@ -22,18 +22,19 @@ export function createChampions(G, A) {
   const BUSY = { tell: 1, strike: 1, guard: 1, clash: 1 };
   function nextMove(e) {
     if (duel) { const o = e.foe; if (o && (BUSY[o.B.st] || (duel.last === e && o.B.st !== 'fallen'))) { e.B.t = 0.1; return; } duel.last = e; }
-    const B = e.B, list = C.phases[phaseOf(e)].moves.filter((m) => m !== B.move), T = foeOf(e), d = e.pos.distanceTo(T.pos); let id = list[Math.floor(Math.random() * list.length)];
+    const B = e.B, T = foeOf(e), list = C.phases[phaseOf(e)].moves.filter((m) => m !== B.move && (!M[m].water || canSpout(e, T))), d = e.pos.distanceTo(T.pos); if (!list.length) list.push('combo'); let id = list[Math.floor(Math.random() * list.length)];
     if (B.since > 3 && !B.didBig) { const big = list.find((m) => M[m].big); if (big) id = big; }
     if (d > 26 && (id === 'wheel')) id = 'rush';
     if (duel) { B.seq = ((B.seq ?? (e.side === 'fire' ? -1 : 2)) + 1) % C.show.length; id = (e.warden ? C.show_warden : C.show)[B.seq]; }      // the showcase goes through everything, in the order that builds
-    B.move = id; B.since = M[id].big ? 0 : B.since + 1; B.didBig = !!M[id].big; const m = M[id]; B.st = 'tell'; B.t = m.tell_s * (e.super ? 0.82 : 1); B.total = B.t; B.done = false; B.f = 0; B.p = null; B.d = 0;
+    B.move = id; B.since = M[id].big ? 0 : B.since + 1; B.didBig = !!M[id].big; const m = M[id]; B.st = 'tell'; B.t = m.tell_s * (e.super && !m.water ? 0.82 : 1); B.total = B.t; B.done = false; B.f = 0; B.p = null; B.d = 0;
     const c = as(e, id); if (c.clip) { const a = A.X.playClip(e, c.clip, 0.12, true); if (a && c.clip_t) { a.time = c.clip_t[0]; a.setEffectiveTimeScale((c.clip_t[1] - c.clip_t[0]) / m.tell_s); } e.act = a; }
     if (T === G.hero) { G.audio.tell && G.audio.tell(); G.combat.log.push({ t: G.time, type: 'tell', foe: 'champion', blow: id, tell_s: m.tell_s }); }
     if (id === 'geyser') { B.p = new THREE.Vector3().copy(T.pos); B.p.y = A.floorAt(T.pos.x, T.pos.z); B.g = 0; }
     if (id === 'wall') { B.dir = new THREE.Vector3().subVectors(T.pos, e.pos).setY(0).normalize(); }
+    if (id === 'spout') raiseSpout(e, T);
     if (id === 'rush') { B.dir = new THREE.Vector3().subVectors(T.pos, e.pos).normalize(); }
   }
-  function endMove(e, again) { const B = e.B; B.st = 'open'; B.t = duel ? rnd(0.5, 0.85) : rnd(C.recover_s[0], C.recover_s[1]) * (again ? 0.5 : 1) * (e.super ? 0.75 : 1); if (e.cur) e.cur.fadeOut(0.2); e.cur = null; }
+  function endMove(e, again) { const B = e.B; if (B.move === 'spout') { B.spoutAt = G.time + M.spout.again_s; if (SP.e === e) lower(); } B.st = 'open'; B.t = duel ? rnd(0.5, 0.85) : rnd(C.recover_s[0], C.recover_s[1]) * (again ? 0.5 : 1) * (e.super ? 0.75 : 1); if (e.cur) e.cur.fadeOut(0.2); e.cur = null; }
 
   // the exchange: the one attacked turns to meet it. Every other time he blocks all three and answers with a side kick; the rest he's caught, and the third blow throws him back
   function meet(e, T, m) {
@@ -64,6 +65,7 @@ export function createChampions(G, A) {
       case 'wheel': { if (!B.done) { B.done = true; B.tick = 0; if (fire) KIT().spin(e.pos, e.pos); else fxOf().spin(e.pos, e.pos); A.X.playClip(e, as(e, 'wheel').strike || 'e_kick', 0.1, true); } if ((B.tick -= dt) <= 0) { B.tick = 0.33; if (e.pos.distanceTo(T.pos) < m.radius_m) hit(e, T, m.damage); } e.heading += dt * 9; if (B.f > m.time_s) endMove(e); break; }
       case 'wall': { if (!B.done) { B.done = true; v1.copy(e.pos); v1.y = A.floorAt(e.pos.x, e.pos.z) + 0.4; (fire ? KIT() : fxOf()).wave(v1, B.dir, 'water'); B.from = v1.clone(); B.d = 1.5; B.hit = false; } B.d += dt * m.speed_mps; v1.subVectors(T.pos, B.from); const al = v1.dot(B.dir), sd = Math.abs(v1.x * B.dir.z - v1.z * B.dir.x), low = T.pos.y - A.floorAt(T.pos.x, T.pos.z) < 5; if (!B.hit && Math.abs(al - B.d) < 2.6 && sd < m.width_m / 2 && low) { B.hit = true; hit(e, T, m.damage, { heavy: true, unblockable: true }); } if (B.d > m.range_m) endMove(e); break; }
       case 'geyser': { B.g += dt; (fire ? KIT() : fxOf()).geyser(B.p, m.radius_m, m.height_m, B.g + B.total, B.total, B.total + m.last_s); if (!B.done && Math.hypot(T.pos.x - B.p.x, T.pos.z - B.p.z) < m.radius_m && T.pos.y - B.p.y < m.height_m) { B.done = true; hit(e, T, m.damage, { heavy: true, unblockable: true }); if (T.vel) T.vel.y = Math.max(T.vel.y, 14); } if (B.g > m.last_s) endMove(e); break; }
+      case 'spout': { A.faceHim(e, dt, 6); e.vel.multiplyScalar(Math.exp(-3 * dt)); if (SP.done || B.f > m.rise_s + m.last_s) endMove(e); break; }
       case 'nova': { if (!B.done) { B.done = true; B.d = 2; B.hit = false; B.tick = 0; G.audio.boom(); if (!(G.settings && G.settings.shake === false)) G.shake(0.5); } B.d += dt * m.speed_mps; if ((B.tick -= dt) <= 0) { B.tick = 0.05; const ny = A.floorAt(e.pos.x, e.pos.z) + 0.2; for (let i = 0; i < 18; i++) { const a = (i / 18) * TAU + B.d * 0.03; v1.set(e.pos.x + Math.cos(a) * B.d, ny, e.pos.z + Math.sin(a) * B.d); F.tongue(v1, Y, 2.4, rnd(3.5, 5.5), 0.24); } } const dd = Math.hypot(T.pos.x - e.pos.x, T.pos.z - e.pos.z), low = T.pos.y - A.floorAt(T.pos.x, T.pos.z) < 3.2; if (!B.hit && Math.abs(dd - B.d) < 3 && low) { B.hit = true; hit(e, T, m.damage, { heavy: true, unblockable: true }); } if (B.d > m.radius_m) endMove(e); break; }
     }
     F.wetNext = 0;
@@ -84,7 +86,7 @@ export function createChampions(G, A) {
 
   // his head, one step
   function step(e, dt) {
-    const B = e.B, T = foeOf(e); B.t -= dt; e.super = phaseOf(e) >= 2; e.heat = 1;
+    const B = e.B, T = foeOf(e); B.t -= dt; e.super = phaseOf(e) >= 2; e.heat = 1; if (SP.on && SP.e === e) spoutStep(e, dt, T);
     if (e.state === 'dead') return false; e.state = 'champ';
     if (duel && e.side === 'fire' && !e.allFire && e.hp < e.maxHp * C.all_fire_at) allFire(e);
     if (B.st !== 'fallen' && !B.falsed && e.hp < e.maxHp * C.false_at) { B.falsed = true; B.st = 'fallen'; B.t = C.false_s; e.noHit = true; e.vel.multiplyScalar(0.3); if (e.cur) e.cur.fadeOut(0.2); e.cur = null; A.X.playClip(e, 'stagger', 0.2, true); G.audio.boom(); }
@@ -110,10 +112,78 @@ export function createChampions(G, A) {
     G.fx.ring(v1.clone(), 16, 0.7, 0xffffff, v3.subVectors(G.camera.position, v1).normalize().clone()); a.vel.copy(v2).multiplyScalar(-22); b.vel.copy(v2).multiplyScalar(22); a.B.st = b.B.st = 'open'; a.B.t = 0.9; b.B.t = 2.1; hit(a, b, 18); hit(b, a, 18); D.clashT = rnd(11, 15); D.who = null;
   }
   const STEAM = new THREE.Color(0.9, 0.92, 0.95);
+
+  // The Tidecaller's water tornado (Randy, 2 Nov: "if a water elemental is fighting close to the water, they can use their water tornado to drag the fire guy and other enemy types (fire and all) in the ocean ... temporarily disarm the main character/bosses in the water when that happens and really damage them").
+  // Its tell is a real waterspout's life on the sea: a pale disc on a dark patch, spiral bands, a ring of spray, then the funnel. It pulls as a Rankine vortex does, solid turning inside the core and falling off as 1/r outside, and the body is steered toward that, never thrown, so a sprint or a dodge across its turn gets out: what the weather service tells boats to do. Inside grab_m it takes him, spins him up and drags him under. Pipeline/research/WORLD_RESPONSE_SOURCES.md §8
+  const SP = { on: false, e: null, base: new THREE.Vector3(), top: 0, t: 0, st: 'off', ft: 0, wv: new THREE.Vector3(), grab: null, done: false, ringT: 0 };
+  const deep = (x, z, m) => G.world.heightAt(x, -z) < -m.deep_m;
+  // the sea by him, deep enough to go under: where he is, or the nearest of eight ways out to near_m
+  function seaBy(p, m, out) {
+    if (deep(p.x, p.z, m)) return out.set(p.x, -4, p.z);
+    for (const r of [5, 9.5, m.near_m]) for (let i = 0; i < 8; i++) { const a = (i * TAU) / 8, x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; if (deep(x, z, m)) return out.set(x, -4, z); }
+    return null;
+  }
+  const heroSpout = () => G.combat.powers && G.combat.powers.spout;
+  const lend = (on, fall = 0, dt = 0) => { const P = heroSpout(); return P && P.lend ? P.lend(on, SP.base, SP.top, SP.r || 1, fall, dt) : false; };
+  function canSpout(e, T) { const P = heroSpout(); return e.side === 'water' && !duel && T === G.hero && G.sideNow === 'fire' && !SP.on && G.time > (e.B.spoutAt || 0) && !!(P && P.lend && !P.on) && !!seaBy(T.pos, M.spout, v4); }
+  function raiseSpout(e, T) { seaBy(T.pos, M.spout, SP.base); SP.on = true; SP.e = e; SP.t = 0; SP.st = 'tell'; SP.top = 0; SP.r = 0.6; SP.ft = 0; SP.wv.set(0, 0, 0); SP.grab = null; SP.done = false; SP.ringT = 0; G.combat.teach('foe_spout', 'Waterspout', 'Run across its turn, not straight away from it'); }
+  function lower() { if (!SP.on || SP.st === 'fall') return; letGo(); SP.st = 'fall'; SP.ft = 0; if (G.audio.spoutRoar) G.audio.spoutRoar(false); }
+  // let him go: dragged under if it had him at the end, dropped where he is if it was cut short
+  function letGo(under) {
+    const g = SP.grab, h = G.hero; if (!g) return; SP.grab = null; if (h.carried === g.c) h.carried = null;
+    if (!under) { h.vel.set(0, -3, 0); return; }
+    h.pos.set(SP.base.x + Math.cos(g.a) * 1.6, -1.6, SP.base.z + Math.sin(g.a) * 1.6); h.vel.set(0, -6, 0); h.air = false; h.land = false;
+    G.turf.drag(); G.fx.sheet(new THREE.Vector3(h.pos.x, 0.1, h.pos.z), 3.2, 3); G.fx.bubbles(h.pos, 16, 1.4); G.audio.splash(); if (G.ember.steamBlast) G.ember.steamBlast(h.pos.x, h.pos.z); if (!(G.settings && G.settings.shake === false)) G.shake(0.6);
+    G.combat.log.push({ t: G.time, type: 'dragged', by: 'champion' }); SP.done = true;
+  }
+  function spoutStep(e, dt, T) {
+    const m = M.spout, B = e.B, h = G.hero, fx = G.fx; SP.t += dt;
+    // cut short: his move's over or he's been put down
+    if (SP.st !== 'fall' && (B.move !== 'spout' || (B.st !== 'tell' && B.st !== 'strike'))) lower();
+    if (SP.st === 'tell') {
+      const q = SP.t, w = v1.set(SP.base.x, 0.06, SP.base.z);
+      if ((SP.ringT -= dt) <= 0) {
+        if (q < m.disc_s) { SP.ringT = 0.16; fx.ring(w.clone(), 2.2 + q * 6, 0.5, 0xdff4ff, Y); }
+        else if (q < m.disc_s + m.bands_s) { SP.ringT = 0.1; const k = (q - m.disc_s) / m.bands_s; fx.ring(w.clone(), 3 + k * 5 + (Math.random() < 0.5 ? 2 : 0), 0.45, 0xeefaff, Y); }
+        else { SP.ringT = 0.3; fx.sheet(w.clone(), 1.4, m.radius_m * 0.9); }
+      }
+      if (q > m.disc_s) fx.spoutSpray(SP.base, 1 + Math.max(0, q - m.disc_s - m.bands_s) * 3, m.radius_m * (q > m.disc_s + m.bands_s ? 1 : 0.55), q > m.disc_s + m.bands_s ? 1 : 0.4, 0);
+      if (B.st === 'strike') { SP.st = 'up'; SP.t = 0; SP.top = 2; G.audio.roar(); G.audio.boom(); if (G.audio.spoutRoar) G.audio.spoutRoar(true); if (!(G.settings && G.settings.shake === false)) G.shake(0.45); fx.sheet(v1.set(SP.base.x, 0.1, SP.base.z).clone(), 3.6, m.radius_m); }
+      return;
+    }
+    if (SP.st === 'fall') { SP.ft += dt; const f = Math.min(1, SP.ft / m.fall_s); lend(true, f, dt); if (f >= 1) { SP.on = false; SP.st = 'off'; lend(false); } return; }
+    // up: the funnel climbs to over his head, the rope thickening to the core's width as it goes
+    const q = Math.min(1, SP.t / m.rise_s), top = Math.min(40, Math.max(m.top_m, h.pos.y + 8)); SP.top = 2 + (top - 2) * (1 - (1 - q) ** 3); SP.r = 1.2 + (m.radius_m - 1.2) * q; lend(true, 0, dt);
+    if ((SP.ringT -= dt) <= 0) { SP.ringT = 0.55; fx.sheet(v1.set(SP.base.x, 0.1, SP.base.z).clone(), 2.2, SP.r * 1.3); }
+    fx.spoutSpray(SP.base, SP.top, m.radius_m, 1, 0);
+    // it walks toward him over the deep water, slower than he runs
+    { const dx = h.pos.x - SP.base.x, dz = h.pos.z - SP.base.z, l = Math.hypot(dx, dz); if (l > 3 && !SP.grab) { const nx = SP.base.x + (dx / l) * 1.4 * dt, nz = SP.base.z + (dz / l) * 1.4 * dt; if (deep(nx, nz, m)) { SP.base.x = nx; SP.base.z = nz; } } }
+    if (SP.grab) { spin(dt, m); return; }
+    if (h.dead || h.state === 'cine' || h.carried || T !== h) return;
+    // the pull: steered toward the vortex's own velocity, around and in
+    const dx = h.pos.x - SP.base.x, dz = h.pos.z - SP.base.z, r = Math.max(0.3, Math.hypot(dx, dz)), a = m.radius_m, gam = m.peak_mps * TAU * a, under = h.pos.y < SP.top + 1.5;
+    if (r < m.pull_m && under) {
+      const vt = r < a ? (gam * r) / (TAU * a * a) : gam / (TAU * r), vin = Math.min(m.pull_cap, m.pull_k * vt), tx = -dz / r, tz = dx / r, k = 1 - Math.exp(-m.steer * dt), on = q * Math.min(1, (m.pull_m - r) / 3);
+      v2.set((tx * vt - (dx / r) * vin) * on, 0, (tz * vt - (dz / r) * vin) * on); SP.wv.lerp(v2, k);
+    } else SP.wv.multiplyScalar(Math.exp(-m.steer * dt));
+    h.pos.x += SP.wv.x * dt; h.pos.z += SP.wv.z * dt;
+    if (r < m.grab_m && under && h.pos.y > -3 && q > 0.5 && !G.combat.dodging) {
+      SP.grab = { t: 0, a: Math.atan2(dz, dx), r0: r, y0: h.pos.y, c: { p: h.pos.clone(), yaw: h.heading, arm: 12, drop: 0 } }; if (h.endFly) h.endFly(); h.carried = SP.grab.c; SP.wv.set(0, 0, 0);
+      G.combat.log.push({ t: G.time, type: 'spout_grab', r: +r.toFixed(1) }); G.audio.hit(true);
+    }
+  }
+  // taken: round and up the column, faster and faster, then down the middle of it into the sea
+  function spin(dt, m) {
+    const g = SP.grab, h = G.hero; g.t += dt; const q = Math.min(1, g.t / m.spun_s), rad = g.r0 + (2.2 - g.r0) * Math.min(1, q * 2.5), up = q < 0.72 ? q / 0.72 : 1 - (q - 0.72) / 0.28, y = q < 0.72 ? g.y0 + (SP.top - 3 - g.y0) * (1 - (1 - up) ** 2) : -1.5 + (SP.top - 4.5) * up * up;
+    g.a += dt * (3 + 7 * q); g.c.p.set(SP.base.x + Math.cos(g.a) * rad, y, SP.base.z + Math.sin(g.a) * rad); g.c.yaw = -g.a; h.inv = Math.max(h.inv, 0.2);
+    if ((g.bead = (g.bead || 0) - dt) <= 0) { g.bead = 0.05; G.fx.sp('bead', g.c.p, 0.12, 0.6, BEAD, { s0: 0.3, s1: 0.06, hot: 0.5, add: 0.6, grav: 9, vx: (Math.random() - 0.5) * 4, vy: Math.random() * 2, vz: (Math.random() - 0.5) * 4 }); }
+    if (q >= 1) letGo(true);
+  }
+  const BEAD = new THREE.Color(0.8, 0.95, 1);
   function spawn(side, at, foe = null) {
     const p = at || new THREE.Vector3(G.hero.pos.x + Math.sin(G.camYaw) * C.from_m, G.hero.pos.y + 26, G.hero.pos.z + Math.cos(G.camYaw) * C.from_m);
     A.R.side = side; const e = A.X.spawn('emberkin', p); if (!e) return null;
-    const c = C[side]; e.champ = side; e.side = side; e.maxHp = e.hp = duel ? C.duel_hp : C.hp; e.first = false; e.foe = foe; e.B = { st: 'intro', t: 2.4, total: 1, move: null, name: c.name, since: 0 }; e.state = 'champ'; e.poise = 1e6; e.heat = 1;
+    const c = C[side]; e.champ = side; e.side = side; e.pale = false; e.maxHp = e.hp = duel ? C.duel_hp : C.hp; e.first = false; e.foe = foe; e.B = { st: 'intro', t: 2.4, total: 1, move: null, name: c.name, since: 0 }; e.state = 'champ'; e.poise = 1e6; e.heat = 1;
     // in the duel the fire side is a man in red until he's hurt, and the water side is the Warden
     A.form(e.slot, !(duel && side === 'fire')); if (duel && side === 'water') A.wardenOn(e, true); e.u.uHeat.value = 1; e.u.uSide.value = side === 'water' ? 1 : 0; e.u.uSwap.value = side === 'water' ? 1 : 0; e.slot.g.scale.setScalar(C.scale);
     return e;
@@ -125,7 +195,8 @@ export function createChampions(G, A) {
     return e;
   }
   function frame() {
-    const c = G.champ; if (!c) return; if (c.e.hp <= 0 || !c.e.slot || !c.e.champ) { G.combat.log.push({ t: G.time, type: 'champion_down' }); if (!A.film) G.ui.toast(c.name + ' falls', 'The ' + (c.e.side === 'fire' ? 'fire' : 'sea') + ' goes quiet', 5); G.audio.setMood && G.audio.setMood('calm'); c.e.slot.g.scale.setScalar(1); G.champ = null; beaten = true; A.onChampDown && A.onChampDown(); }
+    const c = G.champ; if (SP.on && (!c || SP.e !== c.e || c.e.hp <= 0)) { letGo(); SP.on = false; lend(false); }
+    if (!c) return; if (c.e.hp <= 0 || !c.e.slot || !c.e.champ) { G.combat.log.push({ t: G.time, type: 'champion_down' }); if (!A.film) G.ui.toast(c.name + ' falls', 'The ' + (c.e.side === 'fire' ? 'fire' : 'sea') + ' goes quiet', 5); G.audio.setMood && G.audio.setMood('calm'); c.e.slot.g.scale.setScalar(1); G.champ = null; beaten = true; A.onChampDown && A.onChampDown(); }
   }
   // the showcase: both at once, nobody else in it. Where lava meets the sea, the best stage this world has
   function startDuel(at) {

@@ -134,6 +134,8 @@ export function createCombat(G, h, api) {
     const d = D.moves[id];
     if (d.kind === 'power') {
       if (!open(id)) { G.ui.lockedTip(D.locked_tip[id] || 'Not yet'); return true; }
+      // the sea has his fire: no powers till it lets go
+      if (G.turf && G.turf.disarmed > 0) { log('denied', { id, disarmed: +G.turf.disarmed.toFixed(2) }); G.fx.denied && G.fx.denied(); return true; }
       if (!afford(id) || coolOf(id) > 0) { log('denied', { id, tide: h.tide, cool: coolOf(id) }); G.fx.denied && G.fx.denied(); return true; }
     }
     if (id === 'icepath' && G.world.heightAt(h.pos.x, -h.pos.z) > -1) { log('denied', { id, tide: h.tide, cool: 0 }); G.fx.denied && G.fx.denied(); G.ui.tip(G.sideNow === 'fire' ? 'Lava Path needs the sea under you' : 'Ice Path needs the sea under you', 2); return true; }
@@ -454,6 +456,8 @@ export function createCombat(G, h, api) {
   });
 
   return {
+    // inside a dodge's i-frames: what a pull can't take hold of
+    get dodging() { return !!(cur && cur.def && cur.def.kind === 'dodge' && inFrames(cur.def.iframes, cur.f)); },
     presses, stepAttack, findTarget, startAttack, ready, log: LOG, teach, relabel: showSlots,
     get data() { return D; }, get charging() { return !!charge; },
     get cur() { return cur; },

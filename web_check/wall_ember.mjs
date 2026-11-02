@@ -150,6 +150,34 @@ await section(['E23'], async () => {
   line('E23', r.slot > 0 && r.ink > 100 && r.after === 0 && !real.length, `a fire blow marks the wall (slot ${r.slot}, ${r.ink} values in its tile) and two minutes later it's whole again (slot ${r.after}); ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the Tidecaller's tornado: by the sea it takes a man who stays and drags him under, never to his death; flown out of during its tell it takes nobody; inland it never comes
+await section(['E24'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, CH = G.ember.champions(), W = G.world, step = (s) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) G.frame(1 / 60); };
+    G.ember.setSide('fire', { place: true, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); const home = h.pos.clone();
+    let x = 439, z = 910; const hover = () => { h.endFly(); h.pos.set(x, 6, z); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; h.inv = 0; Q.drive({ boost: true, mx: 0, my: 0 }); step(0.2); Q.drive({ boost: false, mx: 0, my: 0 }); step(0.5); };
+    const ph = G.combat.data.champions.phases, keep = ph.map((p) => p.moves.slice()); ph.forEach((p) => (p.moves = ['spout', 'volley', 'combo']));
+    hover(); const e = CH.start('water'); h.hp = h.maxHp; G.combat.log.length = 0; let tellAt = 0, strikeAt = 0, t = 0, dragged = 0;
+    for (let i = 0; i < 60 * 40 && !dragged; i++) { G.frame(1 / 60); t += 1 / 60; if (!G.combat.log.some((q) => q.type === 'spout_grab')) h.hp = Math.max(h.hp, 60); if (e.B.move === 'spout' && e.B.st === 'tell' && !tellAt) tellAt = t; if (e.B.move === 'spout' && e.B.st === 'strike' && !strikeAt) strikeAt = t; if (G.combat.log.some((q) => q.type === 'dragged')) dragged = t; }
+    const a = { tell: strikeAt - tellAt, dragged: !!dragged, hp: h.hp, dis: G.turf.disarmed, jets: G.turf.jetsDead(), L: G.combat.log.map((q) => q.type + '@' + q.t.toFixed(2)).slice(-10).join(' '), now: G.time.toFixed(2), y: h.pos.y.toFixed(1) };
+    step(0.3); G.combat.log.length = 0; Q.drive({ wave: true }); step(0.1); Q.drive({}); step(0.2); Q.drive({ dash: true }); step(0.1); Q.drive({}); a.denied = G.combat.log.filter((q) => q.type === 'denied').length;
+    Q.drive({ jump: true }); step(0.1); Q.drive({}); step(0.2); a.stayed = h.pos.y < 0.5; step(1.0); Q.drive({ jump: true }); step(0.1); Q.drive({}); step(0.4); a.out = h.pos.y; a.inv = h.inv;
+    // again, and this time he flies off across it as soon as it's told
+    e.B.spoutAt = 0; e.B.move = 'volley'; e.B.st = 'open'; e.B.t = 0.1; hover(); G.combat.log.length = 0; let told = false, b = { grabbed: false, through: false };
+    for (let i = 0; i < 60 * 40; i++) { G.frame(1 / 60); h.hp = Math.max(h.hp, 60); if (e.B.move === 'spout' && e.B.st === 'tell' && !told) { told = true; G.camYaw = 1.2; Q.drive({ boost: true, mx: 0, my: 0 }); } if (told && e.B.move !== 'spout') { b.through = true; break; } }
+    Q.drive({}); b.grabbed = G.combat.log.some((q) => q.type === 'spout_grab'); b.told = told;
+    // inland: no water to raise it from
+    G.champ = null; for (const o of G.enemies.all ? G.enemies.all() : []) if (o.champ) o.hp = 0; step(0.5); h.endFly(); Q.walkAt(home.x, -home.z); const inland = W.heightAt(home.x, -home.z); let deepNear = false; for (let r = 0; r <= 14; r += 4.5) for (let k = 0; k < 8; k++) if (W.heightAt(home.x + Math.cos(k * 0.785) * r, -(home.z + Math.sin(k * 0.785) * r)) < -3) deepNear = true;
+    const e2 = CH.start('water'); const seen = new Set(); for (let i = 0; i < 60 * 30; i++) { G.frame(1 / 60); h.hp = h.maxHp; if (e2 && e2.B.move) seen.add(e2.B.move); }
+    ph.forEach((p, i) => (p.moves = keep[i]));
+    return { a, b, c: { seen: [...seen], inland, deepNear } };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), { a, b, c } = r;
+  line('E24', a.tell >= 1.99 && a.dragged && a.hp >= 1 && a.hp <= 71 && a.dis > 2.5 && a.jets && a.denied >= 1 && a.stayed && a.out > 3 && b.told && !b.grabbed && b.through && !c.deepNear && !c.seen.includes('spout') && !real.length, `${real.length || !a.dragged || a.dis < 2.5 ? JSON.stringify([a.L, a.now, a.y]) : ''} told ${a.tell.toFixed(2)} s on the water, then it took him and dragged him under: ${a.hp.toFixed(0)} HP left, disarmed ${a.dis.toFixed(1)} s, a power refused ${a.denied}×, the first Jump kept him in (${a.stayed}), the one after 1.6 s took him out to ${a.out.toFixed(1)} m; flown off at its tell: taken ${b.grabbed}; inland (bed ${c.inland.toFixed(0)} m, sea near ${c.deepNear}) he chose ${c.seen.join(' ')}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

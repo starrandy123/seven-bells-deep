@@ -531,7 +531,10 @@ export async function createHero(G) {
       // out of the sea on the jets, at a price: a man with no tide left has to swim for it
       const wet = h.pos.y < -0.2 && !h.land, cost = wet ? G.combat.data.turf.out_tide : 0;
       // in the sea Jump blasts him up and out on the jets, in a burst of steam. That's fire's way out: the water won't lift him
-      if (wet && h.jumpBuf > 0 && h.tide >= cost) { h.jumpBuf = 0; h.tide -= cost; const sx = h.pos.x, sz = h.pos.z; h.pos.y = Math.max(h.pos.y, -0.3); launch(); h.launchT = LAUNCH.dip; G.ember.steamBlast && G.ember.steamBlast(sx, sz); }
+      // dragged under, the jets are drowned: for the first moments there's no way out but to swim
+      const drowned = G.turf && G.turf.jetsDead();
+      if (drowned && wet) { if (h.jumpBuf > 0) { h.jumpBuf = 0; G.fx.denied && G.fx.denied(); } }
+      else if (wet && h.jumpBuf > 0 && h.tide >= cost) { h.jumpBuf = 0; h.tide -= cost; const sx = h.pos.x, sz = h.pos.z; h.pos.y = Math.max(h.pos.y, -0.3); launch(); h.launchT = LAUNCH.dip; G.ember.steamBlast && G.ember.steamBlast(sx, sz); }
       else if (u.boost && h.pos.y > -1.4 && h.tide >= cost) { h.tide -= cost; startSkim(); }
     }
     else if (h.skim) {      // a right thumb can't hold Boost and press Jump: for a moment after it leaves Boost the jets stay on, so it can slide across

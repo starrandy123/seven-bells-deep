@@ -239,7 +239,8 @@ export async function createEnemies(G) {
     if (e.armour > 0) { if (e.shatter) e.armour = 0; else if (info.heavy) e.armour -= 40; if (e.armour <= 0) { e.armour = 0; G.combat.teach('armour', 'Armour broken', 'It feels every blow now'); G.fx.shatter && G.fx.shatter(e.pos, 8, 1.2); G.audio.boom(); G.combat.log.push({ t: G.time, type: 'armour', foe: e.kind }); } else mul *= F.armour_mul; }
     if (F.needs_soak && e.soaked <= 0) mul *= F.needs_soak;
     if (F.soaked_mul && e.soaked > 0) mul *= F.soaked_mul;
-    if (e.disarmT > 0) mul *= D.turf.hurt_k;
+    // disarmed by the sea counts once: a doused flyer already takes double, and the two don't stack to four
+    if (e.disarmT > 0) mul *= F.flyer && e.doused > 0 ? Math.max(1, D.turf.hurt_k / D.ember.heat.doused_mul) : D.turf.hurt_k;
     e.hp -= dmg * mul * (F.flank_mul && e.state === 'recover' ? F.flank_mul : 1);
     e.u.uFlash.value = 1;
     if (e.hp <= 0) { e.lastD = new THREE.Vector3().subVectors(e.pos, from).normalize(); e.lastKnock = info.knock; die(e); return 'dead'; }

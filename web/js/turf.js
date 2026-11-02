@@ -3,10 +3,14 @@
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function createTurf(G) {
-  const T = { fear: 0, where: '', told: {}, disarmed: 0 };
+  const T = { fear: 0, where: '', told: {}, disarmed: 0, dragged: false };
   const tell = (k, big, small) => { if (T.told[k]) return; T.told[k] = 1; G.ui.toast(big, small, 4); };
   T.step = (dt) => {
     const h = G.hero, Q = G.combat.data && G.combat.data.turf; if (!Q || h.dead) return; T.disarmed = Math.max(0, T.disarmed - dt);
+    // out of the sea after a drag: a moment no blow can land, so he never loses by the world
+    if (T.dragged && (h.pos.y > 0.2 || h.air)) { T.dragged = false; h.inv = Math.max(h.inv, Q.out_inv_s); }
+    // held by a column of water, he's its, not the sea's: nothing here till it lets him go
+    if (h.carried) { T.fear = 0; T.where = ''; return; }
     const g = h.groundAt ? h.groundAt(h.pos.x, h.pos.z) : 0, open = g < -0.5, fire = G.sideNow === 'fire'; let fear = 0, where = '';
     if (fire) {
       if (h.pos.y < -0.2 && open) { fear = 1; where = 'sea'; h.tide = Math.max(0, h.tide - Q.sea_tide * dt); if (h.inv <= 0) h.hp = Math.max(1, h.hp - Q.sea_hp * dt); tell('sea', 'The sea is killing your fire', 'Get out. Boost lifts you off the water, at a price'); }
@@ -16,6 +20,12 @@ export function createTurf(G) {
     }
     T.fear = fear; T.where = where; if (fear > 0.4 && (T.pulse = (T.pulse || 0) - dt) <= 0) { T.pulse = 1.1; G.ui.hurt && G.ui.hurt(0.25 * fear); }
   };
+  // dragged into the sea by a tornado: the jets are dead for jets_s, the powers for disarm_hero_s, and the fall in costs hurt_hp, never the last of him. Pipeline/research/WORLD_RESPONSE_SOURCES.md
+  T.drag = () => {
+    const h = G.hero, Q = G.combat.data.turf; T.disarmed = Q.disarm_hero_s; T.dragged = true; h.hp = Math.max(1, h.hp - Q.hurt_hp); G.ui.hurt && G.ui.hurt(0.7);
+    if (h.endFly) h.endFly(); G.combat.log.push({ t: G.time, type: 'disarmed', hp: Math.round(h.hp) }); tell('disarmed', 'Disarmed', 'The sea has your fire. Swim, or jet out when it lets go');
+  };
+  T.jetsDead = () => T.disarmed > G.combat.data.turf.disarm_hero_s - G.combat.data.turf.jets_s;
   // what a blow is worth, out of his element or into a body the sea has disarmed
   T.dealt = () => { const Q = G.combat.data.turf; return T.where === 'sky' || T.where === 'sea' ? Q.dealt_k : 1; };
   T.taken = () => { const Q = G.combat.data.turf; return T.where === 'sky' || T.where === 'sea' ? Q.taken_k : T.disarmed > 0 ? Q.hurt_k : 1; };

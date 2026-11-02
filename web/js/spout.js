@@ -63,11 +63,20 @@ export function createSpout(G, h, D, C) {
   function leap(slam) {
     if (!T.on || (T.mode !== 'rise' && T.mode !== 'top')) return; h.carried = null; T.mode = 'fall'; T.t = 0; fwd.set(Math.sin(G.camYaw), 0, Math.cos(G.camYaw));
     // Strike at the top takes him and all it's spinning down into the sea
-    if (slam) T.drag = G.time + S.spun_s + 0.4; else { const p = skyTarget(); if (p) { sling(p); return; } }
+    if (slam) { T.drag = G.time + S.spun_s + 0.4; dragBoss(); } else { const p = skyTarget(); if (p) { sling(p); return; } }
     h.vel.set(fwd.x * S.leap_mps, S.leap_up_mps, fwd.z * S.leap_mps); h.heading = G.camYaw; h.apexY = h.pos.y; if (!slam) h.breach = { v: S.leap_mps, H: h.pos.y + (S.leap_up_mps * S.leap_up_mps) / 40 }; C.log('leapt', { y: +h.pos.y.toFixed(1), slam: !!slam });      // the dolphin's arc: the body along it, and in head first G.audio.swing(); if (G.audio.spoutRoar) G.audio.spoutRoar(false);
     if (slam) { h.vel.set(fwd.x * 6, 2, fwd.z * 6); G.combat.startAttack('plunge'); }
   }
   const BEAD = new THREE.Color(0.8, 0.95, 1);
+  // a boss of fire in its reach when it comes down: only while he's open, so it rewards a punish and never skips one; his fire held out of him, a tenth of his health, half of each again inside dr_s and then nothing, and never across the line of a phase, so its teaching still plays. Pipeline/research/WORLD_RESPONSE_SOURCES.md §8, §10
+  function dragBoss() {
+    const b = G.boss, Q = D.turf; if (!b || !b.active || b.dead || !b.fire || !(b.openT > 0 || b.stunned > 0)) return false;
+    if (Math.hypot(b.head.x - T.base.x, b.head.z - T.base.z) > S.pull_m + 6) return false;
+    const n = G.time - (b.dragAt ?? -1e9) < Q.dr_s ? (b.dragN || 0) + 1 : 1; b.dragN = n; b.dragAt = G.time; if (n > 2) { C.log('boss_drag', { n, immune: true }); return false; }
+    const k = n === 1 ? 1 : 0.5, line = [0.66, 0.33].map((q) => q * b.maxHp).find((L) => b.hp > L), floor = line === undefined ? 1 : line + 1, cut = Math.min(b.maxHp * Q.boss_cut * k, Math.max(0, b.hp - floor));
+    b.hurt(cut); b.openT = Math.max(b.openT || 0, Q.disarm_s * k); G.fx.sheet && G.fx.sheet(v1.set(b.head.x, 0.1, b.head.z).clone(), 4, 6); G.audio.boom(); C.log('boss_drag', { n, cut: Math.round(cut) }); C.teach('boss_drag', 'The sea has his fire', 'His crust is out. Strike the core');
+    return true;
+  }
   function step(dt, held) {
     if (T.sl) stepSling(dt);
     if (!T.on) return; T.t += dt; U.uT.value += dt; const fx = G.fx; if ((T.mark = (T.mark || 0) - dt) <= 0) { T.mark = 0.3; if (G.dmg) G.dmg.hit(h.pos, 6, 'water', 1); }
@@ -92,6 +101,11 @@ export function createSpout(G, h, D, C) {
     if ((T.foamT -= dt) <= 0) { T.foamT = 0.55; v1.set(T.base.x, 0.1, T.base.z); fx.sheet(v1, T.mode === 'fall' ? 1.4 : 2.2, U.uR.value * 1.3); }
     if (T.mode !== 'fall' || U.uFall.value < 0.5) fx.spoutSpray(T.base, T.topY, S.radius_m, T.mode === 'fall' ? 0.5 : 1, U.uFall.value);
   }
+  // the same column, lent to a champion of the sea while his own isn't up: one mesh, whoever raises it
+  function lend(on, base, topY, r, fall, dt) {
+    if (T.on) return false; if (!on) { show(false); return true; }
+    U.uT.value += dt; U.uFall.value = fall; U.uAlpha.value = 1; U.uR.value = r; U.uSway.value = Math.min(S.sway_m, Math.max(0, topY - base.y) * 0.14); U.uLen.value = Math.max(0.2, (topY - base.y) / 28); U.uBase.value.copy(base); U.uTop.value.set(base.x, topY, base.z); show(true); return true;
+  }
   function clear() { if (h.carried === T.c || (T.sl && h.carried === T.sl.c)) { h.carried = null; h.shotYaw = undefined; } T.sl = null; T.on = false; T.mode = 'off'; show(false); if (G.audio.spoutRoar) G.audio.spoutRoar(false); }
-  return { start, leap, step, clear, T, set stick(v) { T.stick = v; }, get on() { return T.on; }, get riding() { return T.on && (T.mode === 'rise' || T.mode === 'top'); }, near, far };
+  return { start, leap, step, clear, lend, dragBoss, T, set stick(v) { T.stick = v; }, get on() { return T.on; }, get riding() { return T.on && (T.mode === 'rise' || T.mode === 'top'); }, near, far };
 }

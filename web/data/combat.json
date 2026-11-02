@@ -134,7 +134,7 @@
   },
   "turf": {
     "_doc": "fire fears the water, water fears the sky, and each can still reach the other (turf.js). fire: over open water below low_m the jets are weak (speed_k) and the tide drains; in the sea he burns away, and a Boost out costs out_tide. water: above high_m with no water near, the tide drains, then the hp; while there he deals dealt_k and takes taken_k. disarm_s: what the sea does to a boss or a champion dragged into it, with hurt_k on every blow",
-    "low_m": 7, "speed_k": 0.72, "low_tide": 5, "sea_tide": 12, "sea_hp": 6, "out_tide": 20, "high_m": 34, "sky_tide": 7, "sky_hp": 3, "dealt_k": 0.6, "taken_k": 1.35, "disarm_s": 4, "hurt_k": 2, "drown_s": 3
+    "low_m": 7, "speed_k": 0.72, "low_tide": 5, "sea_tide": 12, "sea_hp": 6, "out_tide": 20, "high_m": 34, "sky_tide": 7, "sky_hp": 3, "dealt_k": 0.6, "taken_k": 1.35, "disarm_s": 4, "hurt_k": 2, "drown_s": 3, "disarm_hero_s": 3, "jets_s": 1.5, "hurt_hp": 30, "out_inv_s": 1.2, "dr_s": 20, "boss_cut": 0.1
   },
   "rag": {
     "_doc": "a body thrown by a blow (ragdoll.js, enemies.js throwBody). at_knock: a blow with this knock or a heavy one throws him. carry: metres a second of throw for each point of knock, carry_finish for a blow of finish_knock or more. A knockdown lands about 3 m off, a finisher 8. up_mps and spin_rad at ref_mps of throw. down_s: how long the body is the ragdoll's in air, water_s in water, where the throw carries water_carry as far and the body drifts. back_s: the blend back to the clips. min_s: he isn't given back sooner. relight_s: how long the burst of a relight lasts",
@@ -222,9 +222,10 @@
       "wall": { "tell_s": 1.2, "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "speed_mps": 30, "width_m": 9, "range_m": 38, "damage": 20 },
       "geyser": { "tell_s": 1.4, "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "radius_m": 3.8, "height_m": 15, "last_s": 1.1, "damage": 18 },
       "frost": { "tell_s": 1.0, "clip": "e_guard", "range_m": 15, "cone_deg": 30, "time_s": 0.8, "damage": 14, "hold_s": 1.5 },
-        "nova": { "tell_s": 2.6, "big": true, "clip": "e_guard", "radius_m": 30, "speed_mps": 22, "damage": 26 }
+        "nova": { "tell_s": 2.6, "big": true, "clip": "e_guard", "radius_m": 30, "speed_mps": 22, "damage": 26 },
+      "spout": { "_doc": "the Tidecaller's water tornado, only near the sea and only on fire (champion.js). The tell is a real spout's life on the water: a pale disc, spiral bands, a ring of spray, 2 s in all. A Rankine vortex pulls: around it peak_mps at the core's edge radius_m and falling as 1/r beyond, in pull_k of that, at most pull_cap; the body is steered toward that at steer per second, so a sprint or a dodge across it gets out. Inside grab_m it takes hold, spins him up spun_s and drags him under. again_s before he can raise another", "tell_s": 2.0, "water": true, "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "disc_s": 0.6, "bands_s": 0.6, "rise_s": 0.7, "last_s": 3.4, "fall_s": 0.9, "radius_m": 4.2, "pull_m": 20, "grab_m": 6.5, "spun_s": 1.9, "peak_mps": 24, "pull_k": 0.6, "pull_cap": 12, "steer": 4, "near_m": 14, "deep_m": 3, "top_m": 24, "again_s": 20, "damage": 0 }
     },
-    "phases": [ { "at": 1.0, "moves": ["volley", "combo", "whip"] }, { "at": 0.68, "moves": ["volley", "combo", "rush", "whip", "wheel", "geyser"] }, { "at": 0.36, "moves": ["combo", "rush", "whip", "wheel", "geyser", "wall", "nova"] } ]
+    "phases": [ { "at": 1.0, "moves": ["volley", "combo", "whip"] }, { "at": 0.68, "moves": ["volley", "combo", "rush", "whip", "wheel", "geyser", "spout"] }, { "at": 0.36, "moves": ["combo", "rush", "whip", "wheel", "geyser", "wall", "nova", "spout"] } ]
   },
   "ember": {
     "_doc": "the Emberkin (EPIC V2, V5). flight: speeds in m/s, accel in m/s2, heights in metres; turn_rad how fast the body swings to the jets' line. heat: 1 is burning; a hit of water takes `water`, of ice `ice`; the sea takes sea_per_s; at 0 it's doused: its jets die for doused_s, it falls, blows do doused_mul, and it relights at `relight`. raid: how a flyer comes in, in seconds and metres",
