@@ -54,6 +54,12 @@
    "from": "https://github.com/orangeduck/Spring-It-On"
   },
   {
+   "what": "the decay of an inertialized pose offset, from spring.h, rewritten for a skeleton in js/inertial.js",
+   "by": "Daniel Holden, Motion-Matching",
+   "license": "MIT",
+   "from": "https://github.com/orangeduck/Motion-Matching"
+  },
+  {
    "what": "The method of the turbine jet in js/turbine.js: a cone, a colour along it, noise run along it, an alpha from the view angle. Written new; the idea comes from this shader",
    "by": "Engine flame, godotshaders.com",
    "license": "CC0",

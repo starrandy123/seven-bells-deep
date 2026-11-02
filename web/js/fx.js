@@ -284,6 +284,8 @@ export function createFx(G) {
   function crown(p, r) { sheet(p, 4, r); }
   // a thornback's spines: barbs stood out round the body, hot at the tip
   function spines(p, r) { tmpC.set(0xff9a50); for (let k = 0; k < 7; k++) { const an = rnd(0, TAU), up = rnd(-0.7, 0.7), R = r * rnd(0.9, 1.25); v1.set(p.x + Math.cos(an) * R, p.y + up * R, p.z + Math.sin(an) * R); sp('dot', v1, rnd(0.08, 0.14), 0.3, tmpC, { vx: Math.cos(an) * 3, vy: up * 3, vz: Math.sin(an) * 3, stretch: 2.5, a: 0.9, hot: 1, outF: 0.5 }); } }
+  // a body on the ground: pale dust the size of a man, thrown out low and gone in under a second. silt below is for a boss breaking the seabed
+  function scuff(p, k = 1, n = 3) { tmpC.set(0xc4b8a6); for (let i = 0; i < n; i++) { const an = rnd(0, TAU), q = rnd(0.1, 0.5) * k; v1.set(p.x + Math.cos(an) * q, p.y + rnd(-0.5, 0.1), p.z + Math.sin(an) * q); sp('smoke', v1, rnd(0.35, 0.6) * k, rnd(0.45, 0.8), tmpC, { s0: 0.3 * k, s1: rnd(1, 1.5) * k, vx: Math.cos(an) * rnd(0.6, 1.6), vy: rnd(0.2, 0.7), vz: Math.sin(an) * rnd(0.6, 1.6), a: 0.2, hot: 0.02, add: 0, inF: 0.08, outF: 0.6, drag: 1.8 }); } }
   // the bed giving way: silt in the sea, embers where the ground burns
   function silt(p, r, hot) { tmpC.set(hot ? 0xff7a30 : 0xa89878); for (let k = 0; k < 4; k++) { const an = rnd(0, TAU), q = Math.sqrt(Math.random()) * r; v1.set(p.x + Math.cos(an) * q, p.y + rnd(0, 1), p.z + Math.sin(an) * q); sp('smoke', v1, rnd(1.2, 2.6), rnd(0.9, 1.6), tmpC, { vy: rnd(0.6, 2), a: hot ? 0.5 : 0.3, hot: hot ? 0.5 : 0.05, add: hot ? 1 : 0, inF: 0.2, outF: 0.6, s1: rnd(2.5, 4), drag: 0.6 }); } }
   function rayLight(p) { for (let k = 0; k < 2; k++) { v1.set(p.x + rnd(-1.5, 1.5), p.y + rnd(-0.4, 0.4), p.z + rnd(-1.5, 1.5)); sp('dot', v1, rnd(1.2, 2.2), 0.7, C.water, { a: 0.4, hot: 0.5, inF: 0.3, outF: 0.5 }); } }
@@ -747,5 +749,5 @@ export function createFx(G) {
   // which side he's playing: the sprites' water colours and the stream's
   const WET = { water: C.water.clone(), foam: C.foam.clone(), bead: C.bead.clone(), dark: C.dark.clone() };
   function setSide() { /* the fire side has its own flames now (flame.js): what's in this file stays water, whoever is playing, so a water champion looks like water */ }
-  return { update, speed, punch, prewarm, warmList, sp, now, ball, setSide, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
+  return { update, speed, punch, prewarm, warmList, sp, now, ball, setSide, edge, song, rayLight, silt, scuff, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
 }

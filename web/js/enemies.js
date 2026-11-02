@@ -1,5 +1,6 @@
 // Everything that fights the Warden. Encounters wake near him, one attacks at a time, and every blow is told before it lands (data/combat.json, foes).
 // A foe carries its own state of the elements: soaked, chilled, frozen, staggered. Its own material shows it.
+import { createInertial } from './inertial.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -80,10 +81,10 @@ export async function createEnemies(G) {
       const mat = foeMaterial(shared);
       const skinned = []; model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.material = mat; if (o.isSkinnedMesh) skinned.push(o); } });
       if (G.look.addOutline) for (const o of skinned) G.look.addOutline(o);    // after the walk: an outline is a mesh too, and the walk would reach it
-      const mixer = new THREE.AnimationMixer(model), acts = {};
+      const mixer = new THREE.AnimationMixer(model), acts = {}, still = createInertial(model);
       for (const c of gltf.animations) acts[c.name] = mixer.clipAction(c);
       const shield = new THREE.Mesh(shieldGeo, shieldMat); shield.visible = false; shield.frustumCulled = false; const arm = model.getObjectByName('fore_L') || model; arm.add(shield); shield.position.set(0.12, 0.22, 0);
-      reaverPool.push({ g, mixer, acts, busy: false, mat, shield, tip: model.getObjectByName('weapon_tip') });
+      reaverPool.push({ g, mixer, acts, still, busy: false, mat, shield, tip: model.getObjectByName('weapon_tip') });
     }
   } catch (e) {
     console.warn('reaver.glb not here yet', e);
@@ -137,7 +138,7 @@ export async function createEnemies(G) {
     const F = FOES[kind]; if (!F) return null;
     const pool = pools[F.body], slot = pool && pool.find((s) => !s.busy);
     if (!slot || awake.length >= MAX * 2) return null;
-    slot.busy = true; slot.g.visible = true; slot.g.scale.setScalar(F.scale || 1);
+    slot.busy = true; slot.g.visible = true; slot.g.scale.setScalar(F.scale || 1); if (slot.still) slot.still.reset();
     for (const k of ['uFrost', 'uWet', 'uTell', 'uFlash', 'uFade']) slot.mat.U[k].value = 0;
     if (slot.mat.U.uAmp) slot.mat.U.uAmp.value = F.walker ? 0.15 : 1;
     const tt = F.tint || [1, 1, 1]; slot.mat.U.uTint.value.setRGB(tt[0], tt[1], tt[2]);
@@ -177,7 +178,7 @@ export async function createEnemies(G) {
     R.hips(ragP); const g = footAt(ragP.x, ragP.z, ragP.y + 0.4), under = ragP.y < SEA_Y; R.step(dt, g, under); R.hips(e.pos); (r.last || (r.last = new THREE.Vector3())).copy(e.pos); e.vel.set(0, 0, 0);
     if (under && !r.wet) { r.wet = true; ember.fellIn && ember.fellIn(e); }
     // where the body comes down, and the wake it drags: dust scaled to how fast it's going
-    if (!under && R.down) { R.velocity(ragV); const sp = Math.hypot(ragV.x, ragV.z); if (!r.hitGround) { r.hitGround = true; if (sp > 1) { G.fx.silt(e.pos, 1.4, true); G.audio.hit(true); } } if (sp > 2 && (r.dust = (r.dust || 0) - dt) <= 0) { r.dust = 0.07; G.fx.silt(e.pos, 0.5 + sp * 0.06, true); } }
+    if (!under && R.down) { R.velocity(ragV); const sp = Math.hypot(ragV.x, ragV.z); if (!r.hitGround) { r.hitGround = true; if (sp > 1) { G.fx.scuff(e.pos, 1.3, 4); G.audio.hit(true); } } if (sp > 2 && (r.dust = (r.dust || 0) - dt) <= 0) { r.dust = 0.1; G.fx.scuff(e.pos, 0.6 + sp * 0.05, 1); } }
     if (!r.dead && !r.out && (r.t >= r.T || (R.settled > D.rag.still_s && r.t > D.rag.min_s))) wakeRag(e, under, ragP.y - g < 1.2);
     return true;
   }
@@ -193,8 +194,10 @@ export async function createEnemies(G) {
 
   function playClip(e, name, fade, once) {
     const a = e.slot.acts && e.slot.acts[name]; if (!a) return null;
-    if (e.cur && e.cur !== a) e.cur.fadeOut(0.1);
-    e.cur = a; a.reset(); if (once) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } a.setEffectiveTimeScale(1); a.fadeIn(fade); a.play();
+    // with a body that carries its own momentum the new clip takes over at once; a hit reaction's offset dies faster, so the blow reads in the frame it lands
+    const still = e.slot.still;
+    if (e.cur && e.cur !== a) { if (still) e.cur.stop(); else e.cur.fadeOut(0.1); }
+    e.cur = a; a.reset(); if (once) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } a.setEffectiveTimeScale(1); if (still) { a.setEffectiveWeight(a.weight || 1); still.kick(/^(hit_|stagger|death)/.test(name) ? 0.05 : 0.08); } else a.fadeIn(fade); a.play();
     return a;
   }
 
@@ -721,7 +724,7 @@ export async function createEnemies(G) {
         const goal = e.onLand ? 0 : e.state === 'swimTo' ? clamp(e.vel.length() / 6, 0, 1) * 1.25 : 0.14; if (e.frozen <= 0) e.tilt = damp(e.tilt, goal, 6, dt);
         g.position.y -= 0.9 * Math.cos(e.tilt); qX.setFromAxisAngle(AX, e.tilt); g.quaternion.copy(qY).multiply(qX);
         if (e.flA > 0) { flAxis.set(e.flZ, 0, -e.flX); qF.setFromAxisAngle(flAxis, Math.sin(Math.min(1, e.flT / 0.05) * 1.5708) * Math.exp(-e.flT * 6.5) * e.flA); g.quaternion.premultiply(qF); }
-        if (e.slot.mixer && e.frozen <= 0) e.slot.mixer.update(G.hitstop > 0 ? dt * 0.08 : dt);
+        if (e.slot.mixer && e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; e.slot.mixer.update(t); if (e.slot.still) e.slot.still.apply(t); }
         drawRag(e, dt);
         if (e.state === 'tell') G.fx.edge(e.pos, e.blow && e.blow.unblockable);
         if (e.state === 'tell' && e.slot.tip && G.fx.glint) { e.slot.tip.getWorldPosition(tipW); G.fx.glint(tipW, e.blow && e.blow.unblockable ? 0xff4422 : 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
