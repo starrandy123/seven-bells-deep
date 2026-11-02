@@ -594,7 +594,9 @@ export async function createHero(G) {
     const r = h.rag, Q = G.combat.data.rag; r.t += dt;
     if (r.last) { const dx = h.pos.x - r.last.x, dz = h.pos.z - r.last.z; if (dx || dz) Rag.shift(dx, 0, dz); }
     Rag.hips(ragP); const g = groundAt(ragP.x, ragP.z), under = ragP.y < -0.8 && g < ragP.y; Rag.step(dt, g, under); Rag.hips(h.pos); collide(0.4); (r.last || (r.last = new THREE.Vector3())).copy(h.pos); h.vel.set(0, 0, 0); h.prev.copy(h.pos);
-    if (r.dead || r.out || !(r.t >= r.T || (Rag.settled > Q.still_s && r.t > Q.min_s))) return;
+    // down, he can roll out of it early with Boost, as a knocked-down fighter can in the games this is read from: no one is held down until they're hit again
+    const early = !r.dead && !r.out && r.t > Q.roll_out_s && (h.rollOut = G.ui.input && (G.ui.input.boost || G.ui.input.dodge));
+    if (r.dead || r.out || !(early || r.t >= r.T || (Rag.settled > Q.still_s && r.t > Q.min_s))) return;
     r.out = true; const near = ragP.y - g < 1.2; Rag.velocity(ragV);
     if (under) { r.blend = Q.water_back_s; h.state = 'swim'; h.air = false; h.land = false; h.grounded = false; h.vel.copy(ragV).multiplyScalar(0.3); }
     else if (near) { const name = Rag.faceUp() ? 'up_back' : 'up_front'; r.blend = 0.3; h.land = true; h.grounded = true; h.air = false; h.pos.y = g + STAND; h.state = 'hurt'; h.stun = 0.4; if (body.play(name, 0.1, true)) { const s = body.shot; if (s) { s.rate = Q.up_speed; h.stun = s.dur / Q.up_speed; } } h.inv = Math.max(h.inv, h.stun); }

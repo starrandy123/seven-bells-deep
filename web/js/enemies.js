@@ -245,7 +245,7 @@ export async function createEnemies(G) {
     e.poise -= info.poise || 0;
     if (F.flyer) ember.jolt(e, d, 0.3 + 0.1 * (info.knock || 0));
     // a heavy blow in the open throws him: the ragdoll, not a clip
-    if (!e.rag && e.frozen <= 0 && (info.heavy || (info.knock || 0) >= D.rag.at_knock) && throwBody(e, d, (info.knock === undefined ? 6 : info.knock) * D.rag.carry, {})) return 'hit';
+    { const kn = info.knock === undefined ? 6 : info.knock, Q = D.rag; if (!e.rag && e.frozen <= 0 && (info.heavy || kn >= Q.at_knock) && throwBody(e, d, kn * (kn >= Q.finish_knock ? Q.carry_finish : Q.carry), {})) return 'hit'; }
     if (e.poise <= 0) { stagger(e); return 'hit'; }
     // a light blow doesn't stop a foe in its stride: it finishes what it told, and it can't be held down by mashing. A heavy blow, or a Siren's song, is what breaks a blow
     const told = e.state === 'tell' || e.state === 'strike', stops = info.heavy || F.fragile || (!told && e.stunGuard <= 0);
