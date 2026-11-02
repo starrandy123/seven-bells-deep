@@ -5,7 +5,7 @@ const NEAR = [[1, 0], [.7, .7], [0, 1], [-.7, .7], [-1, 0], [-.7, -.7], [0, -1],
 export function dressDunes({ data, heightAt, skip }) {
   const out = []; let s = 77317; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const [ox, oy] = data.origin, size = data.size_m;
-  for (let i = 0; i < 26000 && out.length < 6 * 3400; i++) {
+  for (let i = 0; i < 26000 && out.length < 6 * 2100; i++) {
     const x = ox + rnd() * size, y = oy + rnd() * size, h = heightAt(x, y); if (h < 1.0 || h > 7 || (skip && skip(x, y))) continue;
     if (Math.abs(heightAt(x + 3, y) - h) + Math.abs(heightAt(x, y + 3) - h) > 1.6) continue;       // a flat or a dune's back, not a bank
     let sea = false; for (const [c, n] of NEAR) if (heightAt(x + c * 34, y + n * 34) < -0.3) { sea = true; break; } if (!sea) continue;

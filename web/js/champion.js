@@ -7,7 +7,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), rnd = (a, b) => a + Math
 const Y = new THREE.Vector3(0, 1, 0), TAU = Math.PI * 2;
 
 export function createChampions(G, A) {
-  const C = A.D.champions, M = C.moves, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), v4 = new THREE.Vector3(); let duel = null;
+  let beaten = false; const C = A.D.champions, M = C.moves, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), v4 = new THREE.Vector3(); let duel = null;
   const fxOf = () => (G.fireKit && G.fireKit.water) || G.fx, KIT = () => G.fireKit.look;
   const handOf = (e, out, i = 0) => e.slot.jets[i][1].getWorldPosition(out);
   const foeOf = (e) => e.foe || G.hero;
@@ -90,7 +90,7 @@ export function createChampions(G, A) {
     return e;
   }
   function frame() {
-    const c = G.champ; if (!c) return; if (c.e.hp <= 0 || !c.e.slot || !c.e.champ) { G.combat.log.push({ t: G.time, type: 'champion_down' }); if (!A.film) G.ui.toast(c.name + ' falls', 'The ' + (c.e.side === 'fire' ? 'fire' : 'sea') + ' goes quiet', 5); G.audio.setMood && G.audio.setMood('calm'); c.e.slot.g.scale.setScalar(1); G.champ = null; A.onChampDown && A.onChampDown(); }
+    const c = G.champ; if (!c) return; if (c.e.hp <= 0 || !c.e.slot || !c.e.champ) { G.combat.log.push({ t: G.time, type: 'champion_down' }); if (!A.film) G.ui.toast(c.name + ' falls', 'The ' + (c.e.side === 'fire' ? 'fire' : 'sea') + ' goes quiet', 5); G.audio.setMood && G.audio.setMood('calm'); c.e.slot.g.scale.setScalar(1); G.champ = null; beaten = true; A.onChampDown && A.onChampDown(); }
   }
   // the showcase: both at once, nobody else in it. Where lava meets the sea, the best stage this world has
   function startDuel(at) {
@@ -121,5 +121,5 @@ export function createChampions(G, A) {
     else if (!on && show) { removeEventListener('pointerdown', show.end); endDuel(); h.model.visible = true; document.body.classList.remove('duelShow'); h.inv = show.inv; G.filmCam = null; G.noBeacon = false; show = null; }
   }
   function stepShow(dt) { if (!show) return; const h = G.hero, D = duel; h.pos.copy(show.pos); h.vel.set(0, 0, 0); if (!D) return; if (D.a.hp <= 0 || D.b.hp <= 0) { show.again += dt; if (show.again > 3.5) { show.again = 0; endDuel(); startDuel(); } } }
-  return { step, start, startDuel, endDuel, frame, direct, watch, stepShow, get duel() { return duel; } };
+  return { step, start, startDuel, endDuel, frame, direct, watch, stepShow, get duel() { return duel; }, get beaten() { return beaten; } };
 }

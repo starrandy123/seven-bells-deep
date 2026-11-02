@@ -13,6 +13,7 @@ import { createTurbines } from './turbine.js';
 import { createFlames } from './flame.js';
 import { createFireKit } from './firekit.js';
 import { createChampions } from './champion.js';
+import { createRoad } from './road.js';
 import { aimChain, faceIn } from './formulas/aim.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -405,6 +406,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (h.body && h.body.learn) h.body.learn(gltf.animations);
   }
   function showHero() { const s = H2.sup > 0; for (const o of H2.own) o.visible = !H2.on; if (H2.man) { H2.man.visible = H2.on && !s; H2.fire.visible = H2.on && s; } }
+  G.road = createRoad(G);
   CH = createChampions(G, { D, Q, X: new Proxy({}, { get: (_, k) => X[k] }), R, aim, goto, faceHim, form, bolt, floorAt: (x, z) => Math.max(groundAt(x, z), 0), film: FLAG.film });
   function setSide(side, { place = false, quiet = false } = {}) {
     const fire = side === 'fire', h = G.hero; if (!H2.man) return; G.sideNow = fire ? 'fire' : 'water'; document.body.dataset.side = G.sideNow; H2.on = fire; if (!fire) { H2.sup = 0; if (h.fly) h.endFly(); } showHero();
@@ -446,7 +448,7 @@ export async function createEmber(G, { foeMaterial, D }) {
 
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
-    champions: () => CH, warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
+    champions: () => CH, raids: R, warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born,

@@ -453,7 +453,8 @@ export function createQuest(G) {
     if (near && !st.tips.has(near.id)) { st.tips.add(near.id); G.ui.tip(guarded(near) ? 'Defeat the guardians, then strike the bell' : 'Strike the bell', 4); }
     if (arena && st.gateOpen && !st.won && G.boss && !G.boss.active && !G.boss.dead && !h.dead && arena.distanceTo(h.pos) < (data.arena.r || 45) * 0.8) { wakeBoss('leviathan', G.boss); st.checkpoint.copy(arena).add(new THREE.Vector3(0, 6, 22)); st.yaw = Math.PI; }
     for (const b of bells) { if (b.swing > 0) { b.swing = Math.max(0, b.swing - dt * 0.32); b.mesh.rotation.x = Math.sin(G.time * 5) * 0.22 * b.swing; } }
-    const o = objective(); if (o !== objectiveText) { objectiveText = o; G.ui.objective(o); }
+    if (G.road) G.road.step();
+    const o = G.sideNow === 'fire' && G.road ? G.road.text() : objective(); if (o !== objectiveText) { objectiveText = o; G.ui.objective(o); }
     if ((st.hintT = (st.hintT || 0) - dt) <= 0) { st.hintT = 0.12; const a = actHint(), label = a ? a.label : null; if (label !== hintLabel) { hintLabel = label; G.ui.context(label); } }
     if ((st.saveT -= dt) <= 0) { st.saveT = 15; save(); }
   }
@@ -500,7 +501,7 @@ export function createQuest(G) {
     if (!G.started) cine.step(dt);
     if ((pearlT += 1) % 2 === 0) layPearls(t);
     things.update(t); things.omenStep(t, dt);
-    things.beacon(st.talk || st.cine || cine.active || G.noBeacon ? null : target(), dt);
+    things.beacon(st.talk || st.cine || cine.active || G.noBeacon ? null : G.sideNow === 'fire' && G.road ? G.road.target() : target(), dt);
     if (cine.draw()) return;
     if (st.cine && G.camera) {
       const c = st.cine, f = c.t / c.dur, a = c.a + f * 1.1;

@@ -29,3 +29,5 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
 
 Owed from before: two real thumbs on Boost and Jump, a real iPhone, a lost graphics context repainting the isle, Q7 107 at Thalor, the merge of `fire` into `part2`.
+
+Added by me as owed work: fire side objectives (road.js), Build 51. Lava burns the water side, Build 51. Basalt columns, Build 51.

@@ -28,7 +28,7 @@ export function lavaLines() {
 }
 let chanGrid = null;
 const CH = 18;
-function chan(x, y) {        // the nearest lava channel: how far, in its own widths
+export function chan(x, y) {        // the nearest lava channel: how far, in its own widths
   if (!chanGrid) { chanGrid = new Map(); lavaLines().forEach((l) => l.pts.forEach((p, i) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = (Math.floor(p[0] / CH) + a) * 4099 + Math.floor(p[1] / CH) + b; let L = chanGrid.get(k); if (!L) chanGrid.set(k, (L = [])); L.push([p[0], p[1], l.w]); } })); }
   const L = chanGrid.get(Math.floor(x / CH) * 4099 + Math.floor(y / CH)); if (!L) return 9; let best = 9; for (const c of L) { const d = Math.hypot(x - c[0], y - c[1]) / c[2]; if (d < best) best = d; } return best;
 }

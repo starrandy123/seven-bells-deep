@@ -1,7 +1,7 @@
 // What grows on a drowned city. Real wrecks and sunken streets grow by exposure: corners and tops catch the current and carry the most, kelp roots on hard stone, silted flats stay poor (Pipeline/research/WORLD_SOURCES.md). So each building gets its own small reef at its foot and its corners. The stone's own crust is drawn in city_glsl.js.
 import * as THREE from 'three';
 
-const KELP = 3, CORAL = 3;
+const KELP = 2, CORAL = 2;
 export function dressReefCity(cities, sets, heightAt) {
   const add = { kelp_stalk: [], coral_fan: [], coral_branch: [], coral_tube: [], anemone: [], glow_coral: [] }, kinds = ['glow_coral', 'coral_fan', 'glow_coral', 'coral_branch', 'glow_coral', 'coral_tube', 'anemone']; let s = 60493; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (const c of cities) {

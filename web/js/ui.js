@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Fire fights in real martial arts now: a lunge punch, a reverse punch, a side kick, captured from karate forms, each throwing fire';
+const NEWS = 'The fire side has a road now: the compass leads from the High City to the volcano, the raids, the Tidecaller and the Seawall';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -402,7 +402,7 @@ export function createUI(G) {
     const pc = G.quest ? G.quest.pearlCount() : 0; if (pc !== update.pc) { update.pc = pc; $('pearls').textContent = `${pc} pearls`; }
     const c = h.cool; bDash.classList.toggle('cool', c.dash > 0); bSpin.classList.toggle('cool', c.spin > 0); bWave.classList.toggle('cool', c.wave > 0); bP4.classList.toggle('cool', c.p4 > 0); bCall.classList.toggle('cool', c.call > 0);
     // the compass: where the objective lies, across a strip as wide as a half turn
-    const tgt = G.quest && G.quest.target();
+    const tgt = G.sideNow === 'fire' && G.road ? G.road.target() : G.quest && G.quest.target();
     if (tgt && h.pos) {
       const dx = tgt.x - h.pos.x, dz = tgt.z - h.pos.z, a = Math.atan2(dx, dz), rel = Math.atan2(Math.sin(a - G.camYaw), Math.cos(a - G.camYaw));
       $('mark').style.left = `${50 - (Math.max(-1.57, Math.min(1.57, rel)) / 1.57) * 42}%`;

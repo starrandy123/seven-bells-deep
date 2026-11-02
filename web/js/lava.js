@@ -1,7 +1,7 @@
 // The lava itself: the rivers of fireisle.js and the crater's lake, one draw. Pipeline/research/WORLD_SOURCES.md.
 // Colour is temperature, from USGS's table: red below 1073 K, orange to 1273 K, yellow above; fresh lava is about 1443 K. A crust forms in seconds and thickens with the square root of time, so a river is molten at the vent and further down it's dark plates with hot seams, which is what the footage shows. The plates ride the flow: their coordinate along the river is time, so where it runs steep they stretch into the streaks of a lava fall.
 import * as THREE from 'three';
-import { lavaLines, FIRE_HILL } from './fireisle.js';
+import { lavaLines, FIRE_HILL, chan, ISLE } from './fireisle.js';
 
 // a tiling cell map, made once: red the distance to the nearest point, green how close the second is (the seam)
 function cells(n = 128, pts = 26) {
@@ -13,7 +13,8 @@ function cells(n = 128, pts = 26) {
 
 export function createLava(scene, look, heightAt, phone) {
   const P = [], A = [], I = []; let base = 0; const ends = [];
-  const strip = (pts, w, age0) => {
+  const strip = (pts0, w, age0) => {
+    let cut = pts0.findIndex((p, i) => i > 6 && heightAt(p[0], p[1]) < 0.15); if (cut < 0) cut = pts0.length - 1; const pts = pts0.slice(0, cut + 2);      // a river ends at the sea, and that's where the steam is
     // a lava flow stands proud of the ground, a low thick tongue, so the surface rides above the highest of what's under its width
     const raw = pts.map((p, i) => { const a = pts[Math.max(0, i - 1)], c = pts[Math.min(pts.length - 1, i + 1)], dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l * w, ny = dx / l * w; return Math.max(heightAt(p[0], p[1]), heightAt(p[0] + nx * 0.7, p[1] + ny * 0.7), heightAt(p[0] - nx * 0.7, p[1] - ny * 0.7)) + 0.9; });
     const zs = raw.map((_, i) => { let s = 0, n = 0; for (let k = -1; k <= 1; k++) { const v = raw[i + k]; if (v !== undefined) { s += v; n++; } } return Math.max(s / n, -0.9); });
@@ -24,7 +25,7 @@ export function createLava(scene, look, heightAt, phone) {
       for (const sd of [-1, -0.45, 0, 0.45, 1]) { const x = pts[i][0] + nx * ww * sd, y = pts[i][1] + ny * ww * sd; P.push(x, zs[i] - (Math.abs(sd) > 0.9 ? 1.5 : Math.abs(sd) > 0.4 ? 0.22 : 0), -y); A.push(sd, T, Math.min(1, age0 + S / 220), ww); }
       if (i + 1 < n) for (let k = 0; k < 4; k++) { const v = base + i * 5 + k; I.push(v, v + 1, v + 6, v, v + 6, v + 5); }
     }
-    base = P.length / 3; const e = pts[n - 1]; if (heightAt(e[0], e[1]) < 1.5 || zs[n - 1] < 1) ends.push(new THREE.Vector3(e[0], 0.3, -e[1]));
+    base = P.length / 3; const e = pts[n - 1]; if (heightAt(e[0], e[1]) < 1.5) ends.push(new THREE.Vector3(e[0], 0.3, -e[1]));
   };
   lavaLines().forEach((l, i) => { const out = l.pts.filter((p) => Math.hypot(p[0] - FIRE_HILL.x, p[1] - FIRE_HILL.y) > 27); strip(out, l.w, i > 2 ? 0.35 : 0); });      // each river starts at the rim, where the lake spills
   // the crater's lake: a disc of the same stuff, the youngest in the world
@@ -46,11 +47,22 @@ export function createLava(scene, look, heightAt, phone) {
       ocGlow = c*(1.0 + .12*sin(t*2.3 + vL.y*3.0)); }`,
   });
   const mesh = new THREE.Mesh(g, m); mesh.name = 'lava'; mesh.frustumCulled = true; scene.add(mesh);
+  // basalt columns along the isle's shore: jittered hexagons, as real columns crack on cooling, stepped like the great causeways
+  const basalt = (() => {
+    const N = phone ? 420 : 760, g = new THREE.CylinderGeometry(1.5, 1.6, 1, 6, 1).translate(0, 0.5, 0), mt = new THREE.MeshStandardMaterial({ color: 0x1b1a1c, roughness: 0.82, flatShading: true }); look.patch(mt, { key: 'basalt' }); const im = new THREE.InstancedMesh(g, mt, N), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s3 = new THREE.Vector3(), p3 = new THREE.Vector3(), c = new THREE.Color(); let s = 31991, n = 0; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 12000 && n < N; i++) {
+      const a = rnd() * 6.283, r = ISLE.R * (0.72 + rnd() * 0.52), x = ISLE.x + Math.cos(a) * r, y = ISLE.y + Math.sin(a) * r, z = heightAt(x, y); if (z < -3 || z > 7 || Math.sin(a * 3 + 1) + Math.sin(a * 7) < 0.1) continue; const dH = heightAt(x + 8, y) - heightAt(x - 8, y), dI = heightAt(x, y + 8) - heightAt(x, y - 8); if (Math.hypot(dH, dI) < 2.4) continue; if (Math.hypot(x - 246, y + 760) < 120) continue;
+      const h = 3 + rnd() * rnd() * 11; q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rnd() * 1.05); m4.compose(p3.set(x, z - 1.5, -y), q, s3.set(1 + rnd() * 0.35, h, 1 + rnd() * 0.35)); im.setMatrixAt(n, m4); c.setScalar(0.72 + rnd() * 0.6); im.setColorAt(n, c); n++;
+    }
+    im.count = n; im.frustumCulled = false; im.name = 'basalt'; scene.add(im); return im;
+  })();
   // what the footage has round the lava: a fountain of fire at the vent, steam where it meets the sea, sparks in the air. All of it only near him
-  const vent = new THREE.Vector3(FIRE_HILL.x, cz + 1, -FIRE_HILL.y), v = new THREE.Vector3(), STEAM = new THREE.Color(0.86, 0.87, 0.9), HOT = new THREE.Color(1.0, 0.55, 0.16), EMB = new THREE.Color(1.0, 0.42, 0.08); let tF = 0, tS = 0, tE = 0;
+  const vent = new THREE.Vector3(FIRE_HILL.x, cz + 1, -FIRE_HILL.y), v = new THREE.Vector3(), STEAM = new THREE.Color(0.86, 0.87, 0.9), HOT = new THREE.Color(1.0, 0.55, 0.16), EMB = new THREE.Color(1.0, 0.42, 0.08); let tF = 0, tS = 0, tE = 0, tB = 0;
   const rnd = (a, b) => a + Math.random() * (b - a);
   function frame(G, dt) {
-    const cam = G.camera.position, far = cam.distanceTo(vent); if (far > 520) return; const F = G.flames;
+    const cam = G.camera.position, far = cam.distanceTo(vent); basalt.visible = far < 900; if (far > 520) return; const F = G.flames;
+    // lava burns anyone who isn't fire
+    { const h = G.hero; if (G.sideNow !== 'fire' && !h.dead && (tB -= dt) <= 0) { tB = 0.5; const g = heightAt(h.pos.x, -h.pos.z); if (h.pos.y - g < 3 && chan(h.pos.x, -h.pos.z) < 1.05) { h.damage(9, h.pos, { unblockable: true }); G.fx.sparks(h.pos, 8, 0xff8030, 6); G.ui.tip && G.ui.tip('Lava: get off it', 1.6); } } }
     if ((tF -= dt) <= 0 && far < 420) { tF = 0.08; const a = rnd(0, 6.283), s = rnd(0, 7); if (F) F.puff(v.set(vent.x + Math.cos(a) * s, vent.y, vent.z + Math.sin(a) * s), rnd(3.5, 6.5), rnd(0.7, 1.1), Math.cos(a) * rnd(1, 5), rnd(16, 30), Math.sin(a) * rnd(1, 5), 0.7, -6, 2.2); }
     if ((tS -= dt) <= 0) { tS = 0.16; for (const e of ends) { if (e.distanceToSquared(cam) > 340 * 340) continue; v.set(e.x + rnd(-5, 5), 0.5, e.z + rnd(-5, 5)); G.fx.sp('smoke', v, 3, rnd(2.2, 3.6), STEAM, { s0: 2.4, s1: 9, a: 0.42, add: 0, hot: 0, vy: rnd(3, 7), vx: rnd(-1, 1), vz: rnd(-1, 1), drag: 0.4, rot: Math.random() * 6.28 }); } }
     if ((tE -= dt) <= 0 && cam.y > -1) { tE = 0.05; const a = rnd(0, 6.283), d = rnd(3, 34); if (Math.hypot(cam.x - vent.x, cam.z - vent.z) < 270) { v.set(cam.x + Math.cos(a) * d, cam.y + rnd(-8, 8), cam.z + Math.sin(a) * d); G.fx.sp('dot', v, 0.1, rnd(1.2, 2.4), EMB, { s0: 0.13, s1: 0.03, hot: 1, add: 1, vx: rnd(-1.5, 1.5), vy: rnd(1.5, 4), vz: rnd(-1.5, 1.5) }); } }
