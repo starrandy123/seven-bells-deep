@@ -42,4 +42,22 @@ await section(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], async () => {
   line('S8', kept.side === 'fire' && kept.man && bad.length === 0, `the next visit starts on the side he left: ${JSON.stringify(kept)}; ${bad.length} page errors${bad[0] ? ': ' + bad[0].slice(0, 200) : ''}`);
   await close();
 });
+// Real fingers, two at once: the devtools can press them in Chromium, WebKit can't. Boost held by one and Jump by another, then one thumb sliding off Boost and onto Jump, which is how a phone is really held
+if (process.argv[3] === 'chromium') await section(['S9', 'S10'], async () => {
+  const { page, close } = await open('?fresh&tier=phone', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 }); await page.waitForTimeout(400);
+  await tap(page, '#pickFire'); await page.waitForTimeout(700); await tap(page, '#dive'); await page.waitForTimeout(1600);
+  const cdp = await page.context().newCDPSession(page), box = (id) => page.evaluate((i) => { const r = document.getElementById(i).getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, id), touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  const hero = () => page.evaluate(() => { const h = window.__game.hero; return { skim: !!h.skim, fly: !!h.fly, air: !!h.air, fireAir: !!h.fireAir, y: +h.pos.y.toFixed(1), label: document.getElementById('bBoost').textContent, side: window.__game.sideNow }; });
+  const B = await box('bBoost'), J = await box('bJump');
+  const f1 = { x: B.x, y: B.y, id: 1 }, f2 = { x: J.x, y: J.y, id: 2 };
+  await touch('touchStart', [f1]); await page.waitForTimeout(500); const a = await hero();
+  await touch('touchStart', [f1, f2]); await page.waitForTimeout(100); await touch('touchMove', [f1]); await page.waitForTimeout(1200); const b = await hero(); await page.waitForTimeout(1200); const c = await hero();
+  await touch('touchEnd', []); await page.waitForTimeout(1000); const d = await hero();
+  line('S9', a.skim && b.fireAir && c.fly && b.y > a.y + 4 && !d.fly, `two real fingers: Boost held runs on the jets (${a.skim}, label ${a.label}), a second finger on Jump launches him to ${b.y} m from ${a.y}, Boost still held flies (${c.fly}, label ${c.label}), let go and he falls (${d.fly})`);
+  await page.waitForTimeout(3500); const e = await hero();
+  await touch('touchStart', [f1]); await page.waitForTimeout(450); const g = await hero(); await touch('touchEnd', []); await page.waitForTimeout(130); await touch('touchStart', [{ ...f2, id: 3 }]); await page.waitForTimeout(90); await touch('touchEnd', []); await page.waitForTimeout(900); const k = await hero();
+  line('S10', g.skim && k.fireAir && k.y > e.y + 4, `one thumb slides from Boost to Jump in 130 ms and the jump still comes: ${e.y} to ${k.y} m`);
+  await close();
+});
 await finish();
