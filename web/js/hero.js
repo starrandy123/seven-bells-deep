@@ -585,11 +585,12 @@ export async function createHero(G) {
     nose.set(Math.sin(h.nYaw) * Math.cos(h.nPitch), Math.sin(h.nPitch), Math.cos(h.nYaw) * Math.cos(h.nPitch));
     // 3. the goal. Fly only pushes him along the nose, harder the longer it's held. Climbing costs speed, diving adds it, a hard turn bleeds some
     h.flyRun = fly ? (h.flyRun || 0) + dt : Math.max(0, (h.flyRun || 0) - dt * 2);
-    const top = (FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * (G.turf ? G.turf.speed() : 1), share = Math.abs(Math.tan(h.nBank)) / Math.tan(NOSE.bankMax); flyGoal.copy(nose).multiplyScalar(fly ? top * (1 - THRUST.climb * nose.y) * (1 - THRUST.bleed * share) : 0);
+    // in company with a flock they set the pace, a little faster for each bird; round the plume the rising air lifts him
+    const comp = G.birds && G.birds.company, top = (comp ? Math.min(comp.speed, FLY.cruise) : FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * (G.turf ? G.turf.speed() : 1), share = Math.abs(Math.tan(h.nBank)) / Math.tan(NOSE.bankMax); flyGoal.copy(nose).multiplyScalar(fly ? top * (1 - THRUST.climb * nose.y) * (1 - THRUST.bleed * share) : 0);
     const overLand = g0 > SWIM_Y - STAND - 0.1, down = h.flyDown || (!fly && overLand && clear < DOWN.settle);
     if (down) { const fl = Math.hypot(flyGoal.x, flyGoal.z); if (fl > FLY.carry) { flyGoal.x *= FLY.carry / fl; flyGoal.z *= FLY.carry / fl; } flyGoal.y = -clamp(FLY.glide + DOWN.perM * clear, FLY.glide, DOWN.max); }
     else { const ahead = Math.max(groundAt(h.pos.x + h.vel.x * 0.9, h.pos.z + h.vel.z * 0.9), 0) + STAND + 2 - h.pos.y; if (ahead > 0) flyGoal.y = Math.max(flyGoal.y, ahead * 2); }
-    const low = smooth(0.4, FLY.flare, clear); if (flyGoal.y < 0) flyGoal.y *= 0.3 + 0.7 * low;
+    const low = smooth(0.4, FLY.flare, clear); if (flyGoal.y < 0) flyGoal.y *= 0.3 + 0.7 * low; if (G.birds && !down) flyGoal.y += G.birds.lift(h.pos);
     // 4. the carve: direction and speed apart. With the whole velocity on one spring the path trails the nose by 35° and he skids; apart it's under 8°
     if (striking) { h.flySp = V; if (V > 1) flyDir.copy(h.vel).divideScalar(V); flyA.multiplyScalar(Math.exp(-6 * dt)); }
     else {
