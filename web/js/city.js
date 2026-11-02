@@ -496,7 +496,7 @@ export function planCities(data, heightAt, opts = {}) {
         im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.frustumCulled = false; im.name = 'city_' + c.def.id + '_' + type;
         group.add(im); meshes.push(im);
         const ink = type === 'plinth' || type === 'lamp' ? null : matFor('ink');      // (a lamp is thinner than its own outline)
-        if (ink) { const om = new THREE.InstancedMesh(hullOf(A.geo), ink, L.length); om.instanceMatrix.copy(im.instanceMatrix); om.frustumCulled = false; om.name = im.name + '_ink'; group.add(om); }
+        if (ink && !(phone && c.def.kind === 'sea')) { const om = new THREE.InstancedMesh(hullOf(A.geo), ink, L.length); om.instanceMatrix.copy(im.instanceMatrix); om.frustumCulled = false; om.name = im.name + '_ink'; group.add(om); }
       }
     }
     return meshes;

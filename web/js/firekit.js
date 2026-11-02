@@ -62,7 +62,9 @@ export function createFireKit(G, F) {
   // ------------------------------------------------------------------ what the powers look like here. Each takes the place of the water's call of the same name
   const noop = () => {};
   const look = {
-    pushTrail: noop, circle: noop,
+    pushTrail: noop,
+    // a sigil under his own feet is water's way, not fire's. But a ring on the ground that says where a blow will land is a warning, and those stay
+    circle(p, normal, radius, el, dur) { if (radius >= 3.4 && water && water.circle) water.circle(p, normal, radius, el, dur); },
     impact(p, dir, kind) { burst(p, kind === 'heavy' ? 1.25 : kind === 'medium' ? 1 : 0.8, dir); },
     whip(a, b, s) { if (s <= 0.02) return; v1.subVectors(b, a); const l = v1.length() || 1; v1.multiplyScalar(1 / l); F.tongue(a, v1, 0.62 * s, l * 1.08, 0.09); F.tongue(a, v1, 0.32 * s, l * 1.15, 0.07); if (Math.random() < 0.7) { v2.copy(a).addScaledVector(v1, rnd(0.2, 1) * l); F.puff(v2, rnd(0.35, 0.6), 0.2, rnd(-2, 2), rnd(-1, 3), rnd(-2, 2), 4, 2, 1.5); } },
     riptide(on) { K.rip = on ? 1 : 0; if (on) burst(G.hero.pos, 0.8); },

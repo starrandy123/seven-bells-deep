@@ -632,9 +632,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     // windows and domes that light themselves: the brightest, most saturated vertex colours glow, each building at its own flicker
     lit: () => look.patch(lit({ vertexColors: true }), {
       key: 'lit',
+      // a window is dark glass with its glazing bars and the light behind them, not a flat pale panel
+      albedo: /* glsl */`{ float ocW = smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.018, .026, .034), ocW); }`,
       // (the world builder's rule: only lit window faces reach .95 in any channel)
       glow: /* glsl */`{ float ocPane = texture(tOcNoise, floor(vOcP.xz*.7 + vOcP.y*.5)*.0173 + vOcP.y*.011).a;
-        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.32 + 1.5*ocPane*ocPane)*vec3(1.5, 1.05, .6)*(.55 + .45*texture(tOcNoise, floor(vOcP.xz*.5)*.07 + floor(vOcP.y*.4)*.13).r);
+        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.32 + 1.5*ocPane*ocPane)*vec3(1.5, 1.05, .6)*(.55 + .45*texture(tOcNoise, floor(vOcP.xz*.5)*.07 + floor(vOcP.y*.4)*.13).r)*step(.1, fract(vOcP.y*.8))*step(.1, fract((vOcP.x + vOcP.z)*.62));
         ocGlow *= max(ocNight, mix(1.0, mix(.7, 1.0, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)), 1.0 - smoothstep(-6.0, -1.0, vOcP.y)))*exp(-(ocKv - ocKv.g)*.4*length(vOcP - cameraPosition)); }`,      // under the water a window is a lamp only where the day's light has gone (city_glsl.js, CITY_GLOW)
     }),
     coral: () => look.patch(lit({ vertexColors: true }), {
@@ -922,7 +924,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     mesh.frustumCulled = false; mesh.count = 0; mesh.name = name; mesh.visible = false;
     if (!(G.geometry.attributes.color)) mesh.material = familyMat(family);
     scene.add(mesh);
-    const reach = family === 'meadow' ? (phone ? 60 : 150) : family === 'flowers' ? (phone ? 56 : 120) : Math.min(460, (family === 'kelp' ? (phone ? 170 : 300) : family === 'palm' || family === 'tree' ? 440 : family === 'lit' ? 430 : family === 'shrub' ? (phone ? 110 : 170) : /beach_rock|cliff_rock|driftwood/.test(name) ? 340 : family === 'grass' ? (phone ? 60 : 95) : family === 'coral' ? (phone ? 62 : 150) : family === 'anemone' ? (phone ? 40 : 120) : family === 'lamp' || family === 'glow' || family === 'ghost' || family === 'lava' ? 240 : 150) + rad * 7) * (phone ? .86 : 1);
+    const reach = family === 'meadow' ? (phone ? 60 : 150) : family === 'flowers' ? (phone ? 56 : 120) : Math.min(460, (family === 'kelp' ? (phone ? 120 : 300) : family === 'palm' || family === 'tree' ? 440 : family === 'lit' ? 430 : family === 'shrub' ? (phone ? 110 : 170) : /beach_rock|cliff_rock|driftwood/.test(name) ? 340 : family === 'grass' ? (phone ? 60 : 95) : family === 'coral' ? (phone ? 62 : 150) : family === 'anemone' ? (phone ? 40 : 120) : family === 'lamp' || family === 'glow' || family === 'ghost' || family === 'lava' ? 240 : 150) + rad * 7) * (phone ? .86 : 1);
     batches.push({ name, family, mesh, M, C, cells, reach, count, rad, far, cards, waiting: waiting ? G.node : null });
   }
 
