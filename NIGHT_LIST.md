@@ -31,3 +31,5 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
 Added by me as owed work: fire side objectives (road.js), Build 51. Lava burns the water side, Build 51. Basalt columns, Build 51.
+
+Open, not root-caused: on Build 56's first platform run, Chromium's desktop pass reported "Cannot read properties of undefined (reading 'x')" twice, and it showed the title over the boot's preheat view. It did not come back in three more runs, one of them cold on Build 57. Ruled out locally: slow files, each file failing, 24 random boots, input through a slow boot with the platform's own probes, a saved row, negative time. Build 57 added fetch retries, a time floor and a frame that draws even if a part throws, which is a guard, not a fix. If it comes back, `watchrun.mjs` catches the whole stack.
