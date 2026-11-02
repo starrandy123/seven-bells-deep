@@ -28,5 +28,5 @@ Serve `web/` with any static server, for example `node web_check/serve.mjs web 8
 
 ## Licence
 
-The original code is MIT ([`LICENSE`](LICENSE)). Third-party code and assets keep their own licences, listed in
-[`web/rights.json`](web/rights.json) with their notices in [`web/licenses/`](web/licenses/).
+The original code is MIT ([`LICENSE`](LICENSE)). Third-party code and assets keep their own licences ([`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)),
+listed in [`web/rights.json`](web/rights.json) with their notices in [`web/licenses/`](web/licenses/).
