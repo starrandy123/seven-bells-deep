@@ -213,7 +213,7 @@ vec3 ocPaintLit(vec3 alb, vec3 N, vec3 P, float depth, float lit, float caus) {
 float ocSunLit(vec3 P, float depth) {
   if (P.y > 0.0) {                                                     // above the sea: the highest thing on each sun ray, baked once
     vec2 ql = P.xz - ocSunA.xz*(P.y/ocSunA.y);
-    float hl = texture(tOcLand, (ql - ocLandM.xy)*ocLandM.zw, .5).r; hl *= hl*140.0;
+    float hl = texture(tOcLand, (ql - ocLandM.xy)*ocLandM.zw, .5).r; hl *= hl*180.0;
     return smoothstep(-1.9, .1, P.y - hl);
   }
   vec2 q = P.xz + ocSunW.xz*(depth/ocSunW.y);

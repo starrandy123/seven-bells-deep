@@ -1510,6 +1510,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       const im = new THREE.InstancedMesh(b.mesh.geometry, instM, b.count);
       im.instanceMatrix.array.set(b.M); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im);
     }
+    addCasters(s, temp, instM);
     const prev = renderer.getRenderTarget(), col = new THREE.Color(); renderer.getClearColor(col); const al = renderer.getClearAlpha();
     renderer.setRenderTarget(rt); renderer.setClearColor(0xffffff, 1); renderer.clear();
     renderer.render(s, new THREE.Camera());
@@ -1519,11 +1520,16 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     look.setSunMap(kept.texture, m);
     return kept;
   }
-  bakeSun();
+  // what stands in the sun besides the props: every building, and the sky islands, which lay their shadow on the land under them. Randy, 2 Nov: "we HAVE 0 shadows in the game". Pipeline/research/LIGHT_SOURCES.md
+  let cityMeshes = [], skyMeshes = [];
+  function addCasters(s, temp, instM) {
+    for (const m of cityMeshes) { const im = new THREE.InstancedMesh(m.geometry, instM, m.count); im.instanceMatrix.array.set(m.instanceMatrix.array); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im); }
+    for (const m of skyMeshes) { const im = new THREE.InstancedMesh(m.geometry, instM, 1); m.updateWorldMatrix(true, false); im.setMatrixAt(0, m.matrixWorld); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im); }
+  }
 
   // The same for the land: along the true sun, the highest surface on each ray, so hills, walls, trees and houses throw soft shadows.
   function bakeLand() {
-    const S = phone ? 768 : 1024, TOP = 140, sa = U.ocSunA.value;
+    const S = phone ? 768 : 1024, TOP = 180, sa = U.ocSunA.value;
     const pad = TOP * Math.tan(Math.acos(sa.y)) + 30;
     const cx = ox + size / 2, cz = -(oy + size / 2), half = size / 2 + pad;
     const m = new THREE.Vector4(cx - half, cz - half, 1 / (2 * half), 1 / (2 * half));
@@ -1556,6 +1562,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       const im = new THREE.InstancedMesh(b.mesh.geometry, instM, b.count);
       im.instanceMatrix.array.set(b.M); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im);
     }
+    addCasters(s, temp, instM);
     const prev = renderer.getRenderTarget(), col = new THREE.Color(); renderer.getClearColor(col); const al = renderer.getClearAlpha();
     renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 1); renderer.clear();
     renderer.render(s, new THREE.Camera());
@@ -1563,7 +1570,6 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     land.dispose(); landM.dispose(); instM.dispose(); temp.forEach(i => i.dispose());
     look.setLandMap(noDepth(rt, S).texture, m);
   }
-  bakeLand();
   look.onRestore(() => {
     const f = heightFloats();
     tHeight.image.data = f; freeAfter(tHeight); tHeight.needsUpdate = true;
@@ -1607,8 +1613,9 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         #include <colorspace_fragment>
       }`,
   });
-  cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
-  skyRock(scene, look, U);
+  cityMeshes = cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
+  { const before = new Set(scene.children); skyRock(scene, look, U); for (const o of scene.children) if (!before.has(o)) o.traverse((q) => { if (q.isMesh) skyMeshes.push(q); }); }
+  bakeSun(); bakeLand();
   const lava = createLava(scene, look, heightAt, phone);
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
@@ -1890,6 +1897,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   camera.updateMatrixWorld();
   prog(1);
 
+  // the placements as floats, read by index from here on: as plain arrays they held 3 MB of boxed numbers (a heap snapshot, 2 Nov)
+  for (const k in data.instances) data.instances[k] = Float32Array.from(data.instances[k]);
   return {
     data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     lava, glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
