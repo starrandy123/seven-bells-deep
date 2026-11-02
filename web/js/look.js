@@ -494,7 +494,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
-    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, tOcDmg: { value: (() => { const t = new THREE.DataArrayTexture(new Uint8Array(32 * 32 * 4 * 32), 32, 32, 32); t.format = THREE.RGBAFormat; t.type = THREE.UnsignedByteType; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true; return t; })() }, ocDmgC: { value: Array.from({ length: 32 }, () => new THREE.Vector4(0, 0, 0, .1)) }, ocEmbers: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, tOcDmg: { value: (() => { const t = new THREE.DataArrayTexture(new Uint8Array(32 * 32 * 4 * 32), 32, 32, 32); t.format = THREE.RGBAFormat; t.type = THREE.UnsignedByteType; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true; return t; })() }, ocDmgC: { value: Array.from({ length: 32 }, () => new THREE.Vector4(0, 0, 0, .1)) }, ocEmbers: { value: 0 }, ocLeaves: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     ocAddGain: { value: phone ? 1 : .5 },
     ocRes: { value: new THREE.Vector2(0, 0) },
     ocShaft: { value: 1 },
@@ -705,7 +705,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
       uniforms: { ...U, uBox: { value: box }, uPix: { value: 1 } },
       vertexShader: /* glsl */`
         attribute float aSd;
-        uniform float uBox, ocTime, uPix, ocAddGain, ocBio, ocEmbers; uniform vec3 ocScat, ocKd, ocSunCol;
+        uniform float uBox, ocTime, uPix, ocAddGain, ocBio, ocEmbers, ocLeaves; uniform vec3 ocScat, ocKd, ocSunCol;
         varying vec3 vC; varying float vR;
         void main() {
           float sd = aSd;
@@ -737,6 +737,20 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     const mesh = new THREE.Points(g, m); mesh.frustumCulled = false; mesh.renderOrder = 22;
     scene.add(mesh);
     return mesh;
+  })();
+  // falling leaves where trees stand (Randy, 2 Nov: "leaves blowing in the wind and leaves falling too in some places to make the world feel magical"): their own small draw, shown only near trees. Each comes down at under a metre a second, swinging side to side as a falling leaf does, an almond turned by its own spin, dark on the sky and lit gold-green as it turns to the sun
+  const leaves = (() => {
+    const n = 260, box = 18, a = new Float32Array(n * 3), sd = new Float32Array(n); let s = 77; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < n; i++) { a[i * 3] = rnd() * box; a[i * 3 + 1] = rnd() * box; a[i * 3 + 2] = rnd() * box; sd[i] = rnd(); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3)); g.setAttribute('aSd', new THREE.BufferAttribute(sd, 1));
+    const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, toneMapped: false, uniforms: { ocTime: U.ocTime, ocLeaves: U.ocLeaves, ocSunCol: U.ocSunCol, ocHaze: U.ocHaze, uPix: snow.material.uniforms.uPix, uBox: { value: box } },
+      vertexShader: /* glsl */`attribute float aSd; uniform float ocTime, ocLeaves, uPix, uBox; uniform vec3 ocSunCol; varying vec3 vC; varying float vA, vR;
+        void main() { float sd = aSd, ph = ocTime*(1.1 + .8*sd) + sd*31.0; vec3 p = position + vec3(sin(ph)*1.2 + ocTime*.5, -ocTime*(.55 + .5*sd) + abs(cos(ph))*.35, cos(ph*.9)*.8 + ocTime*.33);
+          vec3 rel = mod(p - cameraPosition + .5*uBox, uBox) - .5*uBox, wp = cameraPosition + rel; vec4 mv = viewMatrix*vec4(wp, 1.0); gl_Position = projectionMatrix*mv; float dist = -mv.z;
+          gl_PointSize = clamp(uPix*.3/max(dist, .3), 4.0, 18.0); float turn = abs(sin(ocTime*(2.4 + 2.0*sd) + sd*17.0));
+          vC = mix(vec3(.05, .12, .02), vec3(.45, .33, .06), fract(sd*9.7))*(.3 + .7*turn)*ocSunCol*.45; vA = ocLeaves*(1.0 - smoothstep(.3, .5, length(rel)/uBox))*smoothstep(.5, 2.0, dist)*step(.3, fract(sd*5.3)); vR = sd; }`,
+      fragmentShader: /* glsl */`varying vec3 vC; varying float vA, vR; void main() { vec2 q = gl_PointCoord*2.0 - 1.0; float a = vR*31.0 + 2.0, c = cos(a), s = sin(a); vec2 l = vec2(c*q.x - s*q.y, s*q.x + c*q.y); float r = l.x*l.x*2.6 + l.y*l.y; if (r > 1.0 || vA < .01) discard; gl_FragColor = vec4(vC, vA*smoothstep(1.0, .7, r)); }` });
+    const mesh = new THREE.Points(g, m); mesh.frustumCulled = false; mesh.renderOrder = 23; mesh.visible = false; scene.add(mesh); return mesh;
   })();
 
   // ---------------------------------------------------------------- flashes: a light in every shader, and a glow in the water
@@ -897,6 +911,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     flashGlow.visible = any;
     if (any) { gp.needsUpdate = true; gc.needsUpdate = true; }
     snow.material.uniforms.uPix.value = renderer.getDrawingBufferSize(tmpV).y * .9;
+    leaves.visible = U.ocLeaves.value > .02 && cp.y > 0;
     stepOutlines(cp);
   }
   const tmpV = new THREE.Vector2();

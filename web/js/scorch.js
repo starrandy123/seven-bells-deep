@@ -22,6 +22,8 @@ export function createScorch(G) {
     trees = new Uint8Array(TG * TG); const all = W.data.instances;
     for (const k in all) { if (!/^tree_|^palm/.test(k)) continue; const a = all[k]; for (let i = 0; i + 4 < a.length; i += 6) { const u = Math.floor((a[i] + 1800) / 12), v = Math.floor((a[i + 1] + 1800) / 12); if (u >= 0 && v >= 0 && u < TG && v < TG) trees[v * TG + u] = 1; } }
   }
+  // how many of the 3 x 3 tree cells round a point hold trees: the falling leaves' weight
+  function treesNear(x, z) { if (!trees) plant(); let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (treeAt(x + a * 12, z + b * 12)) n++; return n; }
   const treeAt = (x, z) => { const u = Math.floor((x + 1800) / 12), v = Math.floor((-z + 1800) / 12); return u >= 0 && v >= 0 && u < TG && v < TG && trees[v * TG + u]; };
   // what a cell of ground holds: grass where the biome's grass is, none under water or on bare rock
   function load(i, c, r) {
@@ -142,7 +144,7 @@ export function createScorch(G) {
     active = any; dirty = true; groupFires();
   }
   return {
-    hit,
+    hit, treesNear,
     update(dt, x, z) {
       if (!live && !slotOf.size) return; if (live && active) follow(x, z); acc += dt;
       tNow += dt; if (acc >= TICK) { acc = 0; if (active) tick(); if (mendB(TICK)) active = 1; if (dirty) { tex.needsUpdate = true; dirty = false; } }

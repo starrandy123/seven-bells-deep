@@ -124,7 +124,7 @@ function update(dt) {
   G.quest.draw(G.time);
   look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.dmg.update(dt, hero.pos.x, hero.pos.z); G.life.update(dt, hero.pos); G.sky.update(dt, camera); (G.cityLights ||= createCityLights(G, G.world.cities.cities, G.world.heightAt)).frame(); if (G.world.lava) G.world.lava.frame(G, dt); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
   G.birds.step(dt, camera.position); G.fireLight.update(dt, camera.position);
-  { const c = camera.position, d = Math.hypot(c.x - 300, c.z - 800), s = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); }; G.look.camY = c.y; G.look.setBiome((1 - s(190, 450, d)) * (1 - s(60, 90, c.y))); } if (!/nomirror/.test(location.search)) G.world.mirror.render(camera, G.sky.above, [G.flames && G.flames.mesh]);
+  { const c = camera.position, d = Math.hypot(c.x - 300, c.z - 800), s = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); }; G.look.camY = c.y; G.look.setBiome((1 - s(190, 450, d)) * (1 - s(60, 90, c.y))); if ((G.leafT = (G.leafT || 0) - dt) <= 0) { G.leafT = 0.5; const w = c.y > 0 && c.y < 60 ? Math.min(1, G.dmg.treesNear(c.x, c.z) / 4) : 0; G.look.uniforms.ocLeaves.value += (w - G.look.uniforms.ocLeaves.value) * 0.5; } } if (!/nomirror/.test(location.search)) G.world.mirror.render(camera, G.sky.above, [G.flames && G.flames.mesh]);
   G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);
   if (G.audio.freshwater && G.world.rivers) freshSound(hero.pos);
   G.ui.update(dt);
