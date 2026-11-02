@@ -875,6 +875,8 @@ This is the baseline. From now on:
 | CR-55 | 2 Nov | **Fire's second stance is fire and rock.** Lance, Stomp, Lava Path and Breath had kept the water side's ice looks; they now go through `firekit.look`. Lava Path crusts the sea. Build 53. |
 | CR-56 | 2 Nov | **Fire's stances and kicks reach the legs.** On land the run cycle was overwriting the legs of every blow, so the capture's stance never showed. The fire clips join `CLIP_LEGS`. A guard from capture, fists alight in a fight, a whirlwind kick for the Firewheel. Build 55. |
 | CR-57 | 2 Nov | **A lost graphics context keeps the isle.** The ground came back from its files without the isle painted over it. S11 reads it, and it fails with the fix taken out. Real fingers on Boost and Jump: S9, S10. Build 56. |
+| CR-58 | 2 Nov | **The fire side opens on the High City's plaza facing the volcano, not a wall.** Its halls get lattice screens read off real fronts: board, rail, two leaves, paper lit from a hot spot. Build 58. |
+| CR-59 | 2 Nov | **The duel is a conversation.** Turns, an exchange with blocks and counters, a hard distance limit, and a director that keeps its side of the line, frames from the separation, and cuts on the blows. Sources in `Pipeline/research/DUEL_SOURCES.md`. The road's second step is now the first flight, down to the Ash City. Build 59. |
 
 ## 20. Part 2: the fire war, and the day's asks (V, M20-M23, W23-W26, G13, G14). Owner: lead
 

@@ -201,7 +201,7 @@
   },
   "champions": {
     "_doc": "the boss each side meets, and the duel (champion.js). tell_s by weight: quick .75, heavy 1 to 1.5, arena 2.6. recover_s is how long he stands open. phases open by health",
-    "hp": 2400, "duel_hp": 520, "show": ["volley", "combo", "whip", "wheel", "geyser", "rush", "combo", "wall", "nova"], "scale": 1.28, "hold_m": 13, "high_m": 5, "in_mps": 42, "from_m": 120, "recover_s": [2.0, 3.0], "false_at": 0.1, "false_s": 3.2, "last_hp": 0.22, "false_line": "Not yet",
+    "hp": 2400, "duel_hp": 520, "show": ["combo", "volley", "rush", "combo", "whip", "wheel", "combo", "geyser", "rush", "wall", "combo", "nova"], "scale": 1.28, "hold_m": 13, "high_m": 5, "in_mps": 42, "from_m": 120, "recover_s": [2.0, 3.0], "false_at": 0.1, "false_s": 3.2, "last_hp": 0.22, "false_line": "Not yet",
     "fire": { "name": "The Cinder King", "hint": "Water puts his fire out. Strike when he falls" },
     "water": { "name": "The Tidecaller", "hint": "Fire boils him dry. Strike when he falls" },
     "moves": {

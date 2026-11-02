@@ -22,7 +22,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 16 | Underwater buildings stop being bland, from real references | Build 45: dark water, lit windows, rims of light, moving lights, reefs on the streets. Build 54: kit halls have dark glass and lit glazing bars |
 | 17 | Nice buildings on land and in the fire cities | Build 48: fire cities rebuilt with lofted curved roofs and lacquered walls; harbour town has balconies and awnings. Build 58: real lattice screens with boards, rails and paper lit from a hot spot; the fire side opens on the plaza facing the volcano |
 | 18 | A volcano world to contrast the waterfall | Build 46: the cone, the vent, lava rivers and falls, steam, embers. Basalt columns and lava that hurts the water side still to come |
-| 19 | The water against fire fight shows every power, for showcase clips | Build 47: Pause, Watch the duel, with a directed camera. Moves improve with #12 |
+| 19 | The water against fire fight shows every power, for showcase clips | Build 47: Pause, Watch the duel. Build 59: staged and shot from real fight-film sources (`Pipeline/research/DUEL_SOURCES.md`): turns, blocks and counters, a hard distance limit, a director that cuts on the blows. Moves improve with #12 |
 | 20 | Sand and grass on the water side's beaches, a real transition | Build 44, his eye |
 | 21 | Running stops feeling stiff | Build 44, his eye |
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |

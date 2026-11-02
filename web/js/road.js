@@ -5,7 +5,7 @@ export function createRoad(G) {
   const at = (x, y, z) => new THREE.Vector3(x, z, -y), near = (p, m) => G.hero.pos.distanceTo(p) < m, kills = () => G.ember.raids ? G.ember.raids.kills || 0 : 0;
   const STEPS = [
     { text: 'Take off: hold Boost, then Jump', done: () => G.hero.fireAir },
-    { text: 'Hold Fly and reach the High City', to: at(306, -806, 92), done: (s) => near(s.to, 60) },
+    { text: 'Hold Fly and drop down to the Ash City', to: at(246, -760, 14), done: (s) => near(s.to, 40) },
     { text: 'Stand on the rim of the volcano', to: at(378, -874, 112), done: (s) => near(s.to, 46) },
     { text: 'Break the raids: bring down three', done: () => kills() >= 3 },
     { text: 'Beat the Tidecaller', done: () => G.ember.champions().beaten },
