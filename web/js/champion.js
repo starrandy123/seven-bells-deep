@@ -66,9 +66,10 @@ export function createChampions(G, A) {
     switch (B.st) {
       case 'intro': { v1.copy(T.pos); v2.subVectors(e.pos, T.pos).setY(0).normalize(); A.goto(e, T.pos.x + v2.x * C.hold_m, Math.max(T.pos.y, A.floorAt(e.pos.x, e.pos.z)) + C.high_m, T.pos.z + v2.z * C.hold_m, C.in_mps, 40, dt); A.faceHim(e, dt); if (B.t <= 0) { B.st = 'idle'; B.t = 1; } break; }
       case 'idle': case 'open': {
-        if (duel) { const a = G.time * 0.14 + (e.side === 'fire' ? 0 : Math.PI), R = 9 + Math.sin(G.time * 0.4) * 2.4, s = duel.p; A.goto(e, s.x + Math.cos(a) * R, s.y + (e.side === 'fire' ? 5 : 1.5) + Math.sin(G.time * 0.7 + (e.side === 'fire' ? 0 : 2)) * 1.6, s.z + Math.sin(a) * R, 15, 34, dt); }
+        if (duel) { const a = G.time * 0.16 + (e.side === 'fire' ? 0 : Math.PI), R = 6.4 + Math.sin(G.time * 0.4) * 1.6, s = duel.p; A.goto(e, s.x + Math.cos(a) * R, s.y + (e.side === 'fire' ? 4 : 2) + Math.sin(G.time * 0.7 + (e.side === 'fire' ? 0 : 2)) * 1.2, s.z + Math.sin(a) * R, 24, 44, dt); }
         else { B.ang = (B.ang ?? Math.atan2(e.pos.z - T.pos.z, e.pos.x - T.pos.x)) + dt * 0.3; const R = C.hold_m + Math.sin(G.time * 0.4) * 3; A.goto(e, T.pos.x + Math.cos(B.ang) * R, Math.max(T.pos.y, A.floorAt(e.pos.x, e.pos.z)) + C.high_m, T.pos.z + Math.sin(B.ang) * R, 12, 34, dt); }
         A.faceHim(e, dt); if (B.t <= 0) nextMove(e); break; }
+      case 'clash': { const D = duel; if (!D) { B.st = 'idle'; break; } v1.lerpVectors(D.a.pos, D.b.pos, 0.5); A.goto(e, v1.x, v1.y, v1.z, 40, 80, dt); A.faceHim(e, dt, 12); if (e === D.a && D.a.pos.distanceTo(D.b.pos) < 3.2) clash(D); break; }
       case 'tell': want.set(0, 0, 0); A.aim(e, want, 24, dt); tell(e, dt, T); if (B.t <= 0) { B.st = 'strike'; B.f = 0; e.u.uTell.value = 0; B.g = 0; if (e.act && M[B.move].clip_t) e.act.setEffectiveTimeScale(1); } break;
       case 'strike': if (B.move !== 'rush') { want.set(0, 0, 0); A.aim(e, want, 24, dt); } strike(e, dt, T); break;
       case 'fallen': { want.set(0, -3, 0); A.aim(e, want, 20, dt); const f = A.floorAt(e.pos.x, e.pos.z) + 1.2; if (e.pos.y < f) { e.pos.y = f; e.vel.y = 0; } if (B.t <= 0) { B.st = 'idle'; B.t = 0.4; e.noHit = false; e.hp = Math.max(e.hp, e.maxHp * C.last_hp); G.fireKit.burst(v1.copy(e.pos), 2, null); G.audio.roar(); if (!(G.settings && G.settings.shake === false)) G.shake(0.7); if (!duel && !A.film) G.ui.toast(e.B.name, C.false_line, 3); } break; }
@@ -76,6 +77,13 @@ export function createChampions(G, A) {
     return true;
   }
 
+  // the head-on meeting: fire and water at full stretch, both thrown back, the sea's steam between them, and a beat where time holds
+  function clash(D) {
+    const a = D.a, b = D.b, F = G.flames; v1.lerpVectors(a.pos, b.pos, 0.5); v2.subVectors(b.pos, a.pos).normalize(); G.hitstop = Math.max(G.hitstop || 0, 0.22); G.audio.boom(); G.audio.hit(true); if (!(G.settings && G.settings.shake === false)) G.shake(0.8); G.fireKit.burst(v3.copy(v1).addScaledVector(v2, -0.8), 2, v2.clone().negate()); F.wetNext = 1; G.fireKit.burst(v3.copy(v1).addScaledVector(v2, 0.8), 2, v2); F.wetNext = 0;
+    for (let i = 0; i < 12; i++) { const r = rnd(0, TAU); v3.set(v1.x + Math.cos(r) * 2, v1.y + rnd(-1, 1), v1.z + Math.sin(r) * 2); G.fx.sp('smoke', v3, 3, rnd(1, 2), STEAM, { s0: 1.5, s1: 7, a: 0.5, add: 0, hot: 0, vx: Math.cos(r) * 9, vy: rnd(1, 5), vz: Math.sin(r) * 9, drag: 1.2, rot: r }); }
+    G.fx.ring(v1.clone(), 16, 0.7, 0xffffff, v3.subVectors(G.camera.position, v1).normalize().clone()); a.vel.copy(v2).multiplyScalar(-22); b.vel.copy(v2).multiplyScalar(22); a.B.st = b.B.st = 'open'; a.B.t = 0.9; b.B.t = 2.1; hit(a, b, 18); hit(b, a, 18); D.clashT = rnd(11, 15);
+  }
+  const STEAM = new THREE.Color(0.9, 0.92, 0.95);
   function spawn(side, at, foe = null) {
     const p = at || new THREE.Vector3(G.hero.pos.x + Math.sin(G.camYaw) * C.from_m, G.hero.pos.y + 26, G.hero.pos.z + Math.cos(G.camYaw) * C.from_m);
     A.R.side = side; const e = A.X.spawn('emberkin', p); if (!e) return null;
@@ -94,21 +102,23 @@ export function createChampions(G, A) {
   }
   // the showcase: both at once, nobody else in it. Where lava meets the sea, the best stage this world has
   function startDuel(at) {
-    if (duel) return duel; duel = {}; const p = at || new THREE.Vector3(505, 12, 868), a = spawn('fire', v1.copy(p).add(v2.set(-16, 8, 0)).clone()), b = spawn('water', v1.copy(p).add(v2.set(16, 6, 0)).clone()); a.foe = b; b.foe = a; a.B.t = b.B.t = 1.4; duel.a = a; duel.b = b; duel.p = p; return duel;
+    if (duel) return duel; duel = {}; const p = at || new THREE.Vector3(505, 12, 868), a = spawn('fire', v1.copy(p).add(v2.set(-16, 8, 0)).clone()), b = spawn('water', v1.copy(p).add(v2.set(16, 6, 0)).clone()); a.foe = b; b.foe = a; a.B.t = 1.2; b.B.t = 2.4; duel.a = a; duel.b = b; duel.p = p; duel.clashT = 9; return duel;
   }
   function endDuel() { if (!duel) return; for (const e of [duel.a, duel.b]) { if (e) { e.hp = 0; e.champ = null; e.slot.g.scale.setScalar(1); A.X.free(e); } } duel = null; }
   // the director: the duel shot as a fight is shot. A two-shot from the side, over one shoulder and then the other, low and wide from the water. It cuts on a beat, and between cuts the lens drifts with them
   const lens = { p: new THREE.Vector3(), at: new THREE.Vector3(), shot: -1, t: 0 };
   function direct(dt) {
     const D = duel; if (!D) return; const a = D.a, b = D.b, c = G.camera.position, mid = v1.lerpVectors(a.pos, b.pos, 0.5), d = a.pos.distanceTo(b.pos), dir = v2.subVectors(b.pos, a.pos).normalize(), side = v3.crossVectors(dir, Y).normalize(); lens.t -= dt;
-    if (lens.t <= 0) { lens.shot = (lens.shot + 1) % 5; lens.t = 3.4; lens.cut = true; }
+    if (lens.t <= 0) { lens.shot = (lens.shot + 1) % 5; lens.t = 2.8; lens.cut = true; }
+    const big = (e) => e.B.st === 'strike' && (e.B.move === 'wall' || e.B.move === 'nova' || e.B.move === 'wheel' || e.B.move === 'geyser'), wide = big(a) || big(b), clashing = a.B.st === 'clash';
+    if (clashing && lens.shot !== 0) { lens.shot = 0; lens.t = 2.2; lens.cut = true; } else if (wide && lens.shot !== 4) { lens.shot = 4; lens.t = 2.2; lens.cut = true; }
     const P = v4; let k = 3.2; const look = lens.look || (lens.look = new THREE.Vector3());
     switch (lens.shot) {
-      case 0: P.copy(mid).addScaledVector(side, 10 + d * 0.72); P.y += 1.2; look.copy(mid); break;
+      case 0: P.copy(mid).addScaledVector(side, 6.5 + d * 0.62); P.y += 0.8; look.copy(mid); break;
       case 1: P.copy(a.pos).addScaledVector(dir, -5.4).addScaledVector(side, 2.2); P.y += 1.3; look.copy(b.pos); break;
-      case 2: P.copy(mid).addScaledVector(side, -(12 + d * 0.8)); P.y = Math.max(A.floorAt(mid.x, mid.z) + 1.1, 1.1); look.copy(mid); look.y += 3; break;
+      case 2: P.copy(mid).addScaledVector(side, -(8 + d * 0.7)); P.y = Math.max(A.floorAt(mid.x, mid.z) + 1.1, 1.1); look.copy(mid); look.y += 2; break;
       case 3: P.copy(b.pos).addScaledVector(dir, 5.4).addScaledVector(side, -2.2); P.y += 1.3; look.copy(a.pos); break;
-      case 4: P.copy(mid).addScaledVector(side, 15 + d * 0.5).addScaledVector(dir, 8); P.y += 6; look.copy(mid); k = 2; break;
+      case 4: P.copy(mid).addScaledVector(side, 14 + d * 0.5).addScaledVector(dir, 6); P.y += 5; look.copy(mid); k = 2; break;
     }
     if (lens.cut) { lens.p.copy(P); lens.at.copy(look); lens.cut = false; } else { lens.p.lerp(P, 1 - Math.exp(-k * dt)); lens.at.lerp(look, 1 - Math.exp(-5 * dt)); }
     lens.p.y = Math.max(lens.p.y, A.floorAt(lens.p.x, lens.p.z) + 0.7); c.copy(lens.p); G.camera.up.set(0, 1, 0); if (Math.abs(G.camera.fov - 50) > 0.1) { G.camera.fov = 50; G.camera.updateProjectionMatrix(); } G.camera.lookAt(lens.at);
@@ -120,6 +130,7 @@ export function createChampions(G, A) {
     if (on && !show) { show = { pos: h.pos.clone(), inv: h.inv, again: 0 }; h.model.visible = false; document.body.classList.add('duelShow'); h.inv = 1e6; startDuel(); lens.shot = -1; lens.t = 0; G.filmCam = direct; G.noBeacon = true; show.end = () => watch(false); setTimeout(() => { addEventListener('pointerdown', show.end, { once: true }); }, 400); }
     else if (!on && show) { removeEventListener('pointerdown', show.end); endDuel(); h.model.visible = true; document.body.classList.remove('duelShow'); h.inv = show.inv; G.filmCam = null; G.noBeacon = false; show = null; }
   }
-  function stepShow(dt) { if (!show) return; const h = G.hero, D = duel; h.pos.copy(show.pos); h.vel.set(0, 0, 0); if (!D) return; if (D.a.hp <= 0 || D.b.hp <= 0) { show.again += dt; if (show.again > 3.5) { show.again = 0; endDuel(); startDuel(); } } }
+  function stepDuel(dt) { const D = duel; if (!D) return; D.clashT -= dt; const free = (e) => e.B.st === 'open' || e.B.st === 'idle'; if (D.clashT <= 0 && free(D.a) && free(D.b) && D.a.hp > 0 && D.b.hp > 0) { D.a.B.st = D.b.B.st = 'clash'; D.clashT = 99; } }
+  function stepShow(dt) { stepDuel(dt); if (!show) return; const h = G.hero, D = duel; h.pos.copy(show.pos); h.vel.set(0, 0, 0); if (!D) return; if (D.a.hp <= 0 || D.b.hp <= 0) { show.again += dt; if (show.again > 3.5) { show.again = 0; endDuel(); startDuel(); } } }
   return { step, start, startDuel, endDuel, frame, direct, watch, stepShow, get duel() { return duel; }, get beaten() { return beaten; } };
 }
