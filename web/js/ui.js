@@ -11,7 +11,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Flight rebuilt for thumbs: the stick turns you where you push it and your wings level when you let go, push up to climb, and let go of Fly to hover where the stick points; the stick appears wherever your thumb lands; a smoother camera and smoother bodies everywhere, and palms down in every hover';
+const NEWS = 'Fire aims where you look: he faces what he shoots, locks only onto foes ahead of the camera, and never fires behind you; and the stick stays where your thumb lands';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
