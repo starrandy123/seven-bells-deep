@@ -38,7 +38,7 @@ export const CITY_ALBEDO = /* glsl */`{
   float ocLod = 1.0 - smoothstep(.045, .13, ocMpp);                         // fine detail (courses, joints, mullions, shingle edges, tile rows) fades first
   float ocLodW = 1.0 - smoothstep(.16, .42, ocMpp);                         // window-scale detail (windows, arches, pilasters, ledges, ribs, friezes) holds far longer
   float ocDeep = step(vOcP.y, -100.0);
-  vec3 ocLitC = mix(vec3(1.0, .66, .32), vec3(.22, .95, .92), ocDeep);     // window light: warm, and the deep city's cold
+  float ocHue = fract(vFacSeed*11.3); vec3 ocLitC = vOcP.y < -3.0 ? (ocHue < .55 ? vec3(1.0, .68, .30) : ocHue < .8 ? vec3(.34, .92, 1.0) : ocHue < .92 ? vec3(1.0, .42, .66) : vec3(.62, 1.0, .62)) : vec3(1.0, .66, .32);     // a drowned city's windows, each building its own light: mostly amber, then cyan, a little rose and green, as a city seen at night from the air
   ocEmber = 1.0 - step(230.0, length(vOcP.xz - vec2(300.0, 800.0))); ocLitC = mix(ocLitC, vec3(1.0, .40, .08), ocEmber);      // the Burnt Isle (fireisle.js): its windows burn day and night
   vec3 MARBLE = vec3(.66, .63, .55), PALE = vec3(.78, .75, .66), GOLD = vec3(.64, .44, .12), VERD = vec3(.16, .40, .33), ALG = vec3(.05, .16, .10);
   vec3 ocC = MARBLE*ocT; float ink = 0.0, inkW = 0.0; bool ocStoneish = true;
@@ -71,7 +71,7 @@ export const CITY_ALBEDO = /* glsl */`{
     if (ocK == 15 && st < .5) { hw = ocBw*.33; y0 = 0.0; y1 = 2.6; open = 1.0; }
     if (ocK == 2 && st < .5 && ocH1(vec2(bi, 7.0) + vFacSeed*5.0) < .34) { hw = .56; y0 = 0.0; y1 = 2.25; open = 2.0; }
     float sd = ocSdWin(vec2(ux, vy), hw, y0, y1, arch), fb = sea ? .17 : .1;
-    float lit = step(.14 + .5*fract(vFacSeed*3.17), ocH1(vec2(bi, st) + vFacSeed*17.0));      // some buildings mostly dark, some blazing
+    float lit = step(sea ? .36 + .34*fract(vFacSeed*3.17) : .14 + .5*fract(vFacSeed*3.17), ocH1(vec2(bi, st) + vFacSeed*17.0));      // on land some mostly dark, some blazing; under the sea about one window in four, warm against the blue: bright towers in a dark ocean
     if (!pil && sd < fb) {
       if (sd < 0.0) {
         if (open > 1.5) { c = vec3(.22, .12, .06)*(.82 + .3*step(.5, fract(ux*2.2 + .25))); ink = max(ink, ocLnGrid(ux*2.2 + .25)*.6); }
@@ -182,6 +182,7 @@ export const CITY_ALBEDO = /* glsl */`{
     if (y < .12 || y > .88) c = GOLD*.9;
     inkW = max(inkW, max(ocLn(d - .12), max(ocLn(y - .12), ocLn(y - .88))));
     ocC = mix(mix(bg, GOLD, .35), c, ocLodW); ocStoneish = false;
+    if (vOcP.y < -3.0) { ocWinM = max(ocWinM, (d < .12 || y < .12 || y > .88 ? .85 : .08)); ocWinC = mix(vec3(1.0, .74, .30), vec3(.30, .90, 1.0), step(.6, fract(vFacSeed*3.71))); }      // under the sea the frieze is a line of light round the building, the rim every tower wears in the great drowned cities
   }
   else if (ocK == 13) { ocC = vec3(.05, .045, .04); ocStoneish = false; }
   else if (ocK == 14) { ocC = vec3(.28, .18, .10)*(.86 + .22*step(.5, fract(ocUV.y*2.7 + ocH1(vec2(floor(ocUV.x*3.0), 1.0))))); ocStoneish = false; }
@@ -197,6 +198,16 @@ export const CITY_ALBEDO = /* glsl */`{
     float ocN1 = texture(tOcNoise, vOcP.xz*.037 + vOcP.y*vec2(.021, -.013)).a, ocN2 = texture(tOcNoise, vOcP.zx*.17 + vOcP.y*vec2(.09, .07)).b;
     float ocAl = smoothstep(.42, .70, ocN1*.72 + ocN2*.28)*(1.0 - smoothstep(-.6, 1.2, vOcP.y))*(1.0 - ocWinM);
     ocC = mix(ocC, ocC*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.6);
+    // a sunk city is alive (Randy, 2 Nov: "The buildings in the underwater look very bland still"). What grows goes by exposure: up-facing ledges and the foot of a wall carry the most, in patches of crust, sponge and algae; rust and silt run down the walls below every ledge. Real dives lose red with distance, so this colour shows as he comes close
+    float ocSub = 1.0 - smoothstep(-2.0, -.5, vOcP.y);
+    if (ocSub > 0.0) {
+      vec3 ocFn = normalize(cross(dFdx(vOcP), dFdy(vOcP))); float ocUpF = smoothstep(.4, .9, abs(ocFn.y)), ocFoot = ocK == 1 || ocK == 15 ? 1.0 - smoothstep(.0, 6.5, ocUV.y) : .3;
+      float ocN3 = texture(tOcNoise, vec2((vOcP.x + vOcP.z)*.41, vOcP.y*.035)).g; ocC *= 1.0 - .34*smoothstep(.5, .78, ocN3)*ocSub*(1.0 - ocUpF);
+      float ocF1 = texture(tOcNoise, vOcP.xz*.052 + vOcP.y*vec2(.031, .047)).r, ocF2 = texture(tOcNoise, (vOcP.xz + vOcP.y*.7)*.31).a, ocG = smoothstep(.5, .62, ocF1*.62 + ocF2*.38 + ocUpF*.2 + ocFoot*.2)*ocSub*(1.0 - ocWinM);
+      float ocPick = texture(tOcNoise, vOcP.zx*.013 + vec2(.3, .7)).b, ocDot = texture(tOcNoise, (vOcP.xz + vOcP.y)*1.3).r;
+      vec3 ocGc = ocPick < .36 ? vec3(.70, .22, .13) : ocPick < .54 ? vec3(.78, .38, .44) : ocPick < .74 ? vec3(.20, .46, .24) : vec3(.42, .22, .54);
+      ocC = mix(ocC, ocGc*(.62 + .72*ocDot), ocG*.88);
+    }
   }
   ocInkM = max(ink*ocLod, inkW*ocLodW);
   diffuseColor.rgb = ocC;
@@ -215,9 +226,9 @@ export const CITY_POST = /* glsl */`{
   { float ocUnder = 1.0 - smoothstep(-6.0, -1.0, vOcP.y), ocD = min(length(vOcP - cameraPosition), 40.0);
     outgoingLight += diffuseColor.rgb*ocAmbient(ocWn, max(-vOcP.y, 0.0))*ocUnder*.55*(1.0 - ocWinM);
     float ocL = dot(outgoingLight, vec3(.3, .55, .15)); outgoingLight = max(mix(vec3(ocL), outgoingLight, 1.0 + .3*ocUnder*(1.0 - ocWinM)), vec3(0.0));
-    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.34), ocUnder); }
+    outgoingLight *= mix(vec3(1.0), exp(ocKv*ocD*.62), ocUnder); }
   outgoingLight = mix(outgoingLight, vec3(.010, .020, .028), clamp(ocInkM, 0.0, 1.0));
 }`;
 
 // windows lit when the lamps are lit and at night, and in the deep where no day reaches (Vesper at 150 m is seen by its own windows). Randy, 1 Nov: natural light under the water
-export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(max(ocLamps, ocNight), ocEmber*.62), step(vOcP.y, -18.0)*mix(.05, 1.3, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)))*2.6*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition));`;      // a window is a lamp only where the day's light has gone: by day in the shallows it's dark glass, and at any depth its red goes first with distance
+export const CITY_GLOW = /* glsl */`ocGlow = ocWinC*ocWinM*max(max(max(ocLamps, ocNight), ocEmber*.62), step(vOcP.y, -18.0)*mix(.95, 1.3, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)))*3.0*exp(-(ocKv - ocKv.g)*.3*length(vOcP - cameraPosition));`;      // a window is a lamp only where the day's light has gone: by day in the shallows it's dark glass, and at any depth its red goes first with distance

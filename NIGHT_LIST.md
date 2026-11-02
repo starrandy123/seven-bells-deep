@@ -19,7 +19,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
 | 14 | Combat, cities, buildings, bosses built off proven frameworks | To do |
 | 15 | The right bosses for the fire side and the land people | To do |
-| 16 | Underwater buildings stop being bland, from real references | To do |
+| 16 | Underwater buildings stop being bland, from real references | Build 45: dark water, lit windows, rims of light, moving lights, reefs on the streets. Rotunda kit piece still plain |
 | 17 | Nice buildings on land and in the fire cities | To do |
 | 18 | A volcano world to contrast the waterfall | To do |
 | 19 | The water against fire fight shows every power, for showcase clips | To do |

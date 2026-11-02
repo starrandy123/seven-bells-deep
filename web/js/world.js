@@ -11,6 +11,7 @@ import { addIsle, raiseIsle, paintIsle, skyRock, ISLE } from './fireisle.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
 import { dressDunes } from './dunes.js';
+import { dressReefCity } from './reefcity.js';
 import { fallStrips, FALL_V, FALL_F } from './falls.js';
 import { createWetMap } from './wetmap.js';
 import { CITY_VERTEX_DECL, CITY_VERTEX_BEND, CITY_PARS, CITY_ALBEDO, CITY_POST, CITY_GLOW } from './city_glsl.js';
@@ -630,8 +631,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       key: 'lit',
       // (the world builder's rule: only lit window faces reach .95 in any channel)
       glow: /* glsl */`{ float ocPane = texture(tOcNoise, floor(vOcP.xz*.7 + vOcP.y*.5)*.0173 + vOcP.y*.011).a;
-        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.55 + 1.5*ocPane*ocPane)*2.1;
-        ocGlow *= max(ocNight, mix(1.0, mix(.04, 1.0, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)), 1.0 - smoothstep(-6.0, -1.0, vOcP.y)))*exp(-(ocKv - ocKv.g)*length(vOcP - cameraPosition)); }`,      // under the water a window is a lamp only where the day's light has gone (city_glsl.js, CITY_GLOW)
+        ocGlow = pow(vColor.rgb, vec3(1.9))*smoothstep(.72, .95, max(max(vColor.r, vColor.g), vColor.b))*(1.0 + .22*sin(ocTime*.7 + vOcP.x*.13 + vOcP.z*.19))*(.32 + 1.5*ocPane*ocPane)*vec3(1.5, 1.05, .6)*(.55 + .45*texture(tOcNoise, floor(vOcP.xz*.5)*.07 + floor(vOcP.y*.4)*.13).r);
+        ocGlow *= max(ocNight, mix(1.0, mix(.7, 1.0, 1.0 - smoothstep(-125.0, -75.0, vOcP.y)), 1.0 - smoothstep(-6.0, -1.0, vOcP.y)))*exp(-(ocKv - ocKv.g)*.4*length(vOcP - cameraPosition)); }`,      // under the water a window is a lamp only where the day's light has gone (city_glsl.js, CITY_GLOW)
     }),
     coral: () => look.patch(lit({ vertexColors: true }), {
       wrap: .55, key: 'coral',
@@ -772,6 +773,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
+  { const add = dressReefCity(cityPlan.cities, cityPlan.sets || {}, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }
   { const busy = new Set(), K = (x, y) => Math.floor(x / 10) * 100003 + Math.floor(y / 10); for (const c of (data.colliders || []).concat(cityPlan.colliders)) { if (c.z1 < .5) continue; const r = c.t === 'cyl' ? c.r : Math.hypot(c.hx, c.hy); if (r > 40) continue; for (let dx = -r - 3; dx <= r + 3; dx += 8) for (let dy = -r - 3; dy <= r + 3; dy += 8) busy.add(K(c.x + dx, c.y + dy)); }
     data.instances.grass_tuft = (data.instances.grass_tuft || []).concat(dressDunes({ data, heightAt, skip: (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R + 10 || busy.has(K(x, y)) })); }
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;

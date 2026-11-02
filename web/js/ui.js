@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'Beaches now run from sand through dune grass to green. Running leans into speed and turns';
+const NEWS = 'The drowned cities glow now: dark water, lit windows, rims of light, streams of light down the avenues, coral and kelp on the streets';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };

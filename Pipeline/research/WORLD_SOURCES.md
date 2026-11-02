@@ -12,6 +12,8 @@ Real sites: Pavlopetri (roof tiles at 3-4 m), Baiae (mosaics under sand, gas bub
 - Growth follows exposure: tops and edges grow, silted flats and interiors stay poor.
 - God rays as cone meshes (threex.volumetricspotlight, MIT).
 
+Frames of the best drowned cities, studied 2 Nov, overruled the first reading: what makes them rich is **contrast**: dark water and thousands of points of light. Lit windows, lines of light on the buildings, vivid glowing coral, and streams of moving light along the avenues. Flat bright teal is what reads as bland.
+
 ## Procedural buildings
 
 A shape grammar, our own code in the form CGA made standard: Lot, Mass, Facade, Floor, Bay; split and comp; a seed per lot; terminals are palette meshes. WFC (MIT) and hex-map-wfc (MIT) show adjacency and one-palette batching. Kenney and Quaternius kits are CC0, for reference.
