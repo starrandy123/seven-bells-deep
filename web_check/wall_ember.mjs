@@ -114,6 +114,26 @@ await section(['E21'], async () => {
   line('E21', r.top >= 15 && r.top <= 60 && r.c.burning === 0 && r.c.burnt > 60 && r.c.burnt < 900 && r.black.scorch > 200 && r.wet.wet > 10 && r.wet2.st !== 2 && r.ice.frost > 200 && r.iceAfter.frost === 0 && r.after.burnt === 0 && !real.length, `${r.top} cells at the peak, ${r.c.burnt} burnt and out of ${r.c.fuel} fuel; soaked ground took no fire (${r.wet2.st}); frost ${r.ice.frost} then ${r.iceAfter.frost}; ${r.after.burnt} still burnt after two minutes; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the flight law: the stick points him, Fly pushes him along the nose, let go and he hovers
+await section(['E22'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, V = h.pos.constructor, step = (s) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) G.frame(1 / 60); }, wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    G.ember.setSide('fire', { place: false, quiet: true }); const up = (y = 80) => { h.endFly(); h.pos.set(700, y, 300); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; };
+    up(); G.camYaw = 0.5; Q.drive({ boost: true, mx: 0, my: 0 }); step(3); const y0 = h.nYaw, a = { fly: h.fly, sp: h.vel.length(), turn: Math.abs(wrap(h.heading - 0.5)) };
+    Q.drive({ boost: true, mx: 1, my: 0 }); step(1.6); let slip = 0; for (let i = 0; i < 90; i++) { G.frame(1 / 60); slip = Math.max(slip, Math.acos(Math.min(1, h.vel.clone().normalize().dot(h.noseV)))); } const b = { turned: wrap(y0 - h.nYaw), bank: h.nBank, slip: slip * 57.3 };
+    Q.drive({ boost: true, mx: 0, my: 0 }); step(2); const c = { bank: h.nBank };
+    Q.drive({ boost: false, mx: 0, my: 0 }); step(4.5); const d = { sp: h.vel.length(), fly: h.fly };
+    const p0 = h.nPitch; Q.drive({ boost: false, mx: 0, my: -1 }); step(0.5); const e = { up: h.nPitch - p0 }; Q.drive({ boost: false, mx: 0, my: 0 }); step(1); const p1 = h.nPitch; G.settings.invertFlight = true; Q.drive({ boost: false, mx: 0, my: -1 }); step(0.4); e.inv = h.nPitch - p1; G.settings.invertFlight = false; Q.drive({ boost: false, mx: 0, my: 0 }); step(0.3);
+    G.combat.log.length = 0; const y1 = h.pos.y; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: true }); step(2); const f = { fell: y1 - h.pos.y, dodges: G.combat.log.filter((x) => x.type === 'air_dodge').length }; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: false }); step(0.3);
+    up(); G.camYaw = 0; Q.drive({ boost: true, mx: 0, my: 1 }); step(0.8); const g = { pitch: h.nPitch, latch: h.latch };
+    return { a, b, c, d, e, f, g };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), { a, b, c, d, e, f, g } = r;
+  line('E22', a.fly && a.sp > 20 && a.turn < 0.02 && b.turned > 0.6 && b.bank > 0.9 && b.slip < 10 && Math.abs(c.bank) < 0.05 && d.sp < 1 && d.fly && e.up > 0.1 && e.inv < -0.05 && f.fell > 4 && !f.dodges && g.pitch > -0.02 && !real.length, `Fly alone flew straight at ${a.sp.toFixed(0)} m/s; full stick turned ${(b.turned * 57.3).toFixed(0)}° on a ${(b.bank * 57.3).toFixed(0)}° bank with the nose ${b.slip.toFixed(1)}° off his path; wings came level (${(c.bank * 57.3).toFixed(1)}°); let go: ${d.sp.toFixed(2)} m/s, still flying; pull back raised the nose ${(e.up * 57.3).toFixed(0)}°, inverted ${(e.inv * 57.3).toFixed(0)}°; Jump held fell ${f.fell.toFixed(1)} m with ${f.dodges} dodges; a thumb held up through the start kept the nose at ${(g.pitch * 57.3).toFixed(0)}°; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

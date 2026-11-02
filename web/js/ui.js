@@ -6,7 +6,7 @@ import { readSave } from './save.js';
 import { createScreens } from './screens.js';
 
 const $ = (id) => document.getElementById(id);
-export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 1, difficulty: 'normal', toggleBoost: false };
+export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 1, difficulty: 'normal', toggleBoost: false, invertFlight: false };
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
@@ -97,7 +97,8 @@ export function createUI(G) {
     const R = 54, d = Math.hypot(x, y), k = d > R ? R / d : 1; x *= k; y *= k;
     nub.style.transform = `translate(${x}px,${y}px)`; sx = x / R; sy = -y / R;
   };
-  const stickFrom = (e) => { setStick(e.clientX - sox, e.clientY - soy); };
+  // in flight the stick's base follows a thumb past the rim, so a reversal is never more than two radii
+  const stickFrom = (e) => { let x = e.clientX - sox, y = e.clientY - soy; const d = Math.hypot(x, y); if (d > 54 && G.hero && G.hero.fly && !G.hero.skim) { const k = 1 - 54 / d; sox += x * k; soy += y * k; x -= x * k; y -= y * k; } setStick(x, y); };
   stick.addEventListener('pointerdown', (e) => {
     stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (_) {} const r = stick.getBoundingClientRect();
     sox = r.left + r.width / 2; soy = r.top + r.height / 2; stickFrom(e); G.audio.start(); e.stopPropagation();

@@ -24,6 +24,7 @@ export function createCombat(G, h, api) {
   let stickX = 0, stickY = 0, stickUD = 0;
   function stickDir(out) {
     if (Math.hypot(stickX, stickY) + Math.abs(stickUD) < 0.15) return null;
+    if (h.fly && !h.skim) return out.copy(h.noseV);      // in flight the stick points his nose: a blow goes the way he's pointing
     const cy = Math.cos(G.camYaw), sy = Math.sin(G.camYaw), onLand = h.land && !h.air, cp = onLand ? 1 : Math.cos(G.camPitch), sp = onLand ? 0 : Math.sin(G.camPitch);
     out.set(sy * cp * stickY - cy * stickX, sp * stickY + (onLand ? 0 : stickUD), cy * cp * stickY + sy * stickX);
     return out.lengthSq() > 1e-4 ? out.normalize() : null;

@@ -100,6 +100,7 @@ export function createScreens(G, ui) {
     h += `<div class="row"><div class="g"><b>Bright flashes</b><small>Off softens every flash</small></div>${seg('flash', [[true, 'On'], [false, 'Reduced']])}</div>`;
     if (!canSave()) h += '<div class="row"><div class="g"><b>This browser is not keeping saves</b><small>Your progress lasts until you close the page.</small></div></div>';
     h += `<div class="row"><div class="g"><b>Boost</b><small>Toggle means one press, not a held thumb</small></div>${seg('toggleBoost', [[false, 'Hold'], [true, 'Toggle']])}</div>`;
+    h += `<div class="row"><div class="g"><b>Invert flight</b><small>Off is as in a flight sim: pull back to climb</small></div>${seg('invertFlight', [[false, 'Off'], [true, 'On']])}</div>`;
     if (!TOUCH) {
       const names = { atk: 'Strike', dash: 'First power', spin: 'Second power', wave: 'Third power', p4: 'Fourth power', stance: 'Stance', parry: 'Parry', call: 'Call of the Deep', cast: 'Cast the trident', ride: 'Talk, ride, use', map: 'Map' };
       h += '<div class="sect">Keys</div>' + Object.keys(names).map((a) => `<div class="row"><div class="g"><b>${names[a]}</b></div><button class="btn2" data-key="${a}">${waiting === a ? 'Press a key' : esc(String(s.keys[a]).replace(/^Key|^Digit/, ''))}</button></div>`).join('');

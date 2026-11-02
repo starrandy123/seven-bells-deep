@@ -467,10 +467,15 @@ export async function createHero(G) {
   }
 
   // the fire side's flight, as Randy set it, 1 Nov: "We activate flight with the boost and jump and at that moment, the boost button turns into the fly button and they can choose to fly after that. The jump button can be held to glide down with fire at that moment"; and 2 Nov: "The movement for flight must be more graceful and fluid ... We also need hover too". Sources: Pipeline/research/FLIGHT_SOURCES.md.
-  // Randy, 2 Nov: "Boost, hold it like the water, jump to do big fire jump and while in the air, the boost button becomes fly and we can press and hold that to fly or even hover". Boost held on the ground runs on the jets, a hand's width off it, leaning into it. Jump from there is a big fire jump. In the air Boost reads Fly: held, he goes where he looks with the stick, and with no stick he hovers. Let go and he falls, unless Jump is held, which glides him down. A blow in the air keeps him up long enough to land it, so a thumb can leave Fly to fight
+  // Randy, 2 Nov: "Boost, hold it like the water, jump to do big fire jump and while in the air, the boost button becomes fly and we can press and hold that to fly or even hover". Boost held on the ground runs on the jets, a hand's width off it, leaning into it. Jump from there is a big fire jump. In the air Boost reads Fly.
+  // Randy, 2 Nov: "The flight controls need to match actual flight simulator games with the joystick being used to point in the direction the user wants with the same control types and the fly is just to move forward". The stick points him: X banks and the bank turns him, Y moves the nose, pull back to climb, and one setting inverts it. Let go of X and the wings level, let go of Y and the nose stays. Fly pushes him along the nose. Let go of Fly and he holds a hover, so a thumb can leave it to fight. Jump tapped dodges, held takes him down. Pipeline/research/FLIGHT_SOURCES.md
   // Newton: thrust, drag and gravity, summed, so he carries his speed and a turn at speed is a carved arc. The velocity follows its goal on Daniel Holden's character spring (Spring-It-On, MIT), so the acceleration never jumps
   // The body has two shapes and goes between them with his speed (Pipeline/research/FLIGHT_SOURCES.md). Slow, he stands on his jets, tipped toward what he's asking of them. Fast, he's an arrow: head first along his path, a few degrees nose up, and the lift that turns him comes off his back, so he rolls about his length to aim it, as an aircraft banks. The face looks where he's going
-  const FLY = { cruise: 24, boost: 44, skim: 21, skimH: 0.3, glide: 4, carry: 16, grip: 26, hlHover: 0.3, hlFast: 0.6, hlStop: 0.8, hlBody: 0.2, arrow0: 7, arrow1: 20, nose: 0.15, flare: 5, look: 1.5, stall: 0.75, stopRise: 7, slide: 0.32 }, LAUNCH = { dip: 0.11, t: 0.5, up: 26, g: 11 };
+  const FLY = { cruise: 24, boost: 44, skim: 21, skimH: 0.3, glide: 4, carry: 16, grip: 26, hlHover: 0.3, hlFast: 0.6, hlStop: 0.8, hlBody: 0.2, arrow0: 7, arrow1: 20, nose: 0.15, flare: 5, stopRise: 7, slide: 0.32 }, LAUNCH = { dip: 0.11, t: 0.5, up: 26, g: 11 };
+  // stick: radial dead zone, then expo on Y only, as tan(bank) is already X's curve. 69° is FLY.grip as a bank. nose rates cap at FLY.grip / speed. All of it in the flight sources
+  const STICK = { dead: 0.1, edge: 0.95, expoY: 0.5, latch: 0.3, latchMax: 1.2, pushed: 0.25, tap: 0.16 }, NOSE = { bankMax: 1.204, hlIn: 0.16, hlOut: 0.28, vTurn: 10, qHover: 1.571, tauQ: 0.08, push: 0.5, pitchMax: 1.396, band: 0.14, hlBand: 0.6, floorLo: 3, floorHi: 25 }, THRUST = { climb: 0.22, bleed: 0.18, tauCarve: 0.12, coast: 0.5 }, DOWN = { perM: 0.12, max: 16, settle: 3 }, VIEW = { chase: 6, roll: 0.3, idle: 1.2, hlBack: 0.3 };
+  const nose = h.noseV = new THREE.Vector3(0, 0, 1), flyPrev = new THREE.Vector3(), moved0 = new THREE.Vector3(), fbS = new THREE.Vector3(), calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  h.nYaw = 0; h.nPitch = 0; h.nBank = 0; h.nBankV = 0; h.nQ = 0; h.flySp = 0; h.flySpA = 0; h.flyOff = 0; h.lookYaw = 0; h.lookPitch = 0; h.lookIdle = 9; h.latch = false; h.latchT = 0; h.jumpT = 0; h.jumpSpent = false; h.flyDown = false;
   const flyA = new THREE.Vector3(), flyGoal = new THREE.Vector3(), flyDir = new THREE.Vector3(0, 0, 1), flyP = new THREE.Vector3(), flyAx = new THREE.Vector3(), flyW = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
   const fbX = new THREE.Vector3(), fbY = new THREE.Vector3(), fbZ = new THREE.Vector3(), fbF = new THREE.Vector3(), fbL = new THREE.Vector3(), fbB = new THREE.Vector3(), fbM = new THREE.Matrix4(), fbQ = new THREE.Quaternion(), fbD = new THREE.Quaternion(), fbJ0 = new THREE.Vector3(), fbJ1 = new THREE.Vector3(), fbR = new THREE.Vector3();
   h.flyQ = new THREE.Quaternion(); h.flyUp = new THREE.Vector3(0, 1, 0); h.flyLook = new THREE.Vector3(0, 0, 1); h.flyThrottle = 0; h.flyLat = 0; h.flyBrake = 0;
@@ -488,11 +493,13 @@ export async function createHero(G) {
   // where the body wants to be this frame, and the spring that takes it there. settle (0-1): how far the ground has him stood back up
   function flyBody(dt, settle = 0) {
     const sp = h.vel.length(), s = smooth(FLY.arrow0, FLY.arrow1, sp) * (1 - settle), fx = Math.sin(h.heading), fz = Math.cos(h.heading);
-    fbY.copy(flyA).multiplyScalar(0.55); fbY.y += 9.81; fbY.normalize(); fbZ.set(fx, 0, fz); h.flyLook.set(fx, 0, fz);
+    const air = h.fly && !h.skim; fbY.copy(flyA).multiplyScalar(0.55); fbY.y += 9.81; fbY.normalize(); fbZ.set(fx, 0, fz); if (air) h.flyLook.copy(nose); else h.flyLook.set(fx, 0, fz);
     if (sp > 1) {
-      fbF.copy(h.vel).divideScalar(sp); if (h.fly) h.flyLook.lerp(fbF, smooth(5, 14, sp)); h.flyLook.x += fz * h.flyLat * 0.18; h.flyLook.z -= fx * h.flyLat * 0.18; h.flyLook.normalize();
+      fbF.copy(h.vel).divideScalar(sp); if (air) fbF.copy(nose); else if (h.fly) h.flyLook.lerp(fbF, smooth(5, 14, sp)); h.flyLook.x += fz * h.flyLat * 0.18; h.flyLook.z -= fx * h.flyLat * 0.18; h.flyLook.normalize();
       if (s > 0) {
-        fbL.copy(flyA); fbL.y += 9.81; fbL.x -= fx * 4 * fbF.y; fbL.z -= fz * 4 * fbF.y; fbL.addScaledVector(fbF, -fbL.dot(fbF)).normalize();
+        // in flight he's an arrow along the nose, and the lift off his back leans with the bank
+        if (air) { fbS.set(-fz, 0, fx); fbL.copy(UPV).addScaledVector(fbF, -fbF.y).normalize().multiplyScalar(Math.cos(h.nBank)).addScaledVector(fbS, Math.sin(h.nBank)).normalize(); }
+        else { fbL.copy(flyA); fbL.y += 9.81; fbL.x -= fx * 4 * fbF.y; fbL.z -= fz * 4 * fbF.y; fbL.addScaledVector(fbF, -fbL.dot(fbF)).normalize(); }
         fbB.copy(fbF).multiplyScalar(Math.cos(FLY.nose)).addScaledVector(fbL, Math.sin(FLY.nose)); fbY.lerp(fbB, s).normalize(); fbL.negate(); fbZ.lerp(fbL, s);
       }
     }
@@ -503,9 +510,13 @@ export async function createHero(G) {
     h.flyQ.setFromAxisAngle(UPV, h.heading); h.flyUp.copy(UPV); flyW.set(0, 0, 0); flyA.set(0, 0, 0); h.flyLat = 0; h.flyBrake = 0;
     h.fireAir = true; h.launchT = 0; h.air = true; h.land = false; h.grounded = false; h.breach = null; h.jumps = 2; h.jumpHold = false; h.plunge = false; h.apexY = h.pos.y; h.driveT = 0; h.porpoise = null; h.flyPress = -1;
     body.inertia(0.1); G.fx.ring(new THREE.Vector3(h.pos.x, Math.max(h.pos.y - STAND + 0.1, 0.05), h.pos.z), 5, 0.55, 0xffd9a8, UP_AXIS); G.fx.sparks(h.pos.clone().setY(h.pos.y - STAND + 0.1), 18, 0xffa040, 8); G.audio.fwoosh(); G.shake(0.14); G.combat.log.push({ t: G.time, type: 'launch' });
-    G.combat.teach('takeoff', 'In the air', 'Hold Fly to fly or hover. Hold Jump to glide down');
+    G.combat.teach('takeoff', 'In the air', 'Stick points him, pull back to climb. Hold Fly to go, let go to hover');
   }
-  function startFly() { h.fly = true; h.glide = false; h.jumps = 2; h.apexY = h.pos.y; h.flyRun = 0; flyA.set(0, 0, 0); if (h.vel.lengthSq() > 1) flyDir.copy(h.vel).normalize(); body.inertia(0.3); G.audio.swing(); G.combat.log.push({ t: G.time, type: 'fly' }); }
+  function startFly(u) {
+    h.fly = true; h.glide = false; h.jumps = 2; h.apexY = h.pos.y; h.flyRun = 0; flyA.set(0, 0, 0); const V = h.vel.length(); if (V > 1) flyDir.copy(h.vel).divideScalar(V);
+    // the nose starts where he's going, a little up, so Fly with no stick climbs gently. A thumb still pushing up from the ground doesn't dive him: Y waits until it comes back to the middle
+    h.nYaw = V > 5 ? Math.atan2(h.vel.x, h.vel.z) : G.camYaw; h.nPitch = clamp(V > 5 ? Math.asin(clamp(h.vel.y / V, -1, 1)) : 0, 0, 0.52); if ((h.launchT ?? 9) < 2) h.nPitch = Math.max(h.nPitch, 0.21);
+    h.nBank = 0; h.nBankV = 0; h.nQ = 0; h.flySp = V; h.flySpA = 0; h.flyOff = 0; h.lookYaw = 0; h.lookPitch = 0; h.lookIdle = 9; h.latch = Math.abs(u.my || 0) > STICK.latch; h.latchT = 0; h.jumpT = 0; h.jumpSpent = false; h.flyDown = false; body.inertia(0.3); G.audio.swing(); G.combat.log.push({ t: G.time, type: 'fly' }); }
   function startSkim() {
     h.skim = true; h.fireAir = true; h.fly = true; h.air = true; h.land = false; h.grounded = false; h.launchT = 9; h.jumps = 2; h.flyRun = 0; h.breach = null; h.driveT = 0; h.porpoise = null; flyA.set(0, 0, 0); flyW.set(0, 0, 0); h.flyQ.setFromAxisAngle(UPV, h.heading); h.flyUp.copy(UPV); flyDir.set(Math.sin(h.heading), 0, Math.cos(h.heading));
     body.inertia(0.16); G.fx.ring(new THREE.Vector3(h.pos.x, Math.max(h.pos.y - STAND + 0.1, 0.05), h.pos.z), 3, 0.4, 0xffd9a8, UP_AXIS); G.audio.fwoosh(); G.combat.log.push({ t: G.time, type: 'skim' });
@@ -514,8 +525,7 @@ export async function createHero(G) {
   // the buttons: see above. Runs every step on the fire side
   function fireKeys(u, held, dt) {
     if (h.climb || h.ride || h.dead) return;
-    const lifting = h.fireAir && !h.skim && (h.launchT ?? 9) < LAUNCH.t; h.stallT = Math.max(0, (h.stallT || 0) - dt); if (h.air && (h.state === 'attack' || h.state === 'parry')) h.stallT = FLY.stall;
-    const onIt = u.boost || h.stallT > 0;
+    const lifting = h.fireAir && !h.skim && (h.launchT ?? 9) < LAUNCH.t;
     if (!h.air) {
       if (h.fireAir) { h.fireAir = false; h.fly = false; h.glide = false; }
       // out of the sea on the jets, at a price: a man with no tide left has to swim for it
@@ -529,9 +539,8 @@ export async function createHero(G) {
       if (h.jumpBuf > 0) { h.jumpBuf = 0; h.skim = false; h.fly = false; launch(); h.launchT = LAUNCH.dip; } else if (h.skimOff > FLY.slide) stopSkim();
     }
     else if (!lifting) {
-      if (h.fly && h.jumpBuf > 0 && h.dodgeCool <= 0) { h.jumpBuf = 0; airDodge(u); }
-      if (onIt && !h.fly && (h.vel.y < FLY.stopRise || !h.fireAir || u.my > 0.3)) { h.fireAir = true; startFly(); }
-      else if (!onIt && h.fly) { h.fly = false; h.apexY = h.pos.y; flyW.set(0, 0, 0); }
+      if (h.fly) flyButtons(u, dt);
+      else if (u.boost && (h.vel.y < FLY.stopRise || !h.fireAir || u.my > 0.3)) { h.fireAir = true; startFly(u); }
     }
     h.glide = h.fireAir && !h.fly && held && h.vel.y < 3 && (h.launchT ?? 9) >= LAUNCH.t;
     h.flyPose = h.fireAir && (h.fly || h.glide || (h.launchT ?? 9) < 1.1); if (h.flyPose && !h.fly) { h.flyThrottle = h.glide ? 0.42 : (h.launchT ?? 9) < LAUNCH.t ? 1 : 0.5; h.flyLat = damp(h.flyLat, 0, 5, dt); h.flyBrake = damp(h.flyBrake, 0, 5, dt); flyA.multiplyScalar(Math.exp(-6 * dt)); flyBody(dt); }
@@ -539,25 +548,81 @@ export async function createHero(G) {
   // the dodge in the air (Randy, 2 Nov: "Make sure users can dodge while in the air"): a tap of Jump while he holds Fly. A burst from the jets the way the stick says, a roll round his own length, and for its first part nothing touches him
   const AIR_DODGE = { s: 0.36, mps: 34, inv: 0.26, again: 0.5 }; h.dodgeT = 0; h.dodgeCool = 0; h.dodgeSide = 1; const dodgeDir = new THREE.Vector3(); h.dodgeDir = dodgeDir;
   function airDodge(u) {
-    const fx = Math.sin(G.camYaw), fz = Math.cos(G.camYaw), mx = u.mx || 0, my = u.my || 0; dodgeDir.set(-fz * mx + fx * my, 0, fx * mx + fz * my);
-    if (dodgeDir.lengthSq() < 0.04) { h.dodgeSide = -h.dodgeSide; dodgeDir.set(-fz * h.dodgeSide, 0, fx * h.dodgeSide); } else { dodgeDir.normalize(); h.dodgeSide = mx >= 0 ? 1 : -1; }
+    // in the nose's own plane: left, right, up or down. Forward is Fly's job. Stick centred goes to the other side each time
+    const fx = Math.sin(h.nYaw), fz = Math.cos(h.nYaw), mx = u.mx || 0, my = (G.settings.invertFlight ? 1 : -1) * (u.my || 0); fbS.set(-fz, 0, fx); fbL.copy(UPV).addScaledVector(nose, -nose.y).normalize(); dodgeDir.copy(fbS).multiplyScalar(mx).addScaledVector(fbL, my);
+    if (dodgeDir.lengthSq() < 0.04) { h.dodgeSide = -h.dodgeSide; dodgeDir.copy(fbS).multiplyScalar(h.dodgeSide); } else { dodgeDir.normalize(); h.dodgeSide = mx >= 0 ? 1 : -1; }
     h.dodgeT = AIR_DODGE.s; h.dodgeCool = AIR_DODGE.again; h.inv = Math.max(h.inv, AIR_DODGE.inv); G.fx.dodge && G.fx.dodge(h.pos, dodgeDir, 'water'); G.audio.fwoosh && G.audio.fwoosh(); G.combat.log.push({ t: G.time, type: 'air_dodge' });
+  }
+  // the left thumb: radial dead zone, rescaled, then the curve. Pull back is nose up
+  const stickOut = { sx: 0, pull: 0 };
+  function shapeStick(u, dt) {
+    stickOut.sx = 0; stickOut.pull = 0; const mx = u.mx || 0, my = u.my || 0, m = Math.hypot(mx, my); if (m < STICK.dead) { h.latch = false; return stickOut; }
+    const k = Math.min(1, (m - STICK.dead) / (STICK.edge - STICK.dead)), x = (mx / m) * k, y = (my / m) * k, e = STICK.expoY, yy = (1 - e) * y + e * y * y * y; stickOut.sx = x; stickOut.pull = G.settings.invertFlight ? yy : -yy;
+    if (h.latch) { h.latchT += dt; if (Math.abs(my) < STICK.latch || h.latchT > STICK.latchMax) h.latch = false; else stickOut.pull = 0; }
+    return stickOut;
+  }
+  // Jump in flight: with the stick pushed a press dodges at once; centred, a tap dodges on release and a hold goes down, and a press that dodged never turns into a descent
+  function flyButtons(u, dt) {
+    const pushed = Math.hypot(u.mx || 0, u.my || 0) > STICK.pushed;
+    if (h.jumpBuf > 0 && pushed && h.dodgeCool <= 0) { h.jumpBuf = 0; airDodge(u); h.jumpSpent = true; }
+    if (u.jumpHeld) h.jumpT += dt;
+    else { if ((h.jumpBuf > 0 || h.jumpT > 0) && h.jumpT < STICK.tap && !h.jumpSpent && h.dodgeCool <= 0) airDodge(u); h.jumpT = 0; h.jumpSpent = false; h.jumpBuf = 0; }
+    h.flyDown = !!u.jumpHeld && h.jumpT >= STICK.tap && !h.jumpSpent;
+  }
+  // a critically damped spring on one number (simple_spring_damper_exact, Spring-It-On, MIT)
+  function damper(o, x, v, goal, hl, dt) { const y = (2 * 0.69314718) / hl, j0 = o[x] - goal, j1 = o[v] + j0 * y, e = Math.exp(-y * dt); o[x] = e * (j0 + j1 * dt) + goal; o[v] = e * (o[v] - j1 * y * dt); }
+  function stepFlight(u, dt) {
+    const V = h.vel.length(), g0 = groundAt(h.pos.x, h.pos.z), clear = h.pos.y - Math.max(g0, 0) - STAND, striking = h.state === 'attack' || h.state === 'parry';
+    // 1. the hands. Thrust stays on a moment after the thumb leaves, so it can reach Jump or Strike and come back
+    h.flyOff = u.boost ? 0 : h.flyOff + dt; const fly = h.flyOff <= FLY.slide, st = striking ? null : shapeStick(u, dt), sx = st ? st.sx : 0, pull = st ? st.pull : 0;
+    // 2. the nose. The bank turns him: rate = g tan(bank) / speed, as a real turn, with a floor on the speed so the same law turns him on the spot in a hover. A pull works round his own wings, so a pull in a bank tightens the turn
+    damper(h, 'nBank', 'nBankV', sx * NOSE.bankMax, sx ? NOSE.hlIn : NOSE.hlOut, dt);
+    const push = pull < 0 ? 1 - NOSE.push * smooth(FLY.arrow0, FLY.arrow1, V) : 1; h.nQ += (pull * Math.min(NOSE.qHover, FLY.grip / Math.max(V, 1e-3)) * push - h.nQ) * (1 - Math.exp(-dt / NOSE.tauQ));
+    const c = Math.cos(h.nPitch), sb = Math.sin(h.nBank); let dYaw = ((9.81 * Math.tan(h.nBank)) / Math.max(V, NOSE.vTurn)) * Math.max(c, 0.35) + (h.nQ * sb) / Math.max(c, 0.2), dPitch = h.nQ * Math.cos(h.nBank);
+    const lim = FLY.grip / Math.max(V, NOSE.vTurn), r = Math.hypot(dYaw * c, dPitch); if (r > lim) { dYaw *= lim / r; dPitch *= lim / r; }
+    if (striking) { h.nYaw = h.heading; h.nPitch = damp(h.nPitch, h.pitchT, 14, dt); h.nQ = 0; }
+    else { h.nYaw = wrap(h.nYaw - dYaw * dt); h.nPitch = clamp(h.nPitch + dPitch * dt, -NOSE.pitchMax * smooth(NOSE.floorLo, NOSE.floorHi, clear), NOSE.pitchMax); if (!pull && Math.abs(h.nPitch) < NOSE.band) h.nPitch *= Math.exp((-0.693 / NOSE.hlBand) * dt); }
+    nose.set(Math.sin(h.nYaw) * Math.cos(h.nPitch), Math.sin(h.nPitch), Math.cos(h.nYaw) * Math.cos(h.nPitch));
+    // 3. the goal. Fly only pushes him along the nose, harder the longer it's held. Climbing costs speed, diving adds it, a hard turn bleeds some
+    h.flyRun = fly ? (h.flyRun || 0) + dt : Math.max(0, (h.flyRun || 0) - dt * 2);
+    const top = (FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * (G.turf ? G.turf.speed() : 1), share = Math.abs(Math.tan(h.nBank)) / Math.tan(NOSE.bankMax); flyGoal.copy(nose).multiplyScalar(fly ? top * (1 - THRUST.climb * nose.y) * (1 - THRUST.bleed * share) : 0);
+    const overLand = g0 > SWIM_Y - STAND - 0.1, down = h.flyDown || (!fly && overLand && clear < DOWN.settle);
+    if (down) { const fl = Math.hypot(flyGoal.x, flyGoal.z); if (fl > FLY.carry) { flyGoal.x *= FLY.carry / fl; flyGoal.z *= FLY.carry / fl; } flyGoal.y = -clamp(FLY.glide + DOWN.perM * clear, FLY.glide, DOWN.max); }
+    else { const ahead = Math.max(groundAt(h.pos.x + h.vel.x * 0.9, h.pos.z + h.vel.z * 0.9), 0) + STAND + 2 - h.pos.y; if (ahead > 0) flyGoal.y = Math.max(flyGoal.y, ahead * 2); }
+    const low = smooth(0.4, FLY.flare, clear); if (flyGoal.y < 0) flyGoal.y *= 0.3 + 0.7 * low;
+    // 4. the carve: direction and speed apart. With the whole velocity on one spring the path trails the nose by 35° and he skids; apart it's under 8°
+    if (striking) { h.flySp = V; if (V > 1) flyDir.copy(h.vel).divideScalar(V); flyA.multiplyScalar(Math.exp(-6 * dt)); }
+    else {
+      const gl = flyGoal.length();
+      if (gl > 1) { flyP.copy(flyGoal).divideScalar(gl); if (V < 4) flyDir.copy(flyP); else { const ang = flyDir.angleTo(flyP), most = Math.min((FLY.grip * (fly ? 1 : THRUST.coast)) / V, ang / THRUST.tauCarve) * dt; if (ang <= most) flyDir.copy(flyP); else { flyAx.crossVectors(flyDir, flyP); if (flyAx.lengthSq() < 1e-6) flyAx.set(0, 1, 0); flyDir.applyAxisAngle(flyAx.normalize(), most).normalize(); } } }
+      const hl = gl < V * 0.7 ? FLY.hlStop * smooth(2, 20, V) + FLY.hlHover * (1 - smooth(2, 20, V)) : FLY.hlHover + (FLY.hlFast - FLY.hlHover) * smooth(4, 26, V);
+      damper(h, 'flySp', 'flySpA', gl, hl, dt); if (h.flySp < 0) h.flySp = 0; flyPrev.copy(h.vel); h.vel.copy(flyDir).multiplyScalar(h.flySp); flyA.copy(h.vel).sub(flyPrev).divideScalar(Math.max(dt, 1e-4)); if (flyA.lengthSq() > 3600) flyA.setLength(60);
+    }
+    // 5. move. A wall takes his speed, or he'd press into it at 44 m/s and shoot off its end
+    moved0.copy(h.pos); slide(h.vel.x * dt, h.vel.y * dt, h.vel.z * dt, 0.42, false);
+    { const t = terrain(h.pos.x, h.pos.z) + 0.42; if (h.pos.y < t) h.pos.y = t; } h.apexY = h.pos.y;
+    if (!striking) { const m = h.pos.distanceTo(moved0) / Math.max(dt, 1e-4); if (m < h.flySp - 2) h.flySp = m + 2; }
+    // 6. the view sits behind the nose by itself, so the right thumb never has to steer. A drag looks round, and eases back
+    h.lookIdle += dt; if (h.lookIdle > VIEW.idle) { const k = Math.exp((-0.693 / VIEW.hlBack) * dt); h.lookYaw *= k; h.lookPitch *= k; }
+    const cc = 1 - Math.exp(-VIEW.chase * dt); G.camYaw = wrap(G.camYaw + wrap(h.nYaw + h.lookYaw - G.camYaw) * cc); G.camPitch = clamp(G.camPitch + (h.nPitch + h.lookPitch - G.camPitch) * cc, -1.35, 1.2);
+    // 7. the body
+    h.flyLat = damp(h.flyLat, (h.nBank / NOSE.bankMax) * smooth(FLY.arrow0, FLY.arrow1, V), 5, dt); h.flyBrake = damp(h.flyBrake, V > 4 && !fly ? clamp(-flyA.dot(h.vel) / (V * 10), 0, 1) : 0, 4, dt); flyBody(dt, (1 - low) * (1 - smooth(6, 14, V))); h.flyThrottle = clamp(0.42 + flyA.length() / 40 + V / 90, 0.35, 1);
+    // 8. the ground
+    if (overLand && h.vel.y <= 0.6 && h.pos.y <= g0 + STAND + 0.2) { h.endFly(); landOn(g0); }
+    else if (h.pos.y < -0.2 && g0 < SWIM_Y - STAND) { h.endFly(); h.air = false; h.land = false; G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, -0.05, h.pos.z), 7, 1.1, 0xe8fbff); G.fx.bubbles(h.pos, 26, 1.6); }
   }
   function stepFly(u, dt, held, inputAmt) {
     h.dodgeCool = Math.max(0, h.dodgeCool - dt); if (h.dodgeT > 0) { h.dodgeT = Math.max(0, h.dodgeT - dt); const q = h.dodgeT / AIR_DODGE.s; h.pos.addScaledVector(dodgeDir, AIR_DODGE.mps * q * q * dt * 1.6); }
     if (h.state === 'attack' || h.state === 'parry') G.combat.stepAttack(dt);
+    if (!h.skim) { stepFlight(u, dt); return; }
     const sp = h.vel.length(), g0 = groundAt(h.pos.x, h.pos.z), floor = Math.max(g0, 0), clear = h.pos.y - floor - STAND;
-    // the goal: the way he looks with the stick, and the longer the stick stays pushed the harder the turbines run. No stick and he hovers; Jump held takes him down
+    // on the ground: the way he looks with the stick
     h.flyRun = inputAmt > 0.6 ? (h.flyRun || 0) + dt : Math.max(0, (h.flyRun || 0) - dt * 2);
     flyGoal.copy(wish).multiplyScalar((FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * inputAmt * (G.turf ? G.turf.speed() : 1));
     if (inputAmt < 0.08) flyGoal.set(0, 0, 0);
-    if (h.skim) {        // on the ground: level, at the ground's own height a little ahead of him, on the jets
+    {        // level, at the ground's own height a little ahead of him, on the jets
       const fl = wish.x * wish.x + wish.z * wish.z, k = fl > 1e-4 ? (FLY.skim * inputAmt) / Math.sqrt(fl) : 0; flyGoal.set(wish.x * k, 0, wish.z * k);
       const ax = h.pos.x + h.vel.x * 0.22, az = h.pos.z + h.vel.z * 0.22, floorA = Math.max(groundAt(ax, az), floor, 0); flyGoal.y = clamp((floorA + FLY.skimH + STAND * h.flyUp.y - h.pos.y) * 8, -7, 14);
-    } else {
-      if (held) { flyGoal.multiplyScalar(FLY.carry / Math.max(flyGoal.length(), FLY.carry)); flyGoal.y = -FLY.glide; }
-      // near the ground he looks ahead and rises over what's coming, and the last metres slow him: a soft set-down, never a crash
-      const ahead = Math.max(groundAt(h.pos.x + h.vel.x * 0.9, h.pos.z + h.vel.z * 0.9), 0) + STAND + 2 - h.pos.y; if (ahead > 0 && !held) flyGoal.y = Math.max(flyGoal.y, ahead * 2);
     }
     const low = smooth(0.4, FLY.flare, clear); if (flyGoal.y < 0) flyGoal.y *= 0.3 + 0.7 * low;
     // a turn at speed keeps its speed: the way he's aimed swings toward the way he's asked no faster than his grip on the air allows, so his path is an arc whatever the thumb does
@@ -577,10 +642,6 @@ export async function createHero(G) {
     const fx = Math.sin(h.heading), fz = Math.cos(h.heading); h.flyLat = damp(h.flyLat, clamp((flyA.x * fz - flyA.z * fx) / 18, -1, 1), 5, dt); h.flyBrake = damp(h.flyBrake, sp > 4 && gl < sp * 0.7 ? clamp(-(flyA.x * h.vel.x + flyA.y * h.vel.y + flyA.z * h.vel.z) / (sp * 10), 0, 1) : 0, 4, dt);
     flyBody(dt, h.skim ? 0.42 : (1 - low) * (1 - smooth(6, 14, sp)));
     h.flyThrottle = clamp(0.42 + flyA.length() / 40 + sp / 90, 0.35, 1);
-    const g1 = g0;
-    if (h.skim) return;
-    if (g1 > SWIM_Y - STAND - 0.1 && h.vel.y <= 0.6 && h.pos.y <= g1 + STAND + 0.2) { h.endFly(); landOn(g1); }
-    else if (h.pos.y < -0.2 && g1 < SWIM_Y - STAND) { h.endFly(); h.air = false; h.land = false; G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, -0.05, h.pos.z), 7, 1.1, 0xe8fbff); G.fx.bubbles(h.pos, 26, 1.6); }
   }
 
   // ------------------------------------------------------------------ thrown: a heavy blow gives him to the ragdoll (ragdoll.js), in the air, on the ground or in the sea. Numbers in combat.json `rag`
@@ -614,7 +675,8 @@ export async function createHero(G) {
     if (h.dead || h.state === 'cine') { h.vel.multiplyScalar(Math.exp(-2.5 * dt)); if (h.dead) h.vel.y -= 0.7 * dt; h.pos.addScaledVector(h.vel, dt); collide(0.5); u.atk = u.dash = u.spin = u.wave = u.parry = false; return; }
 
     // the look: the stick and the mouse turn the camera directly
-    G.camYaw = wrap(G.camYaw + u.yaw); G.camPitch = clamp(G.camPitch + u.pitch, -1.35, 1.2); if ((h.state === 'surf' || h.ride || h.breach) && !u.yaw) G.camYaw = wrap(G.camYaw + wrap(h.heading - G.camYaw) * (1 - Math.exp(-1.6 * dt)));
+    // in flight the view sits behind his nose: a drag is a look that eases back, and never steers him
+    if (h.fly && !h.skim) { if (u.yaw || u.pitch) { h.lookYaw = wrap(h.lookYaw + u.yaw); h.lookPitch = clamp(h.lookPitch + u.pitch, -1.2, 1.2); h.lookIdle = 0; } } else { G.camYaw = wrap(G.camYaw + u.yaw); G.camPitch = clamp(G.camPitch + u.pitch, -1.35, 1.2); } if ((h.state === 'surf' || h.ride || h.breach) && !u.yaw) G.camYaw = wrap(G.camYaw + wrap(h.heading - G.camYaw) * (1 - Math.exp(-1.6 * dt)));
     h.pitchBack = Math.max(0, (h.pitchBack || 0) - dt); if (!u.pitch && (h.breach || h.pitchBack > 0)) G.camPitch *= Math.exp(-4 * dt);      // the look comes level through a leap, so back in the water he doesn't swim where it was pointing
     u.yaw = 0; u.pitch = 0;
 
@@ -737,7 +799,8 @@ export async function createHero(G) {
     // the body follows the water: a heading, a pitch, a tilt from upright to streamlined, a bank into turns
     if (h.land && !h.air) { h.bank = damp(h.bank, 0, 8, dt); h.pitchT = damp(h.pitchT, 0, 8, dt); }
     else if (h.state === 'swim' || h.air) {
-      if (h.speed > 1.2) {
+      if (h.fly && !h.skim) { if (h.state !== 'attack' && h.state !== 'parry') h.heading = h.nYaw; h.pitchT = damp(h.pitchT, clamp(h.nPitch, -1.1, 1.1) * smooth(4, 14, h.speed), 3.4, dt); }
+      else if (h.speed > 1.2) {
         const y = Math.atan2(h.vel.x, h.vel.z), dy = wrap(y - h.heading);
         h.heading = wrap(h.heading + dy * (1 - Math.exp(-(h.fly ? 3.4 : 6.5) * dt)));
         if (!h.fly) h.bank = damp(h.bank, clamp(-dy * 1.1, -0.9, 0.9), 5, dt);
@@ -855,7 +918,7 @@ export async function createHero(G) {
     { const p = cam.position, ax = tx - p.x, ay = ty - p.y, az = tz - p.z, al = Math.hypot(ax, ay, az) || 1, cx = h.drawPos.x - p.x, cy = h.drawPos.y + 0.5 - p.y, cz = h.drawPos.z - p.z, cl = Math.hypot(cx, cy, cz) || 1, half = (cam.fov * Math.PI) / 360, most = Math.min(half, Math.atan(Math.tan(half) * cam.aspect)) * KEEP, ang = Math.acos(clamp((ax * cx + ay * cy + az * cz) / (al * cl), -1, 1));
       if (ang > most) { const k = most / ang; tx = p.x + ((cx / cl) * (1 - k) + (ax / al) * k) * al; ty = p.y + ((cy / cl) * (1 - k) + (ay / al) * k) * al; tz = p.z + ((cz / cl) * (1 - k) + (az / al) * k) * al; } }
     cam.lookAt(tx, ty, tz);
-    flyRoll = damp(flyRoll, h.flyPose ? (h.flyLat || 0) * 0.22 : 0, 6, dt); if (Math.abs(flyRoll) > 1e-3) cam.rotateZ(flyRoll);
+    flyRoll = damp(flyRoll, h.fly && !h.skim ? (calm ? 0 : -VIEW.roll * h.nBank * smooth(FLY.arrow0, FLY.arrow1, h.speed)) : h.flyPose ? (h.flyLat || 0) * 0.22 : 0, 6, dt); if (Math.abs(flyRoll) > 1e-3) cam.rotateZ(flyRoll);
     const fov = chase(C.fov, S.fov, shotK > 0.5 ? (cam.aspect < 1 ? 62 : SHOT_FOV) : (cam.aspect < 1 ? 70 : 58) + clamp(h.speed - 7, 0, 12) * (wet ? 0.3 : 0.8) + h.surge * (h.land ? 3 : wet ? 6 : 16) + tier * 1.5, dt);
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = fov; cam.updateProjectionMatrix(); }
   };

@@ -25,10 +25,10 @@ await section(['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'], async () => {
   const air = await page.evaluate(() => { const h = window.__game.hero; return { air: h.air, fireAir: h.fireAir, y: +h.pos.y.toFixed(1), label: document.getElementById('bBoost').textContent }; });
   const eased = ups.every((v, i) => !i || v >= ups[i - 1] - 3);
   line('S4', air.fireAir && air.label === 'Fly' && eased, `Boost and Jump take off, the lift eased in: speed up ${ups.join(' ')}, and Boost reads "${air.label}"`);
-  await page.evaluate(() => window.__qa.drive({ boost: true, my: 0, mx: 0 })); await page.waitForTimeout(3000);
+  await page.evaluate(() => window.__qa.drive({ boost: true, my: 0, mx: 0 })); await page.waitForTimeout(2600); await page.evaluate(() => window.__qa.drive({ boost: false, my: 0, mx: 0 })); await page.waitForTimeout(3600);
   const fly = await page.evaluate(() => { const h = window.__game.hero; return { fly: h.fly, y: +h.pos.y.toFixed(1), vy: +h.vel.y.toFixed(1) }; }); await page.waitForTimeout(700); const still = await page.evaluate(() => +window.__game.hero.pos.y.toFixed(1));
   await page.evaluate(() => window.__qa.drive({ boost: false, jumpHeld: true, my: 0, mx: 0 })); await page.waitForTimeout(900); const gl = await page.evaluate(() => { const h = window.__game.hero; return { vy: +h.vel.y.toFixed(1), y: +h.pos.y.toFixed(1), fly: h.fly }; }); await page.evaluate(() => window.__qa.drive({ jumpHeld: false, my: 0, mx: 0 }));
-  line('S5', fly.fly && Math.abs(still - fly.y) < 2.5 && !gl.fly && gl.vy < -1.5 && gl.vy > -6.5, `Fly held hovers him (${fly.y} then ${still} m), and let go with Jump held he glides down at ${gl.vy} m/s`);
+  line('S5', fly.fly && Math.abs(still - fly.y) < 2.5 && gl.fly && gl.vy < -1.5 && gl.vy > -17, `let go of Fly and he hovers (${fly.y} then ${still} m), and Jump held takes him down at ${gl.vy} m/s`);
   await page.evaluate(() => { const b = window.__game.ember; b.heroSuper(); }); await page.waitForTimeout(300);
   const sup = await page.evaluate(() => { const H = window.__game.ember.heroForm; return { man: H.man.visible, fire: H.fire.visible, t: H.sup }; }); line('S6', sup.fire && !sup.man, `Super: the all-fire form: ${JSON.stringify(sup)}`);
   await page.screenshot({ path: `${out}/super_fire.jpg`, type: 'jpeg', quality: 80 });
@@ -54,8 +54,9 @@ if (process.argv[3] === 'chromium') await section(['S9', 'S10'], async () => {
   await touch('touchStart', [f1]); await page.waitForTimeout(500); const a = await hero();
   await touch('touchStart', [f1, f2]); await page.waitForTimeout(100); await touch('touchMove', [f1]); await page.waitForTimeout(1200); const b = await hero(); await page.waitForTimeout(1200); const c = await hero();
   await touch('touchEnd', []); await page.waitForTimeout(1000); const d = await hero();
-  line('S9', a.skim && b.fireAir && c.fly && b.y > a.y + 4 && !d.fly, `two real fingers: Boost held runs on the jets (${a.skim}, label ${a.label}), a second finger on Jump launches him to ${b.y} m from ${a.y}, Boost still held flies (${c.fly}, label ${c.label}), let go and he falls (${d.fly})`);
-  await page.waitForTimeout(3500); const e = await hero();
+  line('S9', a.skim && b.fireAir && c.fly && b.y > a.y + 4 && d.fly && Math.abs(d.y - c.y) < 12, `two real fingers: Boost held runs on the jets (${a.skim}, label ${a.label}), a second finger on Jump launches him to ${b.y} m from ${a.y}, Boost still held flies (${c.fly}, label ${c.label}), let go and he hovers (${d.fly}, at ${d.y} m)`);
+  // Jump held takes him down, and back in the sea the same two thumbs work again
+  await touch('touchStart', [f2]); await page.waitForFunction(() => { const h = window.__game.hero; return !h.fly; }, null, { timeout: 12000 }).catch(() => {}); await touch('touchEnd', []); await page.waitForTimeout(600); const e = await hero();
   await touch('touchStart', [f1]); await page.waitForTimeout(450); const g = await hero(); await touch('touchEnd', []); await page.waitForTimeout(130); await touch('touchStart', [{ ...f2, id: 3 }]); await page.waitForTimeout(90); await touch('touchEnd', []); await page.waitForTimeout(900); const k = await hero();
   line('S10', g.skim && k.fireAir && k.y > e.y + 4, `one thumb slides from Boost to Jump in 130 ms and the jump still comes: ${e.y} to ${k.y} m`);
   await close();
