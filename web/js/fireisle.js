@@ -53,8 +53,9 @@ export function addIsle(data) {
   for (const s of data.schools || []) { const r = edge(s.x, s.y); if (r < 1.3) { const a = Math.atan2(s.y - ISLE.y, s.x - ISLE.x); s.x = ISLE.x + Math.cos(a) * ISLE.R * 1.5; s.y = ISLE.y + Math.sin(a) * ISLE.R * 1.5; } }
 }
 export function raiseIsle(data, Hz, n, cell, ox, oy) {
+  // land already raised here (Saltlight's plain runs into the isle's west shore, metro.js) keeps its height: the isle's shore only drops into the sea where there was sea
   const near = Math.ceil((ISLE.R * 1.6) / cell), ci = Math.round((ISLE.x - ox) / cell), cj = Math.round((ISLE.y - oy) / cell);
-  for (let j = Math.max(0, cj - near); j <= Math.min(n - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(n - 1, ci + near); i++) { const o = j * n + i; Hz[o] = isleZ(ox + i * cell, oy + j * cell, Hz[o]); }
+  for (let j = Math.max(0, cj - near); j <= Math.min(n - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(n - 1, ci + near); i++) { const o = j * n + i, was = Hz[o], z = isleZ(ox + i * cell, oy + j * cell, was); Hz[o] = was > 0.5 ? Math.max(z, was) : z; }
   // a pearl that was on the old sea floor now lies on the new ground
   for (const p of data.pearls || []) if (edge(p[0], p[1]) < 1.2) { const g = isleZ(p[0], p[1], p[2] - 2); if (g > p[2] - 1) p[2] = g + 1.3; }
 }

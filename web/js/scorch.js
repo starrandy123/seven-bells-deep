@@ -50,6 +50,8 @@ export function createScorch(G) {
   const TT = U.tOcDmg.value, TD = TT.image.data, TS = 32, NS = 32, slotOf = new Map(), slots = Array.from({ length: NS }, () => ({ key: null, m: null, i: -1, hold: 0, at: 0, dirty: false })); let bgrid = null, tNow = 0;
   function buildGrid() {
     bgrid = new Map(); const M = new THREE.Matrix4(), B = new THREE.Box3();
+    // Saltlight's buildings from its plan, not from their boxes' matrices: a box is hidden while its building stands as itself (saltlight_build.js), and the hit must still find it
+    const MM = W.metro && W.metro.meshes && W.metro.meshes[0]; if (MM) W.metro.plan.boxes.forEach((b, i) => { if (b.kind !== 0) return; const cx = b.x, cz = -b.y, e = [MM, i, cx, cz, b.z0, b.z0 + b.h, Math.max(b.sx, b.sy) / 2], k = Math.floor(cx / 16) + ':' + Math.floor(cz / 16); if (!bgrid.has(k)) bgrid.set(k, []); bgrid.get(k).push(e); });
     for (const m of W.cityMeshes || []) { const g = m.geometry; if (!g.boundingBox) g.computeBoundingBox(); for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M); B.copy(g.boundingBox).applyMatrix4(M); if (B.max.y < 0.5 || B.max.y - B.min.y < 2.5) continue; const cx = (B.min.x + B.max.x) / 2, cz = (B.min.z + B.max.z) / 2, e = [m, i, cx, cz, Math.max(B.min.y, 0), B.max.y, Math.max(B.max.x - B.min.x, B.max.z - B.min.z) / 2], k = Math.floor(cx / 16) + ':' + Math.floor(cz / 16); if (!bgrid.has(k)) bgrid.set(k, []); bgrid.get(k).push(e); } }
   }
   const setSlot = (m, i, v) => { const a = m.geometry.attributes.aDmg; if (!a) return; a.array[i * 4] = v; a.needsUpdate = true; };
@@ -74,7 +76,7 @@ export function createScorch(G) {
     q.hold = 30; q.dirty = true; q.at = tNow; active = 1;
   }
   function buildingHit(p, r, el, power) {
-    if (!W.cityMeshes) return; if (!bgrid) buildGrid(); const kx = Math.floor(p.x / 16), kz = Math.floor(p.z / 16);
+    if (!W.cityMeshes && !W.metro) return; if (!bgrid) buildGrid(); const kx = Math.floor(p.x / 16), kz = Math.floor(p.z / 16);
     for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const L = bgrid.get(kx + a + ':' + (kz + b)); if (!L) continue; for (const e of L) { const d = Math.hypot(p.x - e[2], p.z - e[3]); if (d > e[6] + r + 0.8 || p.y < e[4] - 2 || p.y > e[5] + r + 1) continue; stampB(e, p, r, el, power); } }
   }
   // they come back: held 30 s, then receding, each channel at its own pace, frost fastest

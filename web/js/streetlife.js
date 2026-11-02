@@ -9,9 +9,11 @@
 //  - cars keep to lanes, stop at the signals and behind whatever is in front of them (the Intelligent Driver Model), give way to walkers when they turn, brake for him
 //  - many small cheap lights at night: street lamps and their pools, headlights and tail lights, the signals
 import * as THREE from 'three';
-import { METRO, GRID } from './metro.js';
+import { GRID, metroGround } from './metro.js';
 
-const { PITCH, BLOCK } = GRID, HB = BLOCK / 2, BOX = (PITCH - BLOCK) / 2, LANE = 1.75, GZ = METRO.Z + 0.03, TAU = Math.PI * 2;
+const { PITCH, BLOCK, COLS, ROWS } = GRID, HB = BLOCK / 2, BOX = (PITCH - BLOCK) / 2, LANE = 1.75, TAU = Math.PI * 2;
+// the plain climbs from the quays at 2.1% (metro.js): each thing stands on it where it is
+const gz = (x, y) => metroGround(x, y) + 0.03;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 // the Intelligent Driver Model (Treiber, Hennecke and Helbing, Phys. Rev. E 62, 1805, 2000): Table 1's T 1.6 s, s0 2 m, b 1.67 m/s2, delta 4; for a city Treiber's own notes
 // change only v0 (50 km/h here) and give 0.8-2.5 m/s2 as a realistic a (1.0 here); a step under 0.5 s changes nothing, so the cars think at 10 Hz and are drawn in between
@@ -224,12 +226,14 @@ const TAXI = lin(0xe3a91e);
 export function createStreetLife(G) {
   const W = G.world, plan = W.metro && W.metro.plan; if (!plan) return null;
   const scene = G.scene, look = G.look, U = look.uniforms, phone = G.tier === 'phone', rnd = (() => { let z = 4021; return () => ((z = (z * 16807) % 2147483647) - 1) / 2147483646; })();
-  const cx = plan.center.x, cy = plan.center.y, RG = METRO.R * 0.86;
+  const cx = plan.center.x, cy = plan.center.y, ring = plan.ring;
+  // the Bell Ring's bowl is a plaza: no road runs through it and no pavement round its four blocks (a crossing at its centre once sent cars through the arena)
+  const inRing = (x, y, pad = 6) => Math.hypot(x - ring.x, y - ring.y) < ring.BOWL + pad;
 
   // ---------------------------------------------------------------- the crossings and the lanes between them
   const xs = (a) => cx + HB + BOX + a * PITCH, ys = (b) => cy + HB + BOX + b * PITCH, key = (a, b) => a + ',' + b;
   const nodes = new Map();
-  for (let a = -5; a <= 4; a++) for (let b = -5; b <= 4; b++) { const x = xs(a), y = ys(b); if (Math.hypot(x - cx, y - cy) <= RG - 16) nodes.set(key(a, b), { a, b, x, y }); }
+  for (let a = COLS[0] - 1; a <= COLS[1]; a++) for (let b = ROWS[0] - 1; b <= ROWS[1]; b++) { const x = xs(a), y = ys(b); if (!inRing(x, y)) nodes.set(key(a, b), { a, b, x, y }); }
   // a crossing with one road only is a dead end: drop it, and again, until every crossing has a way on
   for (let again = true; again;) { again = false; for (const [k, n] of nodes) { let deg = 0; for (const [da, db] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) if (nodes.has(key(n.a + da, n.b + db))) deg++; if (deg < 2) { nodes.delete(k); again = true; } } }
   const H = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0] }, RIGHT = { N: 'E', E: 'S', S: 'W', W: 'N' }, LEFT = { N: 'W', W: 'S', S: 'E', E: 'N' }, OPP = { N: 'S', S: 'N', E: 'W', W: 'E' };
@@ -274,7 +278,7 @@ export function createStreetLife(G) {
 
   // ---------------------------------------------------------------- the people: about 7 to every 100 m of pavement by day, the density of the busiest published city builds
   const blocks = [];
-  for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) { const bx = cx + i * PITCH, by = cy + j * PITCH, far = Math.hypot(Math.abs(bx - cx) + HB + 3, Math.abs(by - cy) + HB + 3); if (far <= RG - 4) blocks.push({ i, j, bx, by }); }
+  for (let i = COLS[0]; i <= COLS[1]; i++) for (let j = ROWS[0]; j <= ROWS[1]; j++) { const bx = cx + i * PITCH, by = cy + j * PITCH; if (!(i >= ring.i0 && i <= ring.i0 + 1 && j >= ring.j0 && j <= ring.j0 + 1)) blocks.push({ i, j, bx, by }); }
   const blockAt = new Map(blocks.map((b) => [key(b.i, b.j), b]));
   const LINES = [0.8, 1.75];
   const people = [];
@@ -338,7 +342,8 @@ export function createStreetLife(G) {
     const S = SIDES[side], E = HB + 2.2, yaw = Math.atan2(S[4], -S[5]);
     for (const u of [8, 26, 44]) lampsAt.push({ x: b.bx + S[0] * E + S[2] * u * (2 * E) / BLOCK, y: b.by + S[1] * E + S[3] * u * (2 * E) / BLOCK, yaw, k: 1 });
     const avenue = (side === 1 || side === 3) ? b.i % 3 === 0 : b.j % 3 === 0;
-    if (avenue) for (const u of [17, 35]) { const Et = HB + 1.9; treesAt.push({ x: b.bx + S[0] * Et + S[2] * u * (2 * Et) / BLOCK, y: b.by + S[1] * Et + S[3] * u * (2 * Et) / BLOCK, yaw: rnd() * TAU, k: 0.85 + rnd() * 0.35, tint: rnd() }); }
+    // the trees on these kerbs are the AAA3d city's now (saltlight_trees.js), on every side, not only the avenues
+    void avenue;
   }
   // at the crossings, a lamp on every corner: New York lights its intersections at about twice mid-block (NYC DOT); and a signal on every far corner, facing the traffic it stops
   for (const n of nodeList) for (const [sx, sy] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) {
@@ -392,7 +397,7 @@ export function createStreetLife(G) {
     for (const S of [lampsS, sigS, treeS]) {
       const L = S.list; for (const e of L) e.d = Math.hypot(e.x - px, e.y - py);
       const near = L.filter((e) => e.d < 420).sort((a, b) => a.d - b.d).slice(0, S.cap), arr = S.m.instanceMatrix.array;
-      near.forEach((e, i) => { put(arr, i, e.x, GZ, -e.y, e.yaw, e.k && S !== lampsS ? e.k : 1, e.k && S !== lampsS ? e.k : 1, e.k && S !== lampsS ? e.k : 1); if (S === sigS) { const a = S.m.geometry.attributes.aSig; a.array[i * 2] = e.off; a.array[i * 2 + 1] = e.axis; a.needsUpdate = true; } if (S === treeS) { const a = S.m.geometry.attributes.aTr; a.array[i * 2] = e.tint; a.needsUpdate = true; } });
+      near.forEach((e, i) => { put(arr, i, e.x, gz(e.x, e.y), -e.y, e.yaw, e.k && S !== lampsS ? e.k : 1, e.k && S !== lampsS ? e.k : 1, e.k && S !== lampsS ? e.k : 1); if (S === sigS) { const a = S.m.geometry.attributes.aSig; a.array[i * 2] = e.off; a.array[i * 2 + 1] = e.axis; a.needsUpdate = true; } if (S === treeS) { const a = S.m.geometry.attributes.aTr; a.array[i * 2] = e.tint; a.needsUpdate = true; } });
       S.m.count = near.length; S.m.instanceMatrix.needsUpdate = true; S.near = near;
     }
     packAt = { x: px, y: py };
@@ -488,11 +493,12 @@ export function createStreetLife(G) {
   const frustum = new THREE.Frustum(), pm4 = new THREE.Matrix4(), sph = new THREE.Sphere(new THREE.Vector3(), 2.5);
   let thinkT = 0, live = false;
   function update(dt, camera) {
+    if (typeof location !== 'undefined' && /[?&]nocity\b/.test(location.search)) { for (const o of all) o.visible = false; return; }
     const cp = camera.position, cdx = cp.x - cx, cdy = -cp.z - cy, far = Math.hypot(cdx, cdy);
     const on = far < 700; if (on !== live) { live = on; for (const m of all) m.visible = on; } if (!on) return;
     const t = G.time, night = U.ocNight.value; dt = Math.min(dt, 0.1); sigU.value = t;
-    const h = G.hero; hero = h && !h.fly && !h.air && h.pos.y < GZ + 2.6 ? { x: h.pos.x, y: -h.pos.z } : null;
-    danger = h && h.combatT < 1.0 && h.pos.y < GZ + 40 ? { x: h.pos.x, y: -h.pos.z } : null;
+    const h = G.hero; hero = h && !h.fly && !h.air && h.pos.y < gz(h.pos.x, -h.pos.z) + 2.6 ? { x: h.pos.x, y: -h.pos.z } : null;
+    danger = h && h.combatT < 1.0 && h.pos.y < gz(h.pos.x, -h.pos.z) + 40 ? { x: h.pos.x, y: -h.pos.z } : null;
     // cars think at 10 Hz in steps of their own; drawn where they are
     thinkT += dt;
     while (thinkT >= 0.05) { thinkT -= 0.05; for (const c of cars) if (c.out) { if (danger && Math.hypot(c.x - danger.x, c.y - danger.y) < 45) c.panic = 3; carStep(c, 0.05, t); } }
@@ -504,8 +510,8 @@ export function createStreetLife(G) {
     // who is out: fewer by night; someone goes in or comes out only after two seconds out of sight and 50 m away, never in view
     pm4.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pm4);
     const seen = (x, y, z, r) => { sph.center.set(x, z, -y); sph.radius = r; return frustum.intersectsSphere(sph); };
-    for (const p of people) { const w = night > 0.5 ? p.nightOut : true; if (w === p.out) { p.hideT = 0; continue; } const d = Math.hypot(p.x - cdx - cx, p.y - cdy - cy); if (d > 50 && !seen(p.x, p.y, GZ + 1, 1.5)) p.hideT += dt; else p.hideT = 0; if (p.hideT > 2) { p.out = w; p.hideT = 0; if (p.state === 'cross' && p.cross && p.cross.node) p.cross.node.busy[p.cross.strip] = Math.max(0, p.cross.node.busy[p.cross.strip] - 1); if (!w) { p.cross = null; p.state = 'walk'; } } }
-    for (const c of cars) { const w = night > 0.5 ? c.nightOut : true; if (w === c.out) { c.hideT = 0; continue; } const d = Math.hypot(c.x - cdx - cx, c.y - cdy - cy); if (d > 60 && !seen(c.x, c.y, GZ + 1, 4)) c.hideT += dt; else c.hideT = 0; if (c.hideT > 2) { c.out = w; c.hideT = 0; c.v = 0; } }
+    for (const p of people) { const w = night > 0.5 ? p.nightOut : true; if (w === p.out) { p.hideT = 0; continue; } const d = Math.hypot(p.x - cdx - cx, p.y - cdy - cy); if (d > 50 && !seen(p.x, p.y, gz(p.x, p.y) + 1, 1.5)) p.hideT += dt; else p.hideT = 0; if (p.hideT > 2) { p.out = w; p.hideT = 0; if (p.state === 'cross' && p.cross && p.cross.node) p.cross.node.busy[p.cross.strip] = Math.max(0, p.cross.node.busy[p.cross.strip] - 1); if (!w) { p.cross = null; p.state = 'walk'; } } }
+    for (const c of cars) { const w = night > 0.5 ? c.nightOut : true; if (w === c.out) { c.hideT = 0; continue; } const d = Math.hypot(c.x - cdx - cx, c.y - cdy - cy); if (d > 60 && !seen(c.x, c.y, gz(c.x, c.y) + 1, 4)) c.hideT += dt; else c.hideT = 0; if (c.hideT > 2) { c.out = w; c.hideT = 0; c.v = 0; } }
 
     // draw the nearest; the far edge dissolves
     const px = cdx + cx, py = cdy + cy;
@@ -515,13 +521,13 @@ export function createStreetLife(G) {
     const n = Math.min(sel.length, capP), PA = peopleM.instanceMatrix.array, SA = shM.instanceMatrix.array;
     for (let i = 0; i < n; i++) {
       const [d, p] = sel[i], yaw = Math.atan2(p.hx, -p.hy), k = p.h / 1.75, o = i * 4, fade = clamp((RP - d) / 25, 0, 1) * (sel.length > capP ? clamp((capP - i) / 25, 0, 1) : 1);
-      put(PA, i, p.x, GZ, -p.y, yaw, p.build * k, k, k);
+      put(PA, i, p.x, gz(p.x, p.y), -p.y, yaw, p.build * k, k, k);
       PI.G[o] = p.ph; PI.G[o + 1] = p.gait; PI.G[o + 2] = p.pose; PI.G[o + 3] = Math.max(0.001, fade);
       PI.SK[o] = p.skin[0]; PI.SK[o + 1] = p.skin[1]; PI.SK[o + 2] = p.skin[2]; PI.SK[o + 3] = p.hat;
       PI.TP[o] = p.top[0]; PI.TP[o + 1] = p.top[1]; PI.TP[o + 2] = p.top[2]; PI.TP[o + 3] = p.sleeve;
       PI.BT[o] = p.bot[0]; PI.BT[o + 1] = p.bot[1]; PI.BT[o + 2] = p.bot[2]; PI.BT[o + 3] = p.shoe;
       PI.HR[o] = p.hair[0]; PI.HR[o + 1] = p.hair[1]; PI.HR[o + 2] = p.hair[2]; PI.HR[o + 3] = p.long;
-      put(SA, i, p.x, GZ + 0.02, -p.y, 0, 0.9 * fade, 1, 0.9 * fade);
+      put(SA, i, p.x, gz(p.x, p.y) + 0.02, -p.y, 0, 0.9 * fade, 1, 0.9 * fade);
     }
     peopleM.count = n; peopleM.instanceMatrix.needsUpdate = true; for (const a of ['aG', 'aSkin', 'aTop', 'aBot', 'aHair']) pg.attributes[a].needsUpdate = true;
     const selC = []; for (const c of cars) { if (!c.out) continue; const d = Math.hypot(c.x - px, c.y - py); if (d < RC) selC.push([d, c]); }
@@ -529,17 +535,17 @@ export function createStreetLife(G) {
     const m = Math.min(selC.length, capC), CA = carsM.instanceMatrix.array, PO = poolM.instanceMatrix.array; let pools = 0;
     for (let i = 0; i < m; i++) {
       const [d, c] = selC[i], yaw = Math.atan2(c.hx, -c.hy), o = i * 4, fade = clamp((RC - d) / 30, 0, 1);
-      put(CA, i, c.x, GZ, -c.y, yaw, 1, 1, 1);
+      put(CA, i, c.x, gz(c.x, c.y), -c.y, yaw, 1, 1, 1);
       CI.C[o] = c.col[0]; CI.C[o + 1] = c.col[1]; CI.C[o + 2] = c.col[2]; CI.C[o + 3] = c.kind;
       CI.D[o] = c.len; CI.D[o + 1] = c.w; CI.D[o + 2] = c.rad; CI.D[o + 3] = Math.min(0.999, Math.max(0.001, fade)) + 2 * c.brake;
-      put(SA, n + i, c.x, GZ + 0.02, -c.y, yaw, c.w * 1.25 * fade, 1, c.len * 1.15 * fade);
+      put(SA, n + i, c.x, gz(c.x, c.y) + 0.02, -c.y, yaw, c.w * 1.25 * fade, 1, c.len * 1.15 * fade);
       // its headlights on the road ahead, by night
-      if (night > 0.15 && d < 160) { put(PO, pools, c.x + c.hx * (c.len / 2 + 5), GZ + 0.04, -(c.y + c.hy * (c.len / 2 + 5)), yaw, 3.4, 1, 10); poolA[pools * 4] = 0.22 * fade; poolA[pools * 4 + 1] = 1; pools++; }
+      if (night > 0.15 && d < 160) { put(PO, pools, c.x + c.hx * (c.len / 2 + 5), gz(c.x, c.y) + 0.04, -(c.y + c.hy * (c.len / 2 + 5)), yaw, 3.4, 1, 10); poolA[pools * 4] = 0.22 * fade; poolA[pools * 4 + 1] = 1; pools++; }
     }
     carsM.count = m; carsM.instanceMatrix.needsUpdate = true; cg.attributes.aCar.needsUpdate = true; cg.attributes.aDim.needsUpdate = true;
     shM.count = n + m; shM.instanceMatrix.needsUpdate = true;
     // the lamps' pools: the intersections' lamps throw twice the light of the street's (NYC DOT)
-    if (night > 0.15 && lampsS.near) for (const e of lampsS.near) { if (pools >= capPool) break; if (e.d > 300) continue; const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw); put(PO, pools, e.x + fx * 1.85, GZ + 0.035, -e.y + fz * 1.85, 0, 18, 1, 18); poolA[pools * 4] = (e.k === 2 ? 0.30 : 0.16) * clamp((320 - e.d) / 60, 0, 1); poolA[pools * 4 + 1] = 0; pools++; }
+    if (night > 0.15 && lampsS.near) for (const e of lampsS.near) { if (pools >= capPool) break; if (e.d > 300) continue; const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw); put(PO, pools, e.x + fx * 1.85, gz(e.x, e.y) + 0.035, -e.y + fz * 1.85, 0, 18, 1, 18); poolA[pools * 4] = (e.k === 2 ? 0.30 : 0.16) * clamp((320 - e.d) / 60, 0, 1); poolA[pools * 4 + 1] = 0; pools++; }
     poolM.count = pools; poolM.instanceMatrix.needsUpdate = true; poolG.attributes.aPool.needsUpdate = true; poolM.visible = live && pools > 0;
   }
   return { update, people, cars, nodes: nodeList, links, blocks, get drawn() { return { people: peopleM.count, cars: carsM.count, lamps: lampsS.m.count, signals: sigS.m.count, trees: treeS.m.count, pools: poolM.count }; } };

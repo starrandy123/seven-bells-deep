@@ -1,7 +1,7 @@
 {
  "schema": "mosa.rights.v1",
- "searched": "The files: every file in this build. Our own index.html, js/*.js and the assets written by our own scripts in DrownedCity/Pipeline (Blender and numpy, seeded); assets/hero.glb, assets/reaver.glb and assets/ember.glb start from two Microsoft Rocketbox avatars, changed by our scripts; vendor/three. Rocketbox's licence file is carried in licenses/.",
- "mine": "The game's code, rules, shaders, HUD and all its sound (Web Audio, no sound files); the world of Thalor: its seabed, coral, kelp, rock, ruins, statue, arena, shrines and bells; the whale, sharks, rays, turtles, jellies, fish, dolphins and the Leviathan (modelled by our Blender scripts); the Warden's armour, trident and mantle, the Reavers' armour and spears, and every swim and fight move, with the walk and run taken from the Rocketbox motion named below (keyed by our Python scripts). The Warden and Thalor are original: not a comic-book character, not a famous game.",
+ "searched": "The files: every file in this build. Our own index.html, js/*.js and the assets written by our own scripts in DrownedCity/Pipeline (Blender and numpy, seeded); assets/hero.glb, assets/reaver.glb and assets/ember.glb start from two Microsoft Rocketbox avatars, changed by our scripts; vendor/three. Rocketbox's licence file is carried in licenses/. Since 2 Nov also js/aaa3d/: the city generator, facade and vegetation kit carried from the owner's own AAA3d engine (orgo_u/aaa3d at fe8f7c1), whose generators are three.js r185's own (MIT).",
+ "mine": "The game's code, rules, shaders, HUD and all its sound (Web Audio, no sound files); the world of Thalor: its seabed, coral, kelp, rock, ruins, statue, arena, shrines and bells; the whale, sharks, rays, turtles, jellies, fish, dolphins and the Leviathan (modelled by our Blender scripts); the Warden's armour, trident and mantle, the Reavers' armour and spears, and every swim and fight move, with the walk and run taken from the Rocketbox motion named below (keyed by our Python scripts). The Warden and Thalor are original: not a comic-book character, not a famous game. Saltlight's buildings, facades and trees come from the owner's own engine AAA3d (orgo_u/aaa3d, geo/kitVeg.js, world/cityFacade.js; written by him and his sessions, no downloaded assets: every mesh and texture made in code).",
  "others": [
   {
    "what": "three.js r185, the 3D library, carried in vendor/three",
@@ -70,6 +70,12 @@
    "by": "Stylized Fire 3D, godotshaders.com, after Minions Art",
    "license": "MIT",
    "from": "https://godotshaders.com/shader/stylized-fire-3d/"
+  },
+  {
+   "what": "three.js r185's CityGenerator, SkyscraperGenerator and SidewalkGenerator (examples/jsm/generators), ported to WebGL by the owner's AAA3d engine and carried in js/aaa3d/cityGen.js with the facade and interior math in js/aaa3d/cityFacade.js; and three.js's MeshSurfaceSampler in vendor/three/examples/jsm/math",
+   "by": "mrdoob and the three.js authors",
+   "license": "MIT",
+   "from": "https://github.com/mrdoob/three.js"
   }
  ]
 }

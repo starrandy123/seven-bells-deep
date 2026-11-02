@@ -10,7 +10,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { retry } from './config.js';
 import { planCities } from './city.js';
 import { addIsle, raiseIsle, paintIsle, skyRock, ISLE, lavaLines } from './fireisle.js';
-import { addMetro, raiseMetro, planMetro, buildMetro, METRO } from './metro.js';
+import { addMetro, raiseMetro, planMetro, buildMetro, paintMetro, onPlain } from './metro.js';
 import { createLava } from './lava.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
@@ -164,7 +164,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // rivers levelled into the land (rivers.js): their channels and the falls' pools are carved here, before anything reads the field, so the ground drawn,
   // the ground walked on and every prop's footing all agree; written back into the 16 bits that heightAt and a lost context's rebuild read
   const riverPlan = planRivers(data, Hz, n, cell, ox, oy);
-  addMetro(data); raiseMetro(data, Hz, n, cell, ox, oy);      // the skyscraper city on its own island (metro.js)
+  addMetro(data); raiseMetro(data, Hz, n, cell, ox, oy);      // the skyscraper city on its coastal plain west of the Ash City, its quays and the ridge behind it (metro.js)
   addIsle(data); raiseIsle(data, Hz, n, cell, ox, oy);      // the Burnt Isle: the Emberkin's own land, raised here as the rivers are carved, so everything reads the same ground
   if (tweakHeight) tweakHeight(Hz, n, cell, ox, oy);
   if (riverPlan || tweakHeight) for (let i = 0; i < n * n; i++) raw[i] = Math.max(0, Math.min(65535, Math.round((top - Hz[i]) / HK)));
@@ -203,7 +203,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   })();
 
   // The GPU holds the weights in full. All the game asks of them is which water it's in, and every fourth sample answers that.
-  const bn = (n - 1) / 2 + 1, biomeFull = new Uint8Array(biomeBuf), BS = 4, bc = (bn - 1) / BS + 1;
+  const bn = (n - 1) / 2 + 1, biomeFull = paintMetro(new Uint8Array(biomeBuf), bn, 2 * cell, ox, oy), BS = 4, bc = (bn - 1) / BS + 1;
   const coarse = (src) => { const o = new Uint8Array(bc * bc * 4); for (let y = 0; y < bc; y++) for (let x = 0; x < bc; x++) for (let c = 0; c < 4; c++) o[(y * bc + x) * 4 + c] = src[(y * BS * bn + x * BS) * 4 + c]; return o; };
   const biomeBytes = coarse(biomeFull);
   // On a phone on the big map the GPU's copy is half size too: a weight changes slowly, and 8 m a sample shows nothing.
@@ -808,12 +808,12 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   if (riverPlan) { const add = dressRivers(riverPlan, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }     // stones and plants along the water (rivers.js)
   // the rock over the land's bare faces, and what falls off them (cliffs.js): none on the Frost Isle's ice and none in the Cone's ash, for now
   const cliffPlan = dressCliffs({ data, heightAt, waterAt: riverPlan ? riverPlan.waterAt : () => null, solids: (data.colliders || []).concat(cityPlan.colliders),
-    skip: (x, y) => { if (Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R * 1.3 || Math.hypot(x - METRO.x, y - METRO.y) < METRO.R * 1.05) return true; const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
+    skip: (x, y) => { if (Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R * 1.3 || onPlain(x, y, 4)) return true; const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
   { const add = dressReefCity(cityPlan.cities, cityPlan.sets || {}, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }
   { const busy = new Set(), K = (x, y) => Math.floor(x / 10) * 100003 + Math.floor(y / 10); for (const c of (data.colliders || []).concat(cityPlan.colliders)) { if (c.z1 < .5) continue; const r = c.t === 'cyl' ? c.r : Math.hypot(c.hx, c.hy); if (r > 40) continue; for (let dx = -r - 3; dx <= r + 3; dx += 8) for (let dy = -r - 3; dy <= r + 3; dy += 8) busy.add(K(c.x + dx, c.y + dy)); }
-    data.instances.grass_tuft = (data.instances.grass_tuft || []).concat(dressDunes({ data, heightAt, skip: (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R + 10 || busy.has(K(x, y)) })); }
+    data.instances.grass_tuft = (data.instances.grass_tuft || []).concat(dressDunes({ data, heightAt, skip: (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R + 10 || onPlain(x, y, 6) || busy.has(K(x, y)) })); }
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;
   // Cards scattered over a mesh's foliage (its green corners), in real metres; `normal` points out from the canopy, so the mass lights as one.
   function leafCards(G, want) {
@@ -1636,7 +1636,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // each building's damage slot (scorch.js): a geometry of its own over the shared buffers, so the instanced damage values are per city
   for (const m of cityMeshes) { const g = m.geometry, g2 = new THREE.BufferGeometry(); for (const k in g.attributes) g2.setAttribute(k, g.attributes[k]); g2.setIndex(g.index); g2.boundingBox = g.boundingBox; g2.boundingSphere = g.boundingSphere; g2.setAttribute('aDmg', new THREE.InstancedBufferAttribute(new Uint8Array(m.count * 4), 4, true).setUsage(THREE.DynamicDrawUsage)); m.geometry = g2; }
   { const before = new Set(scene.children); skyRock(scene, look, U); for (const o of scene.children) if (!before.has(o)) o.traverse((q) => { if (q.isMesh) skyMeshes.push(q); }); }
-  metro = buildMetro({ scene, look, plan: metroPlan, phone });
+  metro = buildMetro({ scene, look, plan: metroPlan, phone, heightAt });
   bakeSun(); bakeLand();
   const mirror = createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities: cityMeshes.concat(metro.meshes), isle: ISLE, phone });
   const lava = createLava(scene, look, heightAt, phone);
