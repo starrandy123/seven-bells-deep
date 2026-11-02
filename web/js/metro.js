@@ -9,6 +9,8 @@ import * as THREE from 'three';
 export const METRO = { id: 'saltlight', name: 'Saltlight', x: -680, y: 700, R: 270, Z: 7 };
 const smooth = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 const PITCH = 64, BLOCK = 52, STOREY = 3.4, DATUM = 31, EXTENT = 220;
+// the grid the street life walks and drives on (streetlife.js)
+export const GRID = { PITCH, BLOCK, EXTENT };
 const rngOf = (seed) => { let s = seed >>> 0 || 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
 
 export function addMetro(data) {
@@ -156,15 +158,37 @@ export function buildMetro({ scene, look, plan, phone }) {
   const groundGeo = new THREE.CircleGeometry(METRO.R * 0.86, phone ? 48 : 72).rotateX(-Math.PI / 2), gm = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
   look.patch(gm, { key: 'metro_ground',
     fragmentPars: `uniform vec2 uMetroC;\n`,
-    albedo: /* glsl */`{ vec2 w = vec2(vOcP.x, -vOcP.z) - uMetroC + ${(PITCH / 2).toFixed(1)}; vec2 c = mod(w, ${PITCH.toFixed(1)}), ci = floor(w/${PITCH.toFixed(1)}) - 4.0; float st = ${(PITCH - BLOCK).toFixed(1)};
-      vec2 inS = step(vec2(${BLOCK.toFixed(1)}), c); float street = max(inS.x, inS.y), cross = inS.x*inS.y, kerb = 1.0 - street;
-      vec2 e = min(c, ${BLOCK.toFixed(1)} - c); float pave = kerb*step(min(e.x, e.y), 3.2);
-      vec3 col = mix(vec3(.15, .145, .135), vec3(.21, .20, .18), pave)*(.94 + .06*fract(sin(dot(floor(vec2(vOcP.x, vOcP.z)*.8), vec2(12.9, 78.2)))*437.5));
-      if (street > .5) { col = vec3(.045, .045, .05);
-        vec2 s = c - ${BLOCK.toFixed(1)}; float zx = inS.y*(1.0 - inS.x), zy = inS.x*(1.0 - inS.y);
-        float zebra = cross < .5 ? (zx*step(c.x, 5.0) + zx*step(${(BLOCK - 5).toFixed(1)}, c.x) + zy*step(c.y, 5.0) + zy*step(${(BLOCK - 5).toFixed(1)}, c.y))*step(.5, fract((zx > .5 ? s.y : s.x)*1.0)) : 0.0;
-        float lane = (1.0 - cross)*(zx*step(abs(s.y - st*.5), .12) + zy*step(abs(s.x - st*.5), .12))*step(.5, fract((zx > .5 ? c.x : c.y)/6.0));
-        col = mix(col, vec3(.62, .62, .58), max(zebra, lane)); }
+    // the plan's blocks are centred on the grid's points, so a block runs from -BLOCK/2 to +BLOCK/2 and the street from there to the next block (this drew them 6 m off, half of each street as pale paving).
+    // A 12 m street: a 2.5 m pavement each side with its kerb, and two 3.5 m lanes, the way a city's local street is laid out; crossings at every corner
+    albedo: /* glsl */`{ vec2 w = vec2(vOcP.x, -vOcP.z) - uMetroC + ${(BLOCK / 2).toFixed(1)}; vec2 c = mod(w, ${PITCH.toFixed(1)});
+      vec2 inS = step(vec2(${BLOCK.toFixed(1)}), c), u = c - ${BLOCK.toFixed(1)}; float street = max(inS.x, inS.y), cross = inS.x*inS.y;
+      float n1 = fract(sin(dot(floor(vec2(vOcP.x, vOcP.z)*.8), vec2(12.9, 78.2)))*437.5);
+      // the pavement: concrete flags 1.5 m square, their joints darker; on a block it runs up to the buildings
+      vec2 fl = abs(fract(vec2(vOcP.x, vOcP.z)/1.5) - .5); float joint = step(.47, max(fl.x, fl.y));
+      vec3 pave = vec3(.30, .29, .27)*(.92 + .08*n1)*(1.0 - .22*joint);
+      vec3 col = pave;
+      if (street > .5) {
+        // across the street: 0 to 12 m from one block's edge to the next; pavements on 0-2.5 and 9.5-12, a kerb at their edge
+        float ax = inS.x*(1.0 - inS.y), ay = inS.y*(1.0 - inS.x);
+        float acr = ax > .5 ? u.x : u.y, along = ax > .5 ? c.y : c.x;
+        vec3 asph = vec3(.050, .050, .055)*(.9 + .1*n1);
+        if (cross > .5) {
+          // the crossing itself: asphalt, with the pavements' corners squared off
+          float cx0 = min(u.x, ${(PITCH - BLOCK).toFixed(1)} - u.x), cy0 = min(u.y, ${(PITCH - BLOCK).toFixed(1)} - u.y);
+          col = (cx0 < 2.5 && cy0 < 2.5) ? pave : asph;
+        } else {
+          float side = min(acr, ${(PITCH - BLOCK).toFixed(1)} - acr);
+          if (side < 2.5) col = mix(pave, vec3(.46, .45, .42), step(2.3, side));
+          else {
+            col = asph;
+            // the centre line, dashed 3 m in 9; the crossings: white bars 0.5 m wide across the lanes, 4 m deep, at each end of the block
+            float centre = step(abs(acr - 6.0), .08)*step(fract(along/9.0), .34);
+            float zeb = (step(along, 4.0) + step(${(BLOCK - 4).toFixed(1)}, along))*step(.5, fract(acr/1.0));
+            float stopL = step(abs(along - 4.4), .2) + step(abs(along - ${(BLOCK - 4.4).toFixed(1)}), .2);
+            col = mix(col, vec3(.70, .70, .66), clamp(centre + zeb + stopL*step(acr, 6.0)*(1.0 - step(${(BLOCK / 2).toFixed(1)}, along)) + stopL*step(6.0, acr)*step(${(BLOCK / 2).toFixed(1)}, along), 0.0, 1.0));
+          }
+        }
+      }
       diffuseColor.rgb = col; }`,
   });
   gm.userData.uMetroC = { value: new THREE.Vector2(plan.center.x, plan.center.y) };

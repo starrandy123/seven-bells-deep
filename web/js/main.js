@@ -22,6 +22,7 @@ import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createBot } from './bot.js';
 import { clock, advance, alpha as blendOf } from './formulas/step.js';
+import { createStreetLife } from './streetlife.js';
 
 const STEP = 1 / 60;
 const G = window.__game = { time: 0, hitstop: 0, paused: false, started: false, playing: false, film: FLAG.film, tier: detectTier(), camYaw: 0, camPitch: 0, stats: { frames: 0 } };
@@ -61,6 +62,8 @@ async function boot() {
   G.ui.setLoad(0.85, 'Calling the Reavers');
   G.enemies = await createEnemies(G);
   G.dmg = createScorch(G); G.fireLight = createFireLight(G, G.dmg.grid, G.dmg.touch); G.birds = createBirds(G); G.hornets = createHornets(G, G.combat.data);
+  // Saltlight lived in: its people, its traffic, its lamps (streetlife.js)
+  G.streetLife = createStreetLife(G);
   createBoss(G);
   G.quest = createQuest(G);
   if (FLAG.demo) G.bot = createBot(G);
@@ -123,7 +126,7 @@ function update(dt) {
   hero.animate(dt); G.enemies.animate(dt); G.boss.draw();
   if (G.filmCam) G.filmCam(dt); else if (!(G.quest.cineOn && G.quest.cineOn())) hero.camera(dt);
   G.quest.draw(G.time);
-  look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.dmg.update(dt, hero.pos.x, hero.pos.z); G.life.update(dt, hero.pos); G.sky.update(dt, camera); (G.cityLights ||= createCityLights(G, G.world.cities.cities, G.world.heightAt)).frame(); if (G.world.lava) G.world.lava.frame(G, dt); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
+  look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); if (G.streetLife) G.streetLife.update(dt, camera); G.dmg.update(dt, hero.pos.x, hero.pos.z); G.life.update(dt, hero.pos); G.sky.update(dt, camera); (G.cityLights ||= createCityLights(G, G.world.cities.cities, G.world.heightAt)).frame(); if (G.world.lava) G.world.lava.frame(G, dt); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
   G.birds.step(dt, camera.position); G.fireLight.update(dt, camera.position);
   { const c = camera.position, d = Math.hypot(c.x - 300, c.z - 800), s = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); }; G.look.camY = c.y; G.look.setBiome((1 - s(190, 450, d)) * (1 - s(60, 90, c.y))); if ((G.leafT = (G.leafT || 0) - dt) <= 0) { G.leafT = 0.5; const w = c.y > 0 && c.y < 60 ? Math.min(1, G.dmg.treesNear(c.x, c.z) / 4) : 0; G.look.uniforms.ocLeaves.value += (w - G.look.uniforms.ocLeaves.value) * 0.5; } } if (!/nomirror/.test(location.search)) G.world.mirror.render(camera, G.sky.above, [G.flames && G.flames.mesh]);
   G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);

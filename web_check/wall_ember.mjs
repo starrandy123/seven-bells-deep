@@ -158,7 +158,8 @@ await section(['E24'], async () => {
     const G = window.__game, Q = window.__qa, h = G.hero, CH = G.ember.champions(), W = G.world, step = (s) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) G.frame(1 / 60); };
     G.ember.setSide('fire', { place: true, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); const home = h.pos.clone();
     let x = 439, z = 910; const hover = () => { h.endFly(); h.pos.set(x, 6, z); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; h.inv = 0; Q.drive({ boost: true, mx: 0, my: 0 }); step(0.2); Q.drive({ boost: false, mx: 0, my: 0 }); step(0.5); };
-    const ph = G.combat.data.champions.phases, keep = ph.map((p) => p.moves.slice()); ph.forEach((p) => (p.moves = ['spout', 'volley', 'combo']));
+    // the move under test, and only it: with its old mix of three the result hung on the order of the game's random numbers, which any new mesh at boot shifts
+    const ph = G.combat.data.champions.phases, keep = ph.map((p) => p.moves.slice()); ph.forEach((p) => (p.moves = ['spout']));
     hover(); const e = CH.start('water'); h.hp = h.maxHp; G.combat.log.length = 0; let tellAt = 0, strikeAt = 0, t = 0, dragged = 0;
     for (let i = 0; i < 60 * 40 && !dragged; i++) { G.frame(1 / 60); t += 1 / 60; if (!G.combat.log.some((q) => q.type === 'spout_grab')) h.hp = Math.max(h.hp, 60); if (e.B.move === 'spout' && e.B.st === 'tell' && !tellAt) tellAt = t; if (e.B.move === 'spout' && e.B.st === 'strike' && !strikeAt) strikeAt = t; if (G.combat.log.some((q) => q.type === 'dragged')) dragged = t; }
     const a = { tell: strikeAt - tellAt, dragged: !!dragged, hp: h.hp, dis: G.turf.disarmed, jets: G.turf.jetsDead(), L: G.combat.log.map((q) => q.type + '@' + q.t.toFixed(2)).slice(-10).join(' '), now: G.time.toFixed(2), y: h.pos.y.toFixed(1) };
