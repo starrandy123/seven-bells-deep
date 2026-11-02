@@ -757,7 +757,7 @@ export async function createEnemies(G) {
     step, animate,
     keep() { for (const e of awake) { if (!e.prev) { e.prev = e.pos.clone(); e.draw = e.pos.clone(); } e.prev.copy(e.pos); } },
     blend(a) { for (const e of awake) { if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); } ember.blend(a); },
-    alive: () => awake.filter((e) => e.hp > 0 && !e.hidden),   // what can be seen and struck; count() knows about a moray still in its hole
+    alive: () => { const a = awake.filter((e) => e.hp > 0 && !e.hidden); return G.hornets ? G.hornets.targets(a) : a; },   // what can be seen and struck; count() knows about a moray still in its hole
     count: () => awake.filter((e) => e.hp > 0).length, kindAt, rosterOf,
     all: () => awake,
     encounters,
@@ -770,7 +770,7 @@ export async function createEnemies(G) {
         if (d < Q.grab_m) { dropToken(e); endTell(e); e.state = 'stun'; e.t = 30; e.spun = { a: Math.atan2(dz, dx), r: Math.max(d, Q.radius_m * 1.5), y: e.pos.y, t: Q.spun_s, hitT: 0.3, top: Math.min(topY - 3, Math.max(e.pos.y, 0) + Q.spun_up_m), base }; G.combat.log.push({ t: G.time, type: 'spun', foe: e.kind }); if (e.def.body === 'reaver') playClip(e, 'hit_front', 0.05, true); } } },
     pull(p, radius) { for (const e of awake) { if (e.hp <= 0 || e.frozen > 0) continue; const d = e.pos.distanceTo(p); if (d < radius) { to.subVectors(p, e.pos).normalize(); side.crossVectors(to, AY); e.vel.addScaledVector(to, 8).addScaledVector(side, 5); dropToken(e); endTell(e); e.state = 'stun'; e.t = 1.1; if (e.def.body === 'reaver') playClip(e, 'hit_front', 0.05, true); } } },
     drag(p, radius, dt) { for (const e of awake) { if (e.hp <= 0 || e.frozen > 0) continue; to.subVectors(p, e.pos); const d = to.length(); if (d < radius + 3 && d > 2.2) { to.multiplyScalar(1 / d); side.crossVectors(to, AY); e.vel.addScaledVector(to, 26 * dt).addScaledVector(side, 16 * dt); } } },
-    grab(e, speed) { if (e.vel && e.frozen <= 0 && e.hp > 0) { dropToken(e); endTell(e); e.pull = { speed, t: 0.8 }; if (e.def.body === 'reaver' || e.def.flyer) playClip(e, 'hit_front', 0.05, true); } },
+    grab(e, speed) { if (e.hornet) return; if (e.vel && e.frozen <= 0 && e.hp > 0) { dropToken(e); endTell(e); e.pull = { speed, t: 0.8 }; if (e.def.body === 'reaver' || e.def.flyer) playClip(e, 'hit_front', 0.05, true); } },
     waveFrom(p, dir) { /* the wave's front now lives in powers.js */ void p; void dir; },
     callPack(p, dir) { packFrom.copy(p); packDir.copy(dir).normalize(); packT = 1.9; packHit.clear(); G.life && G.life.scatter(p, 50); },
     spawnNear(p, n, kind = 'reaver') { for (let i = 0; i < n; i++) { const a = Math.random() * 6.28; makeEnemy(kind, null, placeFor(kind, null, p.clone().add(new THREE.Vector3(Math.cos(a) * 12, 2, Math.sin(a) * 12)))); } },

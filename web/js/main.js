@@ -15,6 +15,7 @@ import { createEnemies } from './enemies.js';
 import { createScorch } from './scorch.js';
 import { createFireLight } from './firelight.js';
 import { createBirds } from './birds.js';
+import { createHornets } from './hornets.js';
 import { createBoss } from './boss.js';
 import { createQuest } from './quest.js';
 import { createUI } from './ui.js';
@@ -59,7 +60,7 @@ async function boot() {
   await createHero(G);
   G.ui.setLoad(0.85, 'Calling the Reavers');
   G.enemies = await createEnemies(G);
-  G.dmg = createScorch(G); G.fireLight = createFireLight(G, G.dmg.grid, G.dmg.touch); G.birds = createBirds(G);
+  G.dmg = createScorch(G); G.fireLight = createFireLight(G, G.dmg.grid, G.dmg.touch); G.birds = createBirds(G); G.hornets = createHornets(G, G.combat.data);
   createBoss(G);
   G.quest = createQuest(G);
   if (FLAG.demo) G.bot = createBot(G);
@@ -101,7 +102,7 @@ function step(dt) {
   const d = dt * scale;
   G.hero.prev.copy(G.hero.pos); G.enemies.keep();
   if (G.bot) { const u = G.ui.input; const s = G.ui.sample; G.ui.sample = () => { const v = s(); G.bot.drive(v, dt); return v; }; G.hero.step(d); G.ui.sample = s; } else G.hero.step(d);
-  G.enemies.step(d); G.boss.step(d); G.quest.step(dt); G.turf.step(dt);
+  G.enemies.step(d); G.hornets.step(d); G.boss.step(d); G.quest.step(dt); G.turf.step(dt);
 }
 
 // One part of the world throwing must not leave the player looking at a stopped picture: the frame still draws. The error isn't caught, so it's still reported.

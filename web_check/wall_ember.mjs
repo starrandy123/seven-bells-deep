@@ -1,7 +1,7 @@
 // The Emberkin (EPIC V1, V2, V5, V12): a flyer's rules, read in a real page by stepping the game's own frame. A wall says the rules hold; whether it looks like a flying fighter is his call on his phone.
 //   node wall_ember.mjs <base> <chromium|webkit> [--only=E1,E2]
 import { gate } from './lib/h.mjs';
-const { line, note, open, section, finish } = await gate('wall_ember', { budget: 150 });
+const { line, note, open, section, finish } = await gate('wall_ember', { budget: 230 });
 const TURNED = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const steps = (page, n, each = '') => page.evaluate(([n, each]) => { const G = window.__game, f = each ? new Function('G', 'i', each) : null; for (let i = 0; i < n; i++) { if (f) f(G, i); G.frame(1 / 60); } }, [n, each]);
 await section(['E13'], async () => {
@@ -241,6 +241,31 @@ await section(['E27'], async () => {
   });
   const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
   line('E27', Math.max(...q.spreads) < 0.01 && q.shift < 0.01 && q.L && q.L.hand <= 0.61 && q.L.foot <= 1.51 && q.emb.n > 60 && q.emb.spread < 0.02 && q.emb.top < 0.5 && !real.length, `his hand against his chest through cruise, turn, hover and hover with the stick: wanders ${q.spreads.map((x) => (x * 100).toFixed(1)).join(', ')} cm, moves ${(q.shift * 100).toFixed(1)} cm between them; jets at full thrust: hands ${q.L ? q.L.hand : '?'} m, feet ${q.L ? q.L.foot : '?'} m; an Emberkin flying between blows: its hand wanders ${(q.emb.spread * 100).toFixed(1)} cm, at most ${q.emb.top} m/s, over ${q.emb.n} frames; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
+// the Cinder Hornets: a scout comes out to him; killed it brings nothing, let live it marks him and the swarm comes; fire that isn't a fist burns a wing and it drops; a cruising flyer leaves them behind
+await section(['E28'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, V = h.pos.constructor, HN = G.hornets, L = () => G.combat.log, has = (t) => L().some((q) => q.type === t), step = (s, f) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); f && f(i); } };
+    G.ember.setSide('fire', { place: true, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); for (const q of G.enemies.encounters) q.cleared = true; h.inv = 1e6; const N = HN.nest;
+    const out = Math.atan2(N.x - 300, N.z - 800), ox = Math.sin(out), oz = Math.cos(out); const hang = () => { h.endFly(); h.pos.set(N.x + ox * 22, Math.max(N.y, 4) + 9, N.z + oz * 22); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; Q.drive({ boost: true }); step(0.1); Q.drive({}); };
+    L().length = 0; hang(); let t = 0; for (let i = 0; i < 60 * 10 && !(HN.S.scout && HN.S.scout.state === 'mark'); i++) { G.frame(1 / 60); h.inv = 1e6; } const scoutOut = has('scout_out'), sc = HN.S.scout;
+    // the scout killed with two ordinary blows: nothing comes
+    let killed = false; if (sc) { sc.onHit(16, h.pos, 'atk1', { melee: true, element: 'fire' }); const after1 = sc.hp > 0; sc.onHit(16, h.pos, 'atk2', { melee: true, element: 'fire' }); killed = after1 && sc.hp <= 0; }
+    L().length = 0; step(10, () => { h.inv = 1e6; }); const quiet = !has('swarm');
+    // another, let live: it marks him and the nest comes
+    HN.S.cool = 0; L().length = 0; let marked = -1, swarm = -1; t = 0; step(26, () => { t += 1 / 60; h.inv = 1e6; h.hp = h.maxHp; if (marked < 0 && has('marked')) marked = t; if (swarm < 0 && has('swarm')) swarm = t; });
+    const members = HN.list.filter((q) => q.on && q.hp > 0 && (q.state === 'swarm' || q.state === 'tell' || q.state === 'strike')).length, blows = L().filter((q) => q.type === 'tell' && q.foe === 'hornet').map((q) => q.blow);
+    // a fire blast that isn't a fist: the wings go and it drops
+    const one = HN.list.find((q) => q.on && q.hp > 0 && q.state !== 'guard'); let burnt = false; if (one) { one.onHit(4, h.pos, 'fireball', { melee: false, element: 'fire' }); burnt = one.state === 'fall' && one.hp <= 0; }
+    // he cruises away and they're left behind
+    L().length = 0; G.camYaw = Math.atan2(h.pos.x - N.x, h.pos.z - N.z); const away = Math.PI / 2; h.nYaw = away; h.heading = away; h.nPitch = 0.08; h.pos.y = Math.max(h.pos.y, 28); h.prev.copy(h.pos); Q.drive({ boost: true, mx: 0, my: 0 }); let far = 0; step(14, () => { h.inv = 1e6; far = Math.max(far, Math.hypot(h.pos.x - N.x, h.pos.z - N.z)); }); Q.drive({}); const gaveUp = has('swarm_off'), dbg = { far: far | 0, sp: +h.speed.toFixed(1), y: +h.pos.y.toFixed(1), where: G.turf.where, fly: h.fly, S: HN.S.swarm, lost: +HN.S.lost.toFixed(1) };
+    return { scoutOut, killed, quiet, marked: +marked.toFixed(2), swarm: +swarm.toFixed(2), members, blows: [...new Set(blows)], burnt, gaveUp, dbg };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
+  line('E28', q.scoutOut && q.killed && q.quiet && q.marked > 0 && q.swarm > q.marked && q.swarm - q.marked < 9 && q.members >= 4 && q.burnt && q.gaveUp && !real.length, `a scout came out (${q.scoutOut}); killed in two blows (${q.killed}) nothing followed (${q.quiet}); the next marked him at ${q.marked} s and the swarm came at ${q.swarm} s, ${q.members} strong, telling ${q.blows.join(' ')}; a fire blast burnt one's wings (${q.burnt}); cruising away he lost them (${q.gaveUp}) ${q.gaveUp ? '' : JSON.stringify(q.dbg)}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
