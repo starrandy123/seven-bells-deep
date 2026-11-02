@@ -30,19 +30,27 @@ export function createCombat(G, h, api) {
     return out.lengthSq() > 1e-4 ? out.normalize() : null;
   }
 
-  // ------------------------------------------------------------------ who a blow is aimed at: the stick's way if pushed, or where the camera looks
+  // ------------------------------------------------------------------ who a blow is aimed at: a soft lock inside a cone round the view, never behind it
+  // Randy, Build 68: "When I'm shooting fire, it looks in the wrong direction and doesn't always hit the enemy and sometimes shoots behind me". Scored by distance and angle with
+  // no bound, a foe 4 m behind the camera won over one 24 m ahead, and a pushed stick (in flight now a turn) swung the aim to the side. A shipped game's aim assist picks only
+  // inside a cone and ignores what's outside it (M4, Pipeline/research/CONTROL_SOURCES.md), and warns that a cone round the body rather than the view "can sometimes be
+  // confusing": this one is the view's. On his feet a pushed stick leans the aim toward where it points, while that's still inside the cone
+  const AIM_CONE = (40 * Math.PI) / 180;
   function findTarget(range) {
     const list = G.enemies ? G.enemies.alive() : []; let best = null, score = 1e9;
-    const pushed = Math.hypot(stickX, stickY) > 0.3, cy = G.camYaw + (pushed ? Math.atan2(-stickX, stickY) : 0);
+    const pushed = Math.hypot(stickX, stickY) > 0.3 && h.land && !h.air && !h.fly, lean = pushed ? Math.atan2(-stickX, stickY) : 0, cy = G.camYaw + (Math.abs(lean) <= AIM_CONE ? lean : 0);
+    const inView = (x, z) => Math.abs(wrap(Math.atan2(x - h.pos.x, z - h.pos.z) - G.camYaw)) <= AIM_CONE;
     for (const e of list) {
       const dx = e.pos.x - h.pos.x, dy = e.pos.y - h.pos.y, dz = e.pos.z - h.pos.z, d = Math.hypot(dx, dy, dz);
-      if (d > range || e.hidden) continue;
+      if (d > range || e.hidden || !inView(e.pos.x, e.pos.z)) continue;
       const a = Math.abs(wrap(Math.atan2(dx, dz) - cy)), s = d + a * 6;
       if (s < score) { score = s; best = e; }
     }
-    if (G.boss && G.boss.active) { const t = G.boss.lockPoint(h.pos); if (t && t.pos.distanceTo(h.pos) < range && (!best || t.pos.distanceTo(h.pos) < best.pos.distanceTo(h.pos))) best = t; }
+    if (G.boss && G.boss.active) { const t = G.boss.lockPoint(h.pos); if (t && t.pos.distanceTo(h.pos) < range && inView(t.pos.x, t.pos.z) && (!best || t.pos.distanceTo(h.pos) < best.pos.distanceTo(h.pos))) best = t; }
     return best;
   }
+  // with nothing in the cone a shot goes where the view looks (level on his feet), and he faces it
+  const viewAim = (out) => { camDir(out); if (h.land && !h.air) { out.y = 0; out.normalize(); } return out; };
 
   const open = (id) => { if (G.sideNow === 'fire') return true; const k = D.unlock[id]; return k === true || k === undefined ? true : !!h.powers[k]; };
   const afford = (id) => !!D.moves[id] && h.tide >= costOf(id);
@@ -95,7 +103,7 @@ export function createCombat(G, h, api) {
   // a blow reaches for its target: far off, he crosses the gap first, and the wind-up lasts as long as the crossing
   function startReach(a) {
     const d = a.def, t = a.target;
-    if (!t) { heroFacing(a.dir); return; }
+    if (!t) { if (fireMove(a.id)) { viewAim(a.dir); h.heading = Math.atan2(a.dir.x, a.dir.z); } else heroFacing(a.dir); return; }
     to.subVectors(t.pos, h.pos); const dist = to.length() || 1, gap = Math.max(0, dist - (t.r || 0.8) - 1.3);
     a.dir.copy(to).multiplyScalar(1 / dist);
     // the fire side doesn't cross the gap: from here on the same blow is thrown at him as a blast. He stands and turns to it
@@ -227,10 +235,13 @@ export function createCombat(G, h, api) {
   function stepMove(dt) {
     const a = cur, d = a.def, f = a.f;
     const t = a.target; if (t && t.hp !== undefined && t.hp <= 0) a.target = null;
-    if (a.target) {
-      to.subVectors(a.target.pos, h.pos); turnTo(Math.atan2(to.x, to.z), dt);
+    // he faces what he shoots at: the foe, the foe a fire blast was thrown at, or with neither the view; a melee swing with no foe still goes the stick's way
+    const aimAt = a.target || (a.shotAt && a.shotAt.pos ? a.shotAt : null);
+    if (aimAt) {
+      to.subVectors(aimAt.pos, h.pos); turnTo(Math.atan2(to.x, to.z), dt);
       h.pitchT = damp(h.pitchT, Math.atan2(to.y, Math.hypot(to.x, to.z)), 14, dt);
-    } else if (d.kind === 'strike' || d.kind === 'power') { const s = stickDir(v2); if (s) turnTo(Math.atan2(s.x, s.z), dt); else if (d.kind === 'power') turnTo(G.camYaw, dt); }
+    } else if (d.kind === 'power' || fireMove(a.id)) turnTo(G.camYaw, dt);
+    else if (d.kind === 'strike') { const s = stickDir(v2); if (s) turnTo(Math.atan2(s.x, s.z), dt); }
 
     if (!a.swung && d.reach && f >= d.startup - 3) { a.swung = true; G.audio.swing(); }
     switch (d.motion || 'lunge') {

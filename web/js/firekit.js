@@ -37,7 +37,8 @@ export function createFireKit(G, F) {
   function stepShots(dt) {
     for (const s of shots) {
       if (!s.on) continue;
-      if (s.target && s.target.pos && !(s.target.hp <= 0)) { v1.copy(s.target.pos); v1.y += 0.2; v2.subVectors(v1, s.p); const l = v2.length() || 1; v3.copy(s.v).normalize(); v3.lerp(v2.multiplyScalar(1 / l), 1 - Math.exp(-9 * dt)).normalize(); s.v.copy(v3).multiplyScalar(s.v.length()); if (s.f) { s.f.a.copy(v3); s.f.v.copy(s.v); s.f.p.copy(s.p); } }
+      // a light homing that never curves back: it bends toward its foe only while the foe is still ahead of it
+      if (s.target && s.target.pos && !(s.target.hp <= 0) && (v1.copy(s.target.pos).sub(s.p).dot(s.v) > 0)) { v1.copy(s.target.pos); v1.y += 0.2; v2.subVectors(v1, s.p); const l = v2.length() || 1; v3.copy(s.v).normalize(); v3.lerp(v2.multiplyScalar(1 / l), 1 - Math.exp(-9 * dt)).normalize(); s.v.copy(v3).multiplyScalar(s.v.length()); if (s.f) { s.f.a.copy(v3); s.f.v.copy(s.v); s.f.p.copy(s.p); } }
       G.fireLight.light(s.p.x, s.p.y, s.p.z, 1, 0.5, 0.16, 14, 30 * s.k, 0.3, 2.2); s.p.addScaledVector(s.v, dt); s.left -= s.v.length() * dt; if ((s.trail -= dt) <= 0) { s.trail = 0.035; v1.copy(s.v).normalize(); F.puff(v2.copy(s.p).addScaledVector(v1, -0.9), rnd(0.4, 0.62) * s.k, 0.22, -v1.x * 4 + rnd(-1, 1), -v1.y * 4 + rnd(-1, 1), -v1.z * 4 + rnd(-1, 1), 4, 2, 1.4); }
       let done = s.left <= 0 || s.p.y < G.world.heightAt(s.p.x, -s.p.z) + 0.1;
       if (!done && binds && s.a) {

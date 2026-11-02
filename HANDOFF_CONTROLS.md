@@ -15,7 +15,7 @@ His words, on Build 67 on his phone: "The flight and movement controls are terri
 
 | | Left thumb | Right thumb |
 |---|---|---|
-| Everywhere | Floating stick on the left half, the drawn stick included; base follows past the rim; dead zone 0.12 | Drag looks 1:1; a thumb on Boost or Fly drags the view too |
+| Everywhere | Floating stick on the left half, the drawn stick included; once down its base stays put for the touch (his word on Build 68); dead zone 0.12 | Drag looks 1:1; a thumb on Boost or Fly drags the view too |
 | On foot (both) | Relative to the view; small push walks, big runs | Strike, Parry, Jump; Boost: the Warden rides water up the land, the man in red skims on his jets |
 | Water, surf (Warden) | Relative to the view, 3D in the water; carves on the surf | Boost, Jump |
 | Skim (man in red) | Relative to the view | Jump: the big fire jump; then Boost reads Fly |
@@ -38,5 +38,7 @@ Walls changed for the scheme, each saying so in its file: E22 (it held the fligh
 - The lens's cut through the water at a leap (8.5 rad/s) is by design and unchanged; the survey's landing case shows one camera cut near the ground at its own spot, not seen in a traced landing elsewhere: check it.
 - No auto-follow of the view on foot (the third-person template and Cinemachine leave it off by default; Nesky's talk says follow the velocity). Try it gently if he asks for it.
 - The before build used for comparison was served from a scratch checkout of b7b3ee9; it's removed.
+
+Build 68 follow-ups (his words): the fire's aim is a soft lock inside a 40° cone round the view, never behind it, and he faces what he shoots at ("it looks in the wrong direction ... sometimes shoots behind me"); the stick's base no longer follows the thumb ("The joystick moves too with me too much").
 
 Continue from `fire`, after the last commit named above.

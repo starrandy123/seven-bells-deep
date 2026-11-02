@@ -106,8 +106,9 @@ export function createUI(G) {
     const d = Math.hypot(x, y), k = d > TRAVEL ? TRAVEL / d : 1; x *= k; y *= k;
     nub.style.transform = `translate(${x}px,${y}px)`; shaped(x / TRAVEL, -y / TRAVEL, st2); sx = st2[0]; sy = st2[1];
   };
-  // the base follows a thumb that slides past the rim, everywhere, so a reversal is never more than two radii and a drifting thumb never falls off the stick (nipplejs's follow; Baldauf 2015)
-  const stickFrom = (e) => { let x = e.clientX - sox, y = e.clientY - soy; const d = Math.hypot(x, y); if (d > TRAVEL) { const k = 1 - TRAVEL / d; sox += x * k; soy += y * k; x -= x * k; y -= y * k; stick.style.left = `${sox - stick.offsetWidth / 2}px`; stick.style.top = `${soy - stick.offsetHeight / 2}px`; } setStick(x, y); };
+  // once down, the base stays where the thumb landed for that touch, everywhere: a thumb past the rim reads as the full push its way and moves nothing. Randy, Build 68: "The joystick
+  // moves too with me too much and that's bad when I'm in swimming on touch" (the base had followed a thumb past the rim, as nipplejs's follow does)
+  const stickFrom = (e) => setStick(e.clientX - sox, e.clientY - soy);
   const floatAt = (e) => {
     stickId = e.pointerId; floatStick = true; sox = e.clientX; soy = e.clientY;
     stick.style.left = `${e.clientX - stick.offsetWidth / 2}px`; stick.style.top = `${e.clientY - stick.offsetHeight / 2}px`; stick.style.bottom = 'auto'; setStick(0, 0);
