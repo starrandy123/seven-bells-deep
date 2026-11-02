@@ -359,6 +359,12 @@ export async function createEmber(G, { foeMaterial, D }) {
       if (foot) { const [a2, c2, t2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); t.getWorldPosition(footA); t2.getWorldPosition(footB); footA.add(footB).multiplyScalar(0.5); }
       v3.subVectors(v2, v1).normalize().multiplyScalar(foot ? 0.6 : 0.3).addScaledVector(up, -1).normalize();
       if (foot) v2.lerp(footA, 0.45).addScaledVector(v3, 0.07); else v2.addScaledVector(v3, 0.08);
+      // his own palms, which body.js turns to the ground in thrust: as far as a palm faces the ground, the flame leaves the middle of it along its normal, leaning back along his body, as a jet suit's arm jets aim at the ground and a little back
+      const pm = !foot && box === H2 && G.hero.palm, V = pm && (box.palmV || (box.palmV = [new THREE.Vector3(), new THREE.Vector3()]));
+      if (pm) {
+        const P = pm[i === 0 ? 'R' : 'L'], f = clamp((-V[0].fromArray(P.n).transformDirection(c.matrixWorld).y - 0.3) / 0.5, 0, 1), pk = f * f * (3 - 2 * f);
+        if (pk > 1e-3) { V[0].addScaledVector(up, -0.3).normalize(); V[1].fromArray(P.c).applyMatrix4(c.matrixWorld).addScaledVector(V[0], 0.03); v3.lerp(V[0], pk).normalize(); v2.lerp(V[1], pk); }
+      }
       // how long the flame shows at full thrust: about six nozzle widths. A real jet's shock-diamond train dies out within ten, and a jet suit's exhaust is barely seen in daylight (Pipeline/research/FLIGHT_SOURCES.md). Randy, 2 Nov: "The jet propulsion stream is too long"
       const S = J[i], want = (foot ? FOOT_JET_M : HAND_JET_M) * (0.36 + 0.64 * spool) * (0.9 + 0.1 * Math.sin(G.time * 19 + seed * 9 + i * 2) + 0.06 * Math.sin(G.time * 43 + i));
       // it grows out of the nozzle at the speed the gas leaves it, and falls back faster
