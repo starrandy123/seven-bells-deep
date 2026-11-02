@@ -120,13 +120,23 @@ export function paintMetro(b, bn, c, ox, oy) {
 
 // ---------------------------------------------------------------- the plan
 // Every box is { x, y (data), z0, h, sx, sy, yaw, seed, foot, kind, bay }: kind 0 a storeyed volume with windows, 1 roof gear, 2 an aircraft lamp
+// The AAA3d generator's own vertical layout (aaa3d/cityGen.js, SkyscraperGenerator.build), replayed so what can be stood on is what is drawn: its floors and bays snapped to the brick
+// (0.6 m), its height a whole number of floors, its base and crown fractions the first two draws of its seeded stream, its crown set back by setbackDepth bays. (A height not a whole
+// number of floors left the drawn roof up to half a floor over the box he stood on: Randy, 2 Nov, "It seems the character fell inside the buildings too")
+function genLayout(gen) {
+  let s = (gen.seed >>> 0) || 1; const rand = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const baseF = 0.10 + rand() * 0.07, crownF = 0.08 + rand() * 0.08;
+  const fh = Math.max(1.8, Math.round(gen.floorHeight / 0.6) * 0.6), bw = Math.max(1.8, Math.round(gen.bayWidth / 0.6) * 0.6);
+  const floors = Math.max(3, Math.round(gen.totalHeight / fh)), bF = Math.max(1, Math.round(floors * baseF)), cF = Math.max(1, Math.round(floors * crownF)), sF = Math.max(1, floors - bF - cF);
+  return { H: (bF + sF + cF) * fh, shaftTop: (bF + sF) * fh, inset: (gen.setbackDepth || 0) * bw, fh, bw };
+}
 export function planMetro(data) {
   const rnd = rngOf(90210), boxes = [], colliders = [], signs = [], parks = [], cx = METRO.x, cy = METRO.y; let tall60 = 0, tall150 = 0, lots = 0;
   // the towers crowd the business district on the waterfront, west of the centre, as a port city's do (its quays, its station), and fall away up the slope towards the ridge
   const cbd = { x: cx - 0.5 * PITCH, y: cy + 0.5 * PITCH };
   // each building's facade family and wall tone (metro_kit.js FAMILY): a tower's podium may take a different one from its shaft, a bottom and an upper style as the demo city's grammar has
   let cur = { bid: 0, fam: 1, tone: 0 };
-  const box = (b) => { if (b.kind === 0) { b.bid = cur.bid; b.fam = cur.fam; b.tone = cur.tone; } boxes.push(b); if (b.kind !== 2) colliders.push({ t: 'box', x: b.x, y: b.y, z0: b.z0, z1: b.z0 + b.h, hx: b.sx / 2, hy: b.sy / 2, yaw: b.yaw || 0, city: METRO.id, type: 'tower' }); };
+  const box = (b) => { if (b.kind === 0) { b.bid = cur.bid; b.fam = cur.fam; b.tone = cur.tone; } boxes.push(b); if (b.kind !== 2 && !b.nocol) colliders.push({ t: 'box', x: b.x, y: b.y, z0: b.z0, z1: b.z0 + b.h, hx: b.sx / 2, hy: b.sy / 2, yaw: b.yaw || 0, city: METRO.id, type: 'tower' }); };
   // the places take their blocks first: the Bell Ring a square of four on the harbour, east of the centre, looking across at the volcano; the Signal Mast by the western quay, where the sea sees it
   const ring = { i0: 1, j0: 0, x: cx + 1.5 * PITCH, y: cy + 0.5 * PITCH }, mast = { x: cx - 2 * PITCH, y: cy };
   const taken = (i, j) => (i >= 1 && i <= 2 && j >= 0 && j <= 1) || (i === -2 && j === 0);
@@ -151,7 +161,12 @@ export function planMetro(data) {
       const gen = { seed: Math.floor(seed * 100000), totalHeight: h, footprint: { width: pw - 1, depth: pd - 1 }, floorHeight: STOREY + r() * 0.8, bayWidth: 1.9 + r() * 2.1, pierWidth: 0.4 + r() * 0.5, pierDepth: 0.3 + r() * 0.4,
         chamferWidth: !one ? 3 + r() * 4 : 0, chamferCornerX: cornerX, chamferCornerZ: cornerZ, setbackDepth: r() < 0.4 ? 0.8 + r() * 2 : 0, stringCourseEvery: r() < 0.85 ? 3 + Math.floor(r() * 6) : 0 };
       cur = { bid: lots, fam: FAMILY.MASONRY, tone };
-      box({ x: px, y: py, z0: Z, h, sx: pw - 1, sy: pd - 1, seed, foot: Z, kind: 0, bay: gen.bayWidth, floor: gen.floorHeight, gen, glass: Math.floor(r() * 4) });
+      // what can be stood on: the mass to its ledge, and the crown above it, set in by its setback
+      const L = genLayout(gen); h = L.H;
+      box({ x: px, y: py, z0: Z, h, sx: pw - 1, sy: pd - 1, seed, foot: Z, kind: 0, bay: L.bw, floor: L.fh, gen, glass: Math.floor(r() * 4), nocol: true });
+      if (L.inset > 0.05) { const cw = Math.max(L.bw * 2, pw - 1 - 2 * L.inset), cd = Math.max(L.bw * 2, pd - 1 - 2 * L.inset);
+        colliders.push({ t: 'box', x: px, y: py, z0: Z, z1: Z + L.shaftTop, hx: (pw - 1) / 2, hy: (pd - 1) / 2, yaw: 0, city: METRO.id, type: 'tower' }, { t: 'box', x: px, y: py, z0: Z + L.shaftTop, z1: Z + h, hx: cw / 2, hy: cd / 2, yaw: 0, city: METRO.id, type: 'tower' }); }
+      else colliders.push({ t: 'box', x: px, y: py, z0: Z, z1: Z + h, hx: (pw - 1) / 2, hy: (pd - 1) / 2, yaw: 0, city: METRO.id, type: 'tower' });
       // its blade signs: up the corner, out over the street
       if (rnd() < 0.7) { const n = 1 + Math.floor(rnd() * 2); for (let k = 0; k < n; k++) { const side = rnd() < 0.5, sgn = rnd() < 0.5 ? -1 : 1; signs.push({ x: px + (side ? sgn * (pw / 2 + 0.7) : (rnd() - 0.5) * pw * 0.7), y: py + (side ? (rnd() - 0.5) * pd * 0.7 : sgn * (pd / 2 + 0.7)), z: Z + 4.5 + rnd() * 3, h: 4 + rnd() * Math.min(9, h - 9), yaw: side ? 0 : Math.PI / 2, hue: Math.floor(rnd() * 6), seed: rnd() }); } }
       // a red lamp on every roof over 100 m, as air safety asks
