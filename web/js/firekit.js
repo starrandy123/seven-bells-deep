@@ -66,7 +66,7 @@ export function createFireKit(G, F) {
     impact(p, dir, kind) { burst(p, kind === 'heavy' ? 1.25 : kind === 'medium' ? 1 : 0.8, dir); },
     whip(a, b, s) { if (s <= 0.02) return; v1.subVectors(b, a); const l = v1.length() || 1; v1.multiplyScalar(1 / l); F.tongue(a, v1, 0.62 * s, l * 1.08, 0.09); F.tongue(a, v1, 0.32 * s, l * 1.15, 0.07); if (Math.random() < 0.7) { v2.copy(a).addScaledVector(v1, rnd(0.2, 1) * l); F.puff(v2, rnd(0.35, 0.6), 0.2, rnd(-2, 2), rnd(-1, 3), rnd(-2, 2), 4, 2, 1.5); } },
     riptide(on) { K.rip = on ? 1 : 0; if (on) burst(G.hero.pos, 0.8); },
-    spin(p) { K.spin = 1.05; K.spinP.copy(p); },
+    spin(p, who) { K.spin = 1.05; K.spinP.copy(p); K.spinWho = who || null; },
     wave(from, dir) { K.wall = { from: from.clone(), dir: dir.clone().setY(0).normalize(), d: 1.5, left: 38 }; K.wallT = 0; },
     geyser(p, r, H, t, tell, T) {
       if (t < tell) { if (Math.random() < 0.5) { const a = rnd(0, TAU), R = rnd(0, r); v1.set(p.x + Math.cos(a) * R, p.y + 0.1, p.z + Math.sin(a) * R); F.tongue(v1, UP, 0.5, rnd(0.5, 1.2), 0.2); } return; }
@@ -91,8 +91,8 @@ export function createFireKit(G, F) {
       const T = G.homeT; v1.subVectors(T.p, K.spearAt || T.p); K.spearAt = K.spearAt || T.p.clone(); const l = v1.length(); if (l > 1e-3) { v1.multiplyScalar(-1 / l); F.tongue(T.p, v1, 0.85, 7, 0.08); F.tongue(T.p, v1, 0.4, 8.5, 0.06); F.puff(T.p, rnd(0.45, 0.7), 0.2, v1.x * 3 + rnd(-1, 1), rnd(-1, 2), v1.z * 3 + rnd(-1, 1), 4, 2, 1.5); } K.spearAt.copy(T.p);
     } else K.spearAt = null;
     if (K.rip > 0) { v1.copy(h.vel); const sp = v1.length() || 1; v1.multiplyScalar(1 / sp); F.comet(v2.copy(h.pos).addScaledVector(v1, 0.9), h.vel, 1.9, 5.2, 0.09); for (let i = 0; i < 2; i++) F.puff(h.pos, rnd(0.6, 0.95), 0.3, -v1.x * 7 + rnd(-3, 3), rnd(-1, 3), -v1.z * 7 + rnd(-3, 3), 4, 2, 1.5); }
-    if (K.spin > 0) { K.spin -= dt; K.spinA += dt * 11; const q = clamp(K.spin * 3, 0.3, 1); v3.copy(h.pos); v3.y -= 0.1; for (let i = 0; i < 2; i++) { const a = K.spinA + i * Math.PI, R = i ? 4.1 : 2.3; v1.set(Math.cos(a), 0.06, Math.sin(a)); v2.set(-Math.sin(a), 0, Math.cos(a)); F.arc(v3, v1, v2, R, 1.7, 1.25 * q, 0.13); } if (Math.random() < 0.7) { const a = rnd(0, TAU); v1.set(Math.cos(a), 0, Math.sin(a)); F.puff(v2.copy(h.pos).addScaledVector(v1, 3), rnd(0.5, 0.8), 0.28, v1.x * 7 - v1.z * 8, rnd(0, 3), v1.z * 7 + v1.x * 8, 3, 2, 1.5); } }
+    if (K.spin > 0) { K.spin -= dt; K.spinA += dt * 11; const q = clamp(K.spin * 3, 0.3, 1), at = K.spinWho || h.pos; v3.copy(at); v3.y -= 0.1; for (let i = 0; i < 2; i++) { const a = K.spinA + i * Math.PI, R = i ? 4.1 : 2.3; v1.set(Math.cos(a), 0.06, Math.sin(a)); v2.set(-Math.sin(a), 0, Math.cos(a)); F.arc(v3, v1, v2, R, 1.7, 1.25 * q, 0.13); } if (Math.random() < 0.7) { const a = rnd(0, TAU); v1.set(Math.cos(a), 0, Math.sin(a)); F.puff(v2.copy(at).addScaledVector(v1, 3), rnd(0.5, 0.8), 0.28, v1.x * 7 - v1.z * 8, rnd(0, 3), v1.z * 7 + v1.x * 8, 3, 2, 1.5); } }
     if (K.wall) { const w = K.wall; w.d += dt * 34; w.left -= dt * 34; if ((K.wallT -= dt) <= 0) { K.wallT = 0.045; side.set(-w.dir.z, 0, w.dir.x); for (let i = -2; i <= 2; i++) { v1.copy(w.from).addScaledVector(w.dir, w.d).addScaledVector(side, i * 1.55 + rnd(-0.4, 0.4)); v1.y = floorAt(v1) + 0.05; F.tongue(v1, UP, rnd(1.5, 2.1), rnd(3.2, 5) * (1 - Math.abs(i) * 0.13), rnd(0.26, 0.36)); } } if (w.left <= 0) K.wall = null; }
   }
-  return { strike, burst, frame, install, bind(b) { binds = b; }, comet: throwShot, flare };
+  return { strike, burst, frame, install, bind(b) { binds = b; }, comet: throwShot, flare, look, get water() { return water; } };
 }

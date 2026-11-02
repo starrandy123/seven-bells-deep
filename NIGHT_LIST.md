@@ -18,11 +18,11 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 12 | Martial-arts elemental fighting styles, for both sides | To do |
 | 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
 | 14 | Combat, cities, buildings, bosses built off proven frameworks | To do |
-| 15 | The right bosses for the fire side and the land people | To do |
+| 15 | The right bosses for the fire side and the land people | Build 47: the Tidecaller for fire, the Cinder King for water. The land people's boss still to come |
 | 16 | Underwater buildings stop being bland, from real references | Build 45: dark water, lit windows, rims of light, moving lights, reefs on the streets. Rotunda kit piece still plain |
 | 17 | Nice buildings on land and in the fire cities | To do |
 | 18 | A volcano world to contrast the waterfall | Build 46: the cone, the vent, lava rivers and falls, steam, embers. Basalt columns and lava that hurts the water side still to come |
-| 19 | The water against fire fight shows every power, for showcase clips | To do |
+| 19 | The water against fire fight shows every power, for showcase clips | Build 47: Pause, Watch the duel, with a directed camera. Moves improve with #12 |
 | 20 | Sand and grass on the water side's beaches, a real transition | Build 44, his eye |
 | 21 | Running stops feeling stiff | Build 44, his eye |
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |

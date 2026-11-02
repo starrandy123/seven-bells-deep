@@ -4,6 +4,12 @@ import { gate } from './lib/h.mjs';
 const { line, note, open, section, finish } = await gate('wall_ember', { budget: 150 });
 const TURNED = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 const steps = (page, n, each = '') => page.evaluate(([n, each]) => { const G = window.__game, f = each ? new Function('G', 'i', each) : null; for (let i = 0; i < n; i++) { if (f) f(G, i); G.frame(1 / 60); } }, [n, each]);
+await section(['E13'], async () => {
+  const { page, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => { const G = window.__game, CH = G.ember.champions(), h = G.hero; h.inv = 1e6; const e = CH.start('fire'), seen = new Set(), states = new Set(); for (let i = 0; i < 2400; i++) { G.frame(1 / 30); h.hp = h.maxHp; if (e.B.move) seen.add(e.B.move); states.add(e.B.st); if (i === 500) e.hp = e.maxHp * 0.5; if (i === 1000) e.hp = e.maxHp * 0.3; if (i === 1500) e.hp = e.maxHp * 0.08; if (i === 2000) e.hp = 1; } const bar = document.getElementById('bossbar').classList.contains('on'); e.hp = 0; for (let i = 0; i < 30; i++) G.frame(1 / 30); return { seen: [...seen], states: [...states], bar, gone: !G.champ }; });
+  line('E13', r.seen.length >= 5 && r.states.includes('fallen') && r.bar && r.gone, `a champion comes, shows ${r.seen.join(' ')}, falls and rises (${r.states.join(' ')}), holds the bar, and goes when he dies: ${r.gone}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

@@ -163,6 +163,7 @@ export async function createEnemies(G) {
   // ------------------------------------------------------------------ a blow lands on a foe: the shield, the elements, the reaction
   const front = (e, from, arcDeg) => Math.abs(wrap(Math.atan2(from.x - e.pos.x, from.z - e.pos.z) - e.heading)) < (arcDeg * Math.PI) / 360;
   function takeBlow(e, dmg, from, type, info) {
+    if (e.noHit) return 'blocked';
     if (e.hp <= 0) return 'dead';
     const F = e.def, status = info.status && !(F.immune === 'chill' && info.status.chill) ? info.status : {};
     if (status.chill) e.chillT = S.chill_decay_s;

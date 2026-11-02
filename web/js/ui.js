@@ -10,7 +10,7 @@ export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
-const NEWS = 'The Burnt Isle is a volcano now: a black cone, a blazing vent, molten rivers down to the sea';
+const NEWS = 'Champions: the Cinder King and the Tidecaller come after three raids. Pause, then Watch the duel to see them fight';
 
 export function createUI(G) {
   const input = { mx: 0, my: 0, ud: 0, yaw: 0, pitch: 0, boost: false, atk: false, dash: false, spin: false, wave: false, parry: false, call: false, ride: false, jump: false, p4: false, stance: false, dodge: false };
@@ -230,6 +230,7 @@ export function createUI(G) {
     const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
     const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
     $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
+    $('watchDuel').addEventListener('click', () => { G.ui.setPause(false); G.ember.champions().watch(true); });
     $('swapSide').addEventListener('click', () => { G.ember.setSide(G.sideNow === 'fire' ? 'water' : 'fire'); paintSide(); toast(G.sideNow === 'fire' ? 'Fire' : 'Water', G.sideNow === 'fire' ? 'Hold Boost to run on the jets, Jump to take off, then Fly. Super goes all fire' : 'Back to the sea', 4); });
     { let saved = null; try { saved = localStorage.getItem('thalor.side'); } catch (_) { /* water, then */ } G.sideNow = 'water'; if (saved === 'fire' && !FLAG.film) { G.ember.setSide('fire', { place: true, quiet: true }); if (G.quest) G.quest.endTitle(); } paintSide(); }
     setTimeout(() => screens.map.warm(), 1200);
@@ -413,8 +414,8 @@ export function createUI(G) {
     const jumpOn = !!h.land || h.state === 'surf' || h.state === 'swim';
     if (jumpOn !== bJump.classList.contains('show')) { bJump.classList.toggle('show', jumpOn); declareControls(); }
     const sp = $('speedv'); if (sp) sp.style.opacity = (h.surge * 0.85).toFixed(2);
-    const bar = $('bossbar'), b = G.boss;
-    const on = !!(b && b.active); bar.classList.toggle('on', on); if (on) bar.querySelector('i').style.transform = `scaleX(${Math.max(0, b.hp / b.maxHp)})`;
+    const bar = $('bossbar'), b = G.champ || G.boss;
+    const on = !!(b && (b.active || G.champ === b)); bar.classList.toggle('on', on); if (on) bar.querySelector('i').style.transform = `scaleX(${Math.max(0, b.hp / b.maxHp)})`;
   }
 
   return {

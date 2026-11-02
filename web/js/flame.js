@@ -23,7 +23,7 @@ export function createFlames(G, cap = 150) {
     vertexShader: /* glsl */`
       attribute vec4 iP, iA, iN; attribute vec3 iK; varying vec2 vUv; varying vec3 vK;
       void main() {
-        float kind = iK.y, u = position.x, v = position.y; vec3 w; vUv = vec2(u, v); vK = iK;
+        float kind = mod(iK.y, 4.0), u = position.x, v = position.y; vec3 w; vUv = vec2(u, v); vK = iK;
         if (kind > 1.5 && kind < 2.5) {
           // a crescent: the arc from a to b round its centre, tapered at both ends
           float a0 = iN.w*u, r = iA.w; vec3 rad = cos(a0)*iA.xyz + sin(a0)*iN.xyz; float wide = iP.w*sin(3.1416*pow(u, .8));
@@ -39,7 +39,7 @@ export function createFlames(G, cap = 150) {
     fragmentShader: /* glsl */`
       uniform float uT, uWet; uniform sampler2D tN; varying vec2 vUv; varying vec3 vK;
       void main() {
-        float burn = vK.x, kind = vK.y, seed = vK.z, u = vUv.x, v = vUv.y, c = abs(v - .5)*2.0, mask;
+        float burn = vK.x, kind = mod(vK.y, 4.0), wet = step(3.5, vK.y)*1.0 + uWet, seed = vK.z, u = vUv.x, v = vUv.y, c = abs(v - .5)*2.0, mask;
         vec2 n1, n2;
         if (kind < .5) { float r = length(vUv - .5)*2.0; mask = 1.0 - r; n1 = vUv*.7 + seed; n2 = vUv*1.6 - seed*2.0; }
         else if (kind < 1.5) {
@@ -53,7 +53,7 @@ export function createFlames(G, cap = 150) {
         float f = n*1.15*clamp(mask*1.7, 0.0, 1.0) + mask*.42 - burn*1.05 - .12, e = .022;
         float rim = smoothstep(.02 - e, .02 + e, f), body = smoothstep(.22 - e, .22 + e, f), core = smoothstep(.46 - e, .46 + e, f);
         if (rim < .01) discard;
-        vec3 R = mix(vec3(.93, .2, .03), vec3(.2, .55, .95), uWet), B = mix(vec3(1.0, .56, .08), vec3(.5, .85, 1.0), uWet), C = mix(vec3(1.0, .95, .62), vec3(.92, 1.0, 1.0), uWet);
+        vec3 R = mix(vec3(.93, .2, .03), vec3(.12, .42, .86), wet), B = mix(vec3(1.0, .56, .08), vec3(.42, .82, 1.0), wet), C = mix(vec3(1.0, .95, .62), vec3(.92, 1.0, 1.0), wet);
         vec3 rgb = mix(mix(R, B, body), C, core);
         gl_FragColor = vec4(rgb*rim, rim*(.8 + .2*body));
       }`,
@@ -61,10 +61,10 @@ export function createFlames(G, cap = 150) {
   const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 15.8; mesh.visible = false; G.scene.add(mesh);
   const live = []; for (let i = 0; i < cap; i++) live.push({ on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), a: new THREE.Vector3(), n: new THREE.Vector3(), w: 1, l: 1, age: 0, life: 1, kind: 0, seed: 0, drag: 0, rise: 0, grow: 1, turn: 0 });
   let head = 0;
-  const take = () => { const f = live[head]; head = (head + 1) % cap; f.on = true; f.age = 0; f.seed = Math.random(); f.drag = 0; f.rise = 0; f.grow = 1; f.turn = 0; return f; };
+  const take = () => { const f = live[head]; head = (head + 1) % cap; f.on = true; f.age = 0; f.seed = Math.random(); f.drag = 0; f.rise = 0; f.grow = 1; f.turn = 0; f.wet = api.wetNext; return f; };
   const X = new THREE.Vector3(1, 0, 0), t1 = new THREE.Vector3();
   const api = {
-    mesh,
+    mesh, wetNext: 0,      // set to 1 and what's made next is water, in the same three tones
     // a round flame, thrown: where, its size, how long it lasts, its velocity, how fast the air stops it, how fast heat lifts it, how much it swells
     puff(p, size, life, vx = 0, vy = 0, vz = 0, drag = 2, rise = 2, grow = 1.7) { const f = take(); f.kind = PUFF; f.p.copy(p); f.v.set(vx, vy, vz); f.w = f.l = size; f.a.set(0, 1, 0); f.life = life; f.drag = drag; f.rise = rise; f.grow = grow; return f; },
     // a comet: its head at p, flying along v, its tail length l behind
@@ -81,7 +81,7 @@ export function createFlames(G, cap = 150) {
         if (f.drag) f.v.multiplyScalar(Math.exp(-f.drag * dt)); f.v.y += f.rise * dt; f.p.addScaledVector(f.v, dt);
         const q = f.age / f.life, s = f.kind === PUFF ? 1 + (f.grow - 1) * (1 - (1 - q) * (1 - q)) : 1, o = n++ * FIELDS, c = f.kind === COMET || f.kind === TONGUE ? t1.copy(f.p).addScaledVector(f.a, f.kind === COMET ? -f.l * 0.5 : f.l * 0.5 * s) : f.p;
         data[o] = c.x; data[o + 1] = c.y; data[o + 2] = c.z; data[o + 3] = f.w * s; data[o + 4] = f.a.x; data[o + 5] = f.a.y; data[o + 6] = f.a.z; data[o + 7] = f.l * s;
-        data[o + 8] = f.n.x; data[o + 9] = f.n.y; data[o + 10] = f.n.z; data[o + 11] = f.turn; data[o + 12] = q * q * (f.kind === PUFF ? 0.95 : 1.1); data[o + 13] = f.kind; data[o + 14] = f.seed;
+        data[o + 8] = f.n.x; data[o + 9] = f.n.y; data[o + 10] = f.n.z; data[o + 11] = f.turn; data[o + 12] = q * q * (f.kind === PUFF ? 0.95 : 1.1); data[o + 13] = f.kind + (f.wet ? 4 : 0); data[o + 14] = f.seed;
       }
       g.instanceCount = n; mesh.visible = n > 0; if (n) { ib.clearUpdateRanges(); ib.addUpdateRange(0, n * FIELDS); ib.needsUpdate = true; }
     },

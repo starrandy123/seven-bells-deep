@@ -198,6 +198,23 @@
     "names": { "whip": "Flame Whip", "riptide": "Flare Rush", "maelstrom": "Firewheel", "wave": "Wall of Fire", "geyser": "Magma Geyser", "lance": "Magma Lance", "glacier": "Obsidian Stomp", "breath": "Flame Breath", "icepath": "Lava Path", "cast": "Fire Spear", "shoalsong": "Ember Swarm", "call": "All Fire" },
     "moves": { "strike1": { "limb": "hand_L", "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "strike2": { "limb": "hand_R", "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "strike3": { "limb": "foot_R", "clip": "e_kick", "clip_t": [0.38, 0.62, 1.3] }, "air1": { "limb": "hand_L", "clip": "e_jab", "clip_t": [0.22, 0.45, 0.85] }, "air2": { "limb": "hand_R", "clip": "e_cross", "clip_t": [0.36, 0.6, 1.1] }, "launcher": { "limb": "hand_R", "clip": "e_hook", "clip_t": [0.3, 0.55, 1.05] } }
   },
+  "champions": {
+    "_doc": "the boss each side meets, and the duel (champion.js). tell_s by weight: quick .75, heavy 1 to 1.5, arena 2.6. recover_s is how long he stands open. phases open by health",
+    "hp": 2400, "duel_hp": 440, "show": ["volley", "combo", "whip", "wheel", "geyser", "rush", "combo", "wall", "nova"], "scale": 1.28, "hold_m": 13, "high_m": 5, "in_mps": 42, "from_m": 120, "recover_s": [2.0, 3.0], "false_at": 0.1, "false_s": 3.2, "last_hp": 0.22, "false_line": "Not yet",
+    "fire": { "name": "The Cinder King", "hint": "Water puts his fire out. Strike when he falls" },
+    "water": { "name": "The Tidecaller", "hint": "Fire boils him dry. Strike when he falls" },
+    "moves": {
+      "volley": { "tell_s": 0.75, "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "shots": 3, "gap_s": 0.24, "time_s": 1.0, "speed_mps": 36, "lead": 0.7, "damage": 10, "id": "volley" },
+      "rush": { "tell_s": 0.85, "clip": "e_cross", "clip_t": [0.0, 0.6, 1.23], "speed_mps": 36, "reach_m": 2.8, "time_s": 0.8, "damage": 16 },
+      "combo": { "tell_s": 0.75, "clip": "e_guard", "reach_m": 2.5, "speed_mps": 26, "close_s": 1.1, "beat_s": 0.42, "clips": ["e_jab", "e_cross", "e_kick"], "clip_at": [0.25, 0.4, 0.45], "damage": 8 },
+      "whip": { "tell_s": 0.8, "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "range_m": 18, "time_s": 0.6, "pull_mps": 14, "damage": 12 },
+      "wheel": { "tell_s": 1.1, "clip": "e_guard", "radius_m": 7.5, "time_s": 1.05, "damage": 11 },
+      "wall": { "tell_s": 1.2, "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "speed_mps": 30, "width_m": 9, "range_m": 38, "damage": 20 },
+      "geyser": { "tell_s": 1.4, "clip": "e_hook", "clip_t": [0.0, 0.55, 1.13], "radius_m": 3.8, "height_m": 15, "last_s": 1.1, "damage": 18 },
+      "nova": { "tell_s": 2.6, "big": true, "clip": "e_guard", "radius_m": 30, "speed_mps": 22, "damage": 26 }
+    },
+    "phases": [ { "at": 1.0, "moves": ["volley", "combo", "whip"] }, { "at": 0.68, "moves": ["volley", "combo", "rush", "whip", "wheel", "geyser"] }, { "at": 0.36, "moves": ["combo", "rush", "whip", "wheel", "geyser", "wall", "nova"] } ]
+  },
   "ember": {
     "_doc": "the Emberkin (EPIC V2, V5). flight: speeds in m/s, accel in m/s2, heights in metres; turn_rad how fast the body swings to the jets' line. heat: 1 is burning; a hit of water takes `water`, of ice `ice`; the sea takes sea_per_s; at 0 it's doused: its jets die for doused_s, it falls, blows do doused_mul, and it relights at `relight`. raid: how a flyer comes in, in seconds and metres",
     "flight": { "boost_mps": 46, "cruise_mps": 30, "ring_mps": 12, "climb_mps": 11, "accel": 38, "brake_m": 70, "ring_m": 13.5, "hover_m": 5.5, "over_m": 4.5, "duel_m": 8.5, "turn_rad": 7, "water_drag": 2.4, "fall_g": 17, "dive_m": 9 },
@@ -208,6 +225,6 @@
       { "id": "strafe", "clip": "e_blast", "clip_t": [0.0, 0.62, 1.13], "tell_s": 0.6, "strike_s": 1.0, "recover_s": 0.4, "burst": 3, "gap_s": 0.28, "pass_mps": 24, "speed_mps": 34, "lead": 0.8, "damage": 9 },
       { "id": "swoop", "clip": "e_cross", "clip_t": [0.0, 0.6, 1.23], "tell_s": 0.65, "strike_s": 1.0, "recover_s": 0.7, "reach_m": 2.4, "lunge_mps": 25, "damage": 16 } ] },
     "fire_note": "what the man in red does differently when he's played",
-    "raid": { "first_s": 8, "new_player_s": 30, "again_s": 40, "from_m": 300, "high_m": 24, "deepest_m": 30 }
+    "raid": { "before_champion": 3, "first_s": 8, "new_player_s": 30, "again_s": 40, "from_m": 300, "high_m": 24, "deepest_m": 30 }
   }
 }

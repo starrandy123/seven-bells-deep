@@ -474,9 +474,9 @@ export function createFx(G) {
 
   // ------------------------------------------------------------------ Maelstrom: three streams pour round him, climbing and widening
   let vortT = 0, vortP = new THREE.Vector3();
-  function spin(p) { vortT = 1.0; vortP.copy(p); bubbles(p, 26, 5); }
+  let vortWho = null; function spin(p, who) { vortT = 1.0; vortP.copy(p); vortWho = who || null; bubbles(p, 26, 5); }
   function vortexMesh(dt) {
-    if (vortT <= 0) return; vortT -= dt; if (G.hero) vortP.copy(G.hero.drawPos);
+    if (vortT <= 0) return; vortT -= dt; if (vortWho) vortP.copy(vortWho); else if (G.hero) vortP.copy(G.hero.drawPos);
     const k = clamp(vortT * 3.2, 0, 1) * clamp((1.0 - vortT) * 8, 0, 1);
     for (let arm = 0; arm < 3; arm++) {
       const N = 30, ph = (arm / 3) * TAU + G.time * 8.5;
@@ -744,6 +744,6 @@ export function createFx(G) {
 
   // which side he's playing: the sprites' water colours and the stream's
   const WET = { water: C.water.clone(), foam: C.foam.clone(), bead: C.bead.clone(), dark: C.dark.clone() };
-  function setSide(fire) { fMat.uniforms.uHot.value = fire ? 1 : 0; if (fire) { C.water.setRGB(1.0, 0.42, 0.07); C.foam.setRGB(1.0, 0.86, 0.6); C.bead.setRGB(1.0, 0.72, 0.28); C.dark.setRGB(0.24, 0.03, 0.0); } else { C.water.copy(WET.water); C.foam.copy(WET.foam); C.bead.copy(WET.bead); C.dark.copy(WET.dark); } }
+  function setSide() { /* the fire side has its own flames now (flame.js): what's in this file stays water, whoever is playing, so a water champion looks like water */ }
   return { update, speed, punch, prewarm, warmList, sp, now, ball, setSide, edge, song, rayLight, silt, spines, crown, sheet, pushIn, spoutSpray, noiseT, sunDir, chargeRing, sparks, bubbles, pushTrail, ring, spin, wave, shot, impact, parry, guard, block, dodge, perfect, stance, tell, glint, motes, denied, shock, dissolve, frost, frostBurst, whip, riptide, geyser, circle, crystal, spike, shatter, crust, thaw, plate, stagger, stats };
 }

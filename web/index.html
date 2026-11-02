@@ -195,6 +195,7 @@
   #mapZoom { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 8px; } #mapZoom button { width: 62px; height: 62px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.34); background: rgba(3, 18, 32, 0.88); font-size: 24px; font-weight: 700; }
   #mapSheet { position: absolute; left: 8px; right: 78px; bottom: 8px; display: none; padding: 8px 10px; border-radius: 12px; background: rgba(3, 18, 32, 0.92); gap: 10px; align-items: center; }
   #mapSheet.on { display: flex; } #mapSheet .g { flex: 1; min-width: 0; } #mapSheet b { display: block; font: 500 16px var(--title); } #mapSheet small { display: block; font-size: 17px; color: var(--dim); }
+  body.duelShow #hud, body.duelShow #hurt { display: none !important; }
 </style>
 </head>
 <body>
@@ -256,7 +257,8 @@
   <div id="load"><div class="bar"><i></i></div><small>Filling the sea</small></div>
 </div>
 <div class="screen" id="menu"><small class="build"></small>
-  <div id="menuHead"><h2 id="menuTitle">Paused</h2><span id="menuPearls"></span><button class="btn2" id="swapSide">Play as Fire</button><button class="btn2" id="resume">Swim on</button></div>
+  <div id="menuHead"><h2 id="menuTitle">Paused</h2><span id="menuPearls"></span><button class="btn2" id="swapSide">Play as Fire</button>
+        <button id="watchDuel" class="btn2">Watch the duel</button><button class="btn2" id="resume">Swim on</button></div>
   <div id="menuBody">
     <div class="tab" id="tab-quests"></div>
     <div class="tab" id="tab-map"><div id="mapBox"><canvas id="mapC"></canvas><div id="mapZoom"><button id="mapIn" aria-label="Zoom in">+</button><button id="mapOut" aria-label="Zoom out">&minus;</button></div><div id="mapSheet"><div class="g"><b></b><small></small></div><button class="btn2" id="mapGo">Travel</button></div></div></div>
