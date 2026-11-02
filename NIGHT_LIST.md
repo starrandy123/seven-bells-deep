@@ -54,6 +54,9 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 49 | Real shadows | To do |
 | 50 | Water reflections | To do |
 | 51 | Fire lights the world: every flame, jet and blast casts light on the city and the ground, inside the budgets | To do |
+| 52 | Nothing of the Warden shows when the man in red flies | Fixed: at speed `wake.js` drew afterimages from the Warden's own mesh |
+| 53 | The fire side's pause says Ignite for resume | After the rest |
+| 54 | Continue picks up where the player left off | After the rest |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).

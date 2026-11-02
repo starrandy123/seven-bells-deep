@@ -158,7 +158,8 @@ export function createWake(G, h, mesh) {
     if (fast > 14) { since += dt; const every = 0.03; while (since > every) { since -= every; puff(h.pos.x - Math.sin(h.heading) * 1.2 + (Math.random() - 0.5) * 0.9, h.pos.y - 0.86, h.pos.z - Math.cos(h.heading) * 1.2 + (Math.random() - 0.5) * 0.9, 0.5 + sp * 0.02, 0.5 + sp * 0.01); } }      // behind him and low: the lens is right behind him at this speed, and a taller cloud stands between it and his legs
     if (anyDust) { let live = false; for (let i = 0; i < DUST; i++) { const p = P[i]; p.t += dt; const u = p.t / p.life; if (u < 1) { live = true; p.y += p.vy * dt; const o = i * 4; seat[o] = p.x; seat[o + 1] = p.y; seat[o + 2] = p.z; seat[o + 3] = p.r * (1 + u * 1.6); glow[i] = (1 - u) * (1 - u); } else glow[i] = 0; } geo.attributes.aSeat.needsUpdate = true; geo.attributes.aA.needsUpdate = true; anyDust = live; if (!warm) dust.visible = live; }
     // afterimages: the same over the match limit, on land or in the water at super speed
-    const over = onFoot ? clamp((sp - 14) / 8, 0, 1) : clamp((h.speed - 30) / 12, 0, 1);
+    // the afterimages are the Warden's own mesh: the man in red has his jets, and no ghost of anybody else behind him. Randy, 2 Nov: "When I fly with fire, I see some semblance of the water guy too smimming with the trident"
+    const over = G.sideNow === 'fire' ? 0 : onFoot ? clamp((sp - 14) / 8, 0, 1) : clamp((h.speed - 30) / 12, 0, 1);
     if (ghosts.length) {
       turn += dt;
       if (over > 0 && turn > 0.07) { turn = 0; mesh.skeleton.update(); const g = ghosts.reduce((a, b) => (a.t > b.t ? a : b)); g.sk.boneMatrices.set(mesh.skeleton.boneMatrices); if (g.sk.boneTexture) g.sk.boneTexture.needsUpdate = true; g.t = 0; g.strength = over; g.g.visible = true; }

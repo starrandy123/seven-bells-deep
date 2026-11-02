@@ -41,7 +41,7 @@
    "from": "http://mocap.cs.cmu.edu/faqs.php"
   },
   {
-   "what": "The fire side's strikes, kicks and guard in assets/ember.glb: motion capture of boxing and karate forms, trials 14_01, 14_02, 14_03, 135_01, 135_02 and 135_03, cut and fitted by our own scripts. The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.",
+   "what": "The fire side's strikes, kicks and guard in assets/ember.glb: motion capture of boxing and karate forms, trials 14_01, 14_02, 14_03, 135_01, 135_02 and 135_03, the tai chi set 12_04 for the Warden's forms, and getting up off the ground, 140_01 and 140_09, cut and fitted by our own scripts. The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.",
    "by": "Carnegie Mellon University Graphics Lab",
    "license": "other",
    "terms": "The FAQ at mocap.cs.cmu.edu/faqs.php, read 1 Nov 2026: \"The motion capture data may be copied, modified, or redistributed without permission.\" It asks that the data be credited, as the line above does",

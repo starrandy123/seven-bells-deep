@@ -87,6 +87,18 @@ await section(['E19'], async () => {
   line('E19', !r.spout && r.air && r.y > 2 && !real.length, `in the sea Jump held raises no tornado (${r.spout}); a Jump blasts him out to ${r.y} m; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// a returning player goes on from where he left off, and the fire side's pause reads Ignite
+await section(['E20'], async () => {
+  const { page, errors, close } = await open('?tier=phone&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 }); await page.waitForTimeout(400);
+  await page.locator('#pickFire').tap(); await page.waitForTimeout(500); const word = await page.evaluate(() => [document.getElementById('dive').textContent, document.getElementById('resume').textContent]); await page.locator('#dive').tap(); await page.waitForTimeout(1500);
+  await page.evaluate(() => { const G = window.__game, h = G.hero; window.__qa.walkAt(246, -760); G.quest.save(); return localStorage.getItem('thalor.save.v2').length; }); await page.waitForTimeout(400); await page.evaluate(() => window.__game.quest.save());
+  await page.reload(); await page.waitForFunction(() => { const d = document.querySelector('#dive'); return d && d.style.display !== 'none'; }, null, { timeout: 60000 }); await page.waitForTimeout(500); const label = await page.evaluate(() => document.getElementById('dive').textContent); await page.locator('#dive').tap(); await page.waitForTimeout(1400);
+  const r = await page.evaluate(() => { const h = window.__game.hero; return { side: window.__game.sideNow, x: Math.round(h.pos.x), y: Math.round(h.pos.y), z: Math.round(h.pos.z) }; });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E20', word[0] === 'Ignite' && word[1] === 'Ignite' && label === 'Continue' && r.side === 'fire' && Math.hypot(r.x - 246, r.z - 760) < 14 && !real.length, `the fire side reads ${word.join(' and ')}; ${label} comes back ${JSON.stringify(r)}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

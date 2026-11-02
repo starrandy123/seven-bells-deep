@@ -315,6 +315,8 @@ export function createQuest(G) {
       v: 2, at: Date.now(),
       player: { x: h.pos.x, y: h.pos.y, z: h.pos.z, yaw: G.camYaw, pitch: G.camPitch, land: !!h.land },
       checkpoint: { x: st.checkpoint.x, y: st.checkpoint.y, z: st.checkpoint.z, yaw: st.yaw },
+      // where he stood: Randy, 2 Nov, "we should be able to continue the game from where we left from" (his 1 Nov word had every session start at sea)
+      spot: finite(h.pos) && !h.dead ? { x: +h.pos.x.toFixed(1), y: +h.pos.y.toFixed(1), z: +h.pos.z.toFixed(1), yaw: +h.heading.toFixed(2), land: !!h.land, side: G.sideNow } : (st.loaded && st.loaded.spot) || null,
       chapter: missions.chapter(), won: st.won, first: st.first, gate: st.gateOpen,
       missions: missions.pack(),
       bells: bells.filter((b) => b.rung).map((b) => b.id), powers: Object.keys(h.powers).filter((k) => h.powers[k]),
@@ -383,8 +385,10 @@ export function createQuest(G) {
     if (G.settings && s.settings) G.ui.applySettings(s.settings);
     if (G.started && s.screen && s.screen !== 'play') G.ui.openScreen(s.screen);      // land them on the screen they left
   }
-  function seat() {      // every session starts at sea, where the title shows him: his word, 1 Nov. A save keeps what he's done, never where he stood
-    st.seated = true; h.ride = null;
+  // a game goes on from where he left it, on the side he left it on. A new game, or the other side, starts at that side's own beginning
+  function seat() {
+    st.seated = true; h.ride = null; const w = st.loaded && st.loaded.spot; if (!w || w.side !== G.sideNow || !Number.isFinite(w.x + w.y + w.z)) return;
+    h.respawn(new THREE.Vector3(w.x, w.y, w.z), w.yaw || 0); h.land = !!w.land; h.grounded = !!w.land; h.air = !w.land && w.y > 0.5; G.camYaw = w.yaw || 0; if (h.place) h.place(); st.loaded.spot = null;
   }
 
   if (G.sky) G.sky.onBolt = () => { st.thunderAt = G.time + 0.5 + Math.random() * 1.4; };

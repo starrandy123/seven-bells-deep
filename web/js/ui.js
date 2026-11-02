@@ -227,7 +227,7 @@ export function createUI(G) {
     refreshTitle();
     if (G.quest) G.quest.titleShot();
     // water or fire: picked here, kept, and changed from the pause screen. Randy, 1 Nov: "Allow users to choose in the Home Screen for water and fire and be able to switch too"
-    const paintSide = () => { const fire = G.sideNow === 'fire'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
+    const paintSide = () => { const fire = G.sideNow === 'fire'; $('resume').textContent = fire ? 'Ignite' : 'Swim on'; if ($('dive').textContent !== 'Continue') $('dive').textContent = fire ? 'Ignite' : 'Dive'; $('pickWater').classList.toggle('on', !fire); $('pickFire').classList.toggle('on', fire); $('titleLine').textContent = fire ? 'The sea has had its age. The fire comes for the rest.' : 'The drowned city waits for its last Warden.'; $('swapSide').textContent = fire ? 'Play as Water' : 'Play as Fire'; };
     const pick = (s) => { if (G.sideNow === s) return; G.ember.setSide(s, { place: true, quiet: true }); if (G.quest) { if (s === 'fire') G.quest.endTitle(); else G.quest.titleShot(); } paintSide(); };
     $('sidePick').style.display = ''; $('pickWater').addEventListener('click', () => pick('water')); $('pickFire').addEventListener('click', () => pick('fire'));
     $('watchDuel').addEventListener('click', () => { G.ui.setPause(false); if (G.ember.champions().watch(true) === false) toast('Not now', 'Finish this fight first', 3); });
