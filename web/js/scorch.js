@@ -62,7 +62,8 @@ export function createScorch(G) {
     q.key = key; q.m = e[0]; q.i = e[1]; TD.fill(0, best * TS * TS * 4, (best + 1) * TS * TS * 4); slotOf.set(key, best); U.ocDmgC.value[best].set(e[2], e[4], e[3], 1 / Math.max(e[5] - e[4], 1)); setSlot(e[0], e[1], best + 1); return best;
   }
   function stampB(e, p, r, el, power) {
-    const s = slotFor(e), q = slots[s], cx = e[2], cz = e[3], foot = e[4], H = Math.max(e[5] - foot, 1), dx = p.x - cx, dz = p.z - cz, ax = Math.abs(dx), az = Math.abs(dz), qq = dx / (ax + az + 1e-3), u = ((dz >= 0 ? 1 - qq : 3 + qq) * 0.25) * TS, v = ((p.y - foot) / H * 0.85 + Math.max(9 - Math.max(ax, az), 0) * 0.0167) * TS;
+    const s0 = slotFor(e), oc = s0 * TS * TS * 4, was = TD.subarray(oc, oc + TS * TS * 4).reduce((m, v, i) => (i % 4 === 3 && v > m ? v : m), 0);
+    const s = s0, q = slots[s], cx = e[2], cz = e[3], foot = e[4], H = Math.max(e[5] - foot, 1), dx = p.x - cx, dz = p.z - cz, ax = Math.abs(dx), az = Math.abs(dz), qq = dx / (ax + az + 1e-3), u = ((dz >= 0 ? 1 - qq : 3 + qq) * 0.25) * TS, v = ((p.y - foot) / H * 0.85 + Math.max(9 - Math.max(ax, az), 0) * 0.0167) * TS;
     const per = 4 * Math.max(ax + az, 2), ru = Math.max(1.6, (r / per) * TS * 2), rv = Math.max(1.6, (r / H) * 0.85 * TS), base = s * TS * TS * 4;
     for (let y = Math.max(0, Math.floor(v - rv)); y <= Math.min(TS - 1, Math.ceil(v + rv * 3)); y++) for (let k = Math.floor(u - ru * 2); k <= Math.ceil(u + ru * 2); k++) {
       // soot rises in a V: wider above, three times as tall as it is low
@@ -70,10 +71,12 @@ export function createScorch(G) {
       if (el === 'fire') { TD[o] = Math.max(TD[o], Math.min(255, w * 260)); if (!up || d < 0.4) TD[o + 1] = Math.max(TD[o + 1], Math.min(255, w * 255)); if (TD[o + 2] > 0) TD[o + 2] = Math.max(0, TD[o + 2] - w * 200); }
       else if (el === 'water') { if (TD[o + 1] > 150 && w > 0.3) TD[o + 3] = Math.min(255, TD[o + 3] + 60); TD[o] = TD[o] * (1 - 0.5 * w); TD[o + 1] = 0; }
       else { TD[o + 2] = Math.max(TD[o + 2], Math.min(255, w * 270)); TD[o + 1] = 0; }
-      // a blow breaks it in stages, the way the study counts hit points: plaster off, then a breach, then the room; frozen or hot stone goes faster
-      if (power >= 0.9 && !up && d < 0.5) TD[o + 3] = Math.min(255, TD[o + 3] + (TD[o + 2] > 120 ? 70 : TD[o + 1] > 150 ? 55 : 26));
+      // a blow breaks it in stages, the way the study counts hit points: plaster off, then a breach, then the room; frozen or hot stone goes much faster (stone cracks from heat and then cold)
+      if (power >= 0.9 && !up && d < 0.6) TD[o + 3] = Math.min(255, TD[o + 3] + (TD[o + 2] > 120 ? 95 : TD[o + 1] > 150 ? 85 : 42));
     }
     q.hold = 30; q.dirty = true; q.at = tNow; active = 1;
+    // the moment it gives: when this blow takes the deepest break past the face (0.38) or into the room (0.62), stone and dust come off it
+    if (power >= 0.9) { let now = 0; for (let i = oc + 3; i < oc + TS * TS * 4; i += 4) if (TD[i] > now) now = TD[i]; if ((was < 97 && now >= 97) || (was < 158 && now >= 158)) G.fx.rubble && G.fx.rubble(p, now >= 158 ? 22 : 12, now >= 158 ? 1.3 : 1); }
   }
   function buildingHit(p, r, el, power) {
     if (!W.cityMeshes && !W.metro) return; if (!bgrid) buildGrid(); const kx = Math.floor(p.x / 16), kz = Math.floor(p.z / 16);

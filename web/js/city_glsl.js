@@ -25,6 +25,17 @@ vec4 ocDmgAt(float s) {
   float v = (vOcP.y - c.y)*c.w*.85 + max(9.0 - max(a.x, a.y), 0.0)*.0167;
   return texture(tOcDmg, vec3(u, v, s));
 }
+// the room behind a breach: a ray into 3 x 3.4 x 3 m cells (van Dongen's interior mapping), the face it meets drawn as a lived-in room lit by the daylight through the hole: plaster walls, a timber
+// floor in boards, a pale ceiling, its corners darker and its far end dimmer, so a broken wall reads as a hole into a room and not as a dark stain
+vec3 slRoom(vec3 P) {
+  vec3 V = normalize(P - cameraPosition) + 1e-4, cell = vec3(3.0, 3.4, 3.0), t = ((floor(P/cell) + step(0.0, V))*cell - P)/V;
+  float d = min(t.x, min(t.y, t.z)); vec3 H = P + V*d, q = fract(H/cell);
+  bool flr = t.y <= min(t.x, t.z) && V.y < 0.0, top = t.y <= min(t.x, t.z) && V.y > 0.0, sideX = t.x <= min(t.y, t.z);
+  vec3 c = flr ? mix(vec3(.20, .12, .06), vec3(.30, .19, .10), step(.5, fract(H.x*1.6))) : top ? vec3(.46, .44, .40) : vec3(.40, .34, .27)*(.85 + .15*q.y);
+  vec2 e = flr || top ? q.xz : vec2(sideX ? q.z : q.x, q.y);
+  float ao = smoothstep(0.0, .14, e.x)*smoothstep(0.0, .14, 1.0 - e.x)*smoothstep(0.0, .14, e.y)*smoothstep(0.0, .14, 1.0 - e.y);
+  return c*(.5 + .5*ao)*(.25 + .75*exp(-d*.18))*.7;
+}
 float ocWinM = 0.0, ocInkM = 0.0, ocEmber = 0.0; vec3 ocWinC = vec3(0.0);
 float ocH1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
 // an ink line about a pixel and a half wide wherever d (in any unit) crosses zero: d over its own screen rate is its distance in pixels
@@ -259,7 +270,7 @@ export const CITY_ALBEDO = /* glsl */`{
       float fB = ocD.a + det*.8;
       if (fB > .38) { ocC = mix(vec3(.30, .26, .22), vec3(.46, .38, .30), n2)*(.8 + .3*step(.5, fract(ocQ.y/.35))); ocWinM = 0.0; }
       inkW = max(inkW, max(ocLn(fB - .38)*.6, ocLn(fB - .62)));
-      if (fB > .62) { vec3 V = normalize(vOcP - cameraPosition) + 1e-4, cell = vec3(3.0, 3.4, 3.0), t = ((floor(vOcP/cell) + step(0.0, V))*cell - vOcP)/V; float d = min(t.x, min(t.y, t.z)), flr = step(t.y, min(t.x, t.z)); ocC = mix(vec3(.030, .026, .024), vec3(.055, .045, .038), flr)*exp(-d*.25); ink = 0.0; }
+      if (fB > .62) { ocC = slRoom(vOcP); ink = 0.0; }
     } }
   ocInkM = max(ink*ocLod, inkW*ocLodW);
   diffuseColor.rgb = ocC;

@@ -77,6 +77,17 @@ export const DMG_PARS = /* glsl */`
 uniform mediump sampler2DArray tOcDmg; uniform vec4 ocDmgC[32];
 vec4 slDmgTile(int s, vec3 P) { vec4 c = ocDmgC[s]; vec2 p = P.xz - c.xz, a = abs(p); float q = p.x/(a.x + a.y + 1e-3), u = (p.y >= 0.0 ? 1.0 - q : 3.0 + q)*.25;
   float v = (P.y - c.y)*c.w*.85 + max(9.0 - max(a.x, a.y), 0.0)*.0167; return texture(tOcDmg, vec3(u, v, float(s))); }
+// the room behind a breach: a ray into 3 x 3.4 x 3 m cells (van Dongen's interior mapping), the face it meets drawn as a lived-in room lit by the daylight through the hole: plaster walls, a timber
+// floor in boards, a pale ceiling, its corners darker and its far end dimmer, so a broken wall reads as a hole into a room and not as a dark stain
+vec3 slRoom(vec3 P) {
+  vec3 V = normalize(P - cameraPosition) + 1e-4, cell = vec3(3.0, 3.4, 3.0), t = ((floor(P/cell) + step(0.0, V))*cell - P)/V;
+  float d = min(t.x, min(t.y, t.z)); vec3 H = P + V*d, q = fract(H/cell);
+  bool flr = t.y <= min(t.x, t.z) && V.y < 0.0, top = t.y <= min(t.x, t.z) && V.y > 0.0, sideX = t.x <= min(t.y, t.z);
+  vec3 c = flr ? mix(vec3(.20, .12, .06), vec3(.30, .19, .10), step(.5, fract(H.x*1.6))) : top ? vec3(.46, .44, .40) : vec3(.40, .34, .27)*(.85 + .15*q.y);
+  vec2 e = flr || top ? q.xz : vec2(sideX ? q.z : q.x, q.y);
+  float ao = smoothstep(0.0, .14, e.x)*smoothstep(0.0, .14, 1.0 - e.x)*smoothstep(0.0, .14, e.y)*smoothstep(0.0, .14, 1.0 - e.y);
+  return c*(.5 + .5*ao)*(.25 + .75*exp(-d*.18))*.7;
+}
 vec3 slDamage(vec3 col, vec4 D, vec3 P, inout float glow, inout vec3 glowC) {
   if (D.r + D.g + D.b + D.a < .008) return col;
   vec2 Q = vec2((P.x + P.z)*.5, P.y);
@@ -89,8 +100,7 @@ vec3 slDamage(vec3 col, vec4 D, vec3 P, inout float glow, inout vec3 glowC) {
   col = mix(col, mix(vec3(.46, .58, .66), vec3(.74, .83, .90), n1)*(.88 + .24*smoothstep(.0, .16, rib + .08)), ice); glow *= 1.0 - ice*.92;
   float fB = D.a + det*.8;
   if (fB > .38) { col = mix(vec3(.30, .26, .22), vec3(.46, .38, .30), n2)*(.8 + .3*step(.5, fract(Q.y/.35))); glow = 0.0; }
-  if (fB > .62) { vec3 V = normalize(P - cameraPosition) + 1e-4, cell = vec3(3.0, 3.4, 3.0), t = ((floor(P/cell) + step(0.0, V))*cell - P)/V; float d = min(t.x, min(t.y, t.z)), flr = step(t.y, min(t.x, t.z));
-    col = mix(vec3(.030, .026, .024), vec3(.055, .045, .038), flr)*exp(-d*.25); }
+  if (fB > .62) col = slRoom(P);
   return col;
 }
 `;
