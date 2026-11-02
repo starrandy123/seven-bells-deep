@@ -38,7 +38,11 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 33 | Fire burns and breaks the world; water puts fire out, freezes and breaks it; buildings recover | To do |
 | 34 | Dodge in the air | To do |
 | 35 | Near the sea, the water tornado drags fire and other foes in: henchmen drown, bosses and the main character are disarmed and badly hurt | To do |
-| 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After 24 to 35 |
+| 36 | Turf: fire fears the water, water fears the sky, and they can still reach each other | To do |
+| 37 | A great water tornado, summoned near water, lifts a water elemental to the sky cities | To do |
+| 38 | Fire animals the fire side fights, as the water side has its beasts and bosses | To do |
+| 39 | Peaceful birds to fly with, and beautiful views | To do |
+| 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
