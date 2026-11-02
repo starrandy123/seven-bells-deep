@@ -2,6 +2,7 @@
 // body.js draws him from what's decided here; combat.js decides his blows.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { shrinkMaps } from './shrink.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { FLAG, W, TOUCH, retry } from './config.js';
 import { createRagdoll } from './ragdoll.js';
@@ -93,7 +94,7 @@ export async function createHero(G) {
   try {
     const r = await retry(() => fetch('assets/moves.json')); if (r.ok) moves = { ...FALLBACK_MOVES, ...(await r.json()) };
     const gltf = await retry(() => loader.loadAsync(G.tier === 'phone' ? 'assets/hero_phone.glb' : 'assets/hero.glb'));      // the phone's has its textures at half size: about 16 MB less in memory
-    model = gltf.scene; root.add(model); clips = gltf.animations;
+    model = gltf.scene; root.add(model); clips = gltf.animations; if (G.tier === 'phone') shrinkMaps(model, ['normalMap', 'emissiveMap', 'roughnessMap', 'metalnessMap']);
     model.traverse((o) => {
       if (o.isBone) bones[o.name] = o;
       if (o.isMesh) {

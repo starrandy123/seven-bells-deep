@@ -199,6 +199,29 @@ await section(['E25'], async () => {
   line('E25', q.low >= 6 && q.outSeen && !q.under.length && q.surf.length >= 3 && !q.surf.some((b) => b !== 'bolt' && b !== 'strafe') && q.m && q.flee >= 1 && q.outT > 0 && q.outT < 3 && q.hill && q.onHill !== 'sky' && q.onFort === 'sky' && !real.length, `two fire flyers over a man 5 m under the sea, far out: lowest ${q.low.toFixed(1)} m over open water, ${q.panics} panics up, out of their element ${q.outSeen}, ${q.under.length} blows told at him; at the surface ${q.surf.length} blows, all from range (${[...new Set(q.surf)].join(' ')}); a monitor thrown in the sea fled ${q.flee}× and was out in ${q.outT.toFixed(2)} s; a hilltop reads '${q.onHill}', the sky city '${q.onFort}'; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the Spatter Newt: it can't see, so it goes for thumps. A man running near it is lobbed at, a man hanging quiet over it isn't; after three lobs its glands go dark and a blow does double; stoked past its heat they burst
+await section(['E26'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, W = G.world, V = h.pos.constructor, step = (s, f) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); f && f(i); } };
+    G.ember.setSide('fire', { place: true, quiet: true }); for (const q of G.enemies.encounters) q.cleared = true; G.enemies.clearAll && G.enemies.clearAll(); const c = new V(456, 0, 862); let bx = 0, bz = 0;
+    for (let rr = 10; rr < 40 && !bx; rr += 2) for (let k = 0; k < 16; k++) { const x = c.x + Math.cos(k * 0.39) * rr, z = c.z + Math.sin(k * 0.39) * rr; if (G.newts.lavaAt(x, z) > 3 && W.heightAt(x, -z) > 1) { bx = x; bz = z; break; } }
+    const e = G.enemies.spawn('newt', new V(bx, W.heightAt(bx, -bz) + 0.3, bz)); const g0 = W.heightAt(bx, -bz);
+    // quiet: hanging in the air 8 m off it, still
+    const hang = () => { h.endFly(); h.pos.set(bx + 8, g0 + 9, bz); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; h.inv = 1e6; };
+    hang(); Q.drive({ boost: true }); step(0.2); Q.drive({}); G.combat.log.length = 0; step(8, () => { h.inv = 1e6; }); const quiet = G.combat.log.filter((q) => q.type === 'lob' || (q.type === 'tell' && q.foe === 'newt')).length;
+    // loud: running about on the ground 9 m off
+    h.endFly(); Q.walkAt(e.pos.x + 9, -e.pos.z); G.combat.log.length = 0; step(20, (i) => { h.inv = 1e6; h.hp = h.maxHp; const dx = h.pos.x - e.pos.x, dz = h.pos.z - e.pos.z, d = Math.hypot(dx, dz) || 1, tx = -dz / d, tz = dx / d, rx = tx - (dx / d) * (d - 9) * 0.3, rz = tz - (dz / d) * (d - 9) * 0.3, sn = Math.sin(G.camYaw), cs = Math.cos(G.camYaw); Q.drive({ mx: -(rx * cs - rz * sn) * 0.8, my: (rx * sn + rz * cs) * 0.8 }); });
+    Q.drive({}); const lobs = G.combat.log.filter((q) => q.type === 'lob').length, spent = G.combat.log.filter((q) => q.type === 'newt_spent').length, contacts = G.combat.log.filter((q) => q.type === 'contact' && q.foe === 'newt').length;
+    // a blow on spent glands does double; then stoked by fire, they burst
+    e.spent = 4; let a0 = e.hp; e.onHit(10, h.pos, 'atk1', { element: 'water' }); const soft = a0 - e.hp; e.spent = 0; e.heat = 0.8; e.hp = e.maxHp; G.combat.log.length = 0; e.onHit(1, h.pos, 'atk1', { element: 'fire' }); const burst = G.combat.log.some((q) => q.type === 'newt_spent');
+    return { at: [bx | 0, bz | 0], quiet, lobs, spent, contacts, soft, burst, dbg: [e.lobs, e.spent, e.state, G.combat.log.filter((q) => q.foe === 'newt').map((q) => q.type + (q.blow ? ':' + q.blow : '')).slice(0, 14).join(' ')] };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r;
+  line('E26', q.at[0] !== 0 && q.quiet === 0 && q.lobs >= 3 && q.spent >= 1 && q.soft >= 19.9 && q.burst && !real.length, `hanging quiet 8 m off it for 8 s: ${q.quiet} blows; running round it 9 m off for 20 s: ${q.lobs} lobs, ${q.contacts} reached him, glands spent ${q.spent}×; a blow on spent glands: 10 did ${q.soft.toFixed(0)}; stoked past its heat its glands burst: ${q.burst}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

@@ -6,6 +6,7 @@
 import { createInertial } from './inertial.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { shrinkMaps } from './shrink.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { FLAG, retry } from './config.js';
@@ -28,7 +29,7 @@ const LOOK_S = [0.14, 0.38, 0.48], GR = 9.81, DRAG = 0.03;       // at 30 m/s th
 export async function createEmber(G, { foeMaterial, D }) {
   const phone = G.tier === 'phone', Q = D.ember, H = Q.heat, MAX = phone ? 2 : 3, WATERS = Q.water.in_raids ? (phone ? 2 : 3) : 0, time = { value: 0 };
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await retry(() => loader.loadAsync('assets/ember.glb'));
+  const gltf = await retry(() => loader.loadAsync('assets/ember.glb')); if (phone) shrinkMaps(gltf.scene, ['map', 'normalMap']);
   let manB = null, fireB = null; const packed = new THREE.Vector4(0, 0, 0, 1);       // the packer stores positions as whole numbers with a scale on the node: the fire's pattern is in metres
   gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse((o) => { if (!o.isMesh) return; if (o.material.name === 'M_emberfire') { fireB = o.material; const m = o.matrixWorld.elements; packed.set(m[12], m[13], m[14], Math.hypot(m[0], m[1], m[2])); o.geometry.deleteAttribute('uv'); } else manB = o.material; });

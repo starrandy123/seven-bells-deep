@@ -3,6 +3,7 @@
 import { createInertial } from './inertial.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { shrinkMaps } from './shrink.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -73,7 +74,7 @@ export async function createEnemies(G) {
   const shieldMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.5, metalness: 0.7 }); G.look.patch(shieldMat, {});
 
   try {
-    const gltf = await retry(() => loader.loadAsync(G.tier === 'phone' ? 'assets/reaver_phone.glb' : 'assets/reaver.glb'));
+    const gltf = await retry(() => loader.loadAsync(G.tier === 'phone' ? 'assets/reaver_phone.glb' : 'assets/reaver.glb')); if (G.tier === 'phone') shrinkMaps(gltf.scene, ['map', 'normalMap', 'roughnessMap', 'emissiveMap']);
     let shared = null;
     gltf.scene.traverse((o) => { if (o.isMesh) { shared = shared || o.material; } });
     if (shared) G.look.patch(shared, { skinned: true });
@@ -117,6 +118,8 @@ export async function createEnemies(G) {
   }
   const ember = G.ember = await createEmber(G, { foeMaterial, D }); pools.emberkin = ember.pool;
   const beasts = G.beasts = createBeasts(G, { foeMaterial, D }); pools.monitor = beasts.pool;
+  const newts = G.newts = createBeasts(G, { foeMaterial, D, kind: 'newt' }); pools.newt = newts.pool;
+  const beastOf = (e) => (e.def.body === 'newt' ? newts : beasts);
   for (const k in FOES) { if (k !== '_doc' && FOES[k].body !== 'reaver' && !FOES[k].flyer && !FOES[k].beast) fishPool(FOES[k].body); }
   const sharkPool = pools.shark;
 
@@ -133,6 +136,8 @@ export async function createEnemies(G) {
   const data = G.world.data, encounters = (data.encounters || []).map((e) => ({ ...e, c: W(e.x, e.y, e.z), state: 'idle', list: [], cleared: false, cool: 0 }));
   // the Scoria Monitors' ground: the black plain on the Burnt Isle between the lava channels. Pipeline/research/LIFE_SOURCES.md
   { const p = G.beasts.home(410, 700); if (p) encounters.push({ id: 'monitors', kind: 'monitor', n: 3, r: 26, spread: 9, land: true, c: p, state: 'idle', list: [], cleared: false, cool: 0 }); }
+  // the newts live in the lava: three where the east river runs out over the black plain
+  encounters.push({ id: 'newts', kind: 'newt', n: 3, r: 24, spread: 10, land: true, c: new THREE.Vector3(456, G.world.heightAt(456, -862) + 1, 862), state: 'idle', list: [], cleared: false, cool: 0 });
   // the fights on land: soldiers only, each at a named place (combat.json `land`). `at` is a poi or land id; dx, dy move it off that spot, onto ground that's open from where he arrives
   for (const f of (D.land && D.land.fights) || []) { const q = [...(data.poi || []), ...(data.land || [])].find((o) => o.id === f.at); if (!q) { console.error('a land fight at no place', f.id, f.at); continue; } const x = q.x + (f.dx || 0), y = q.y + (f.dy || 0), z = G.world.heightAt(x, y); encounters.push({ id: f.id, kind: 'reaver', mix: f.mix, n: f.mix.length, r: f.r || 30, spread: f.spread || 8, x, y, z, c: W(x, y, z + 0.92), state: 'idle', list: [], cleared: false, cool: 0, tied_to: null, land: true }); }
   const awake = [];
@@ -156,7 +161,7 @@ export async function createEnemies(G) {
     };
     if (F.body === 'reaver') for (const n of ['idle_combat', 'swim_slow', 'swim_fast', 'run']) { const a = slot.acts[n]; if (a) { a.reset(); a.setEffectiveWeight(n === 'idle_combat' ? 1 : 0); a.play(); } }
     if (F.flyer) ember.born(e);
-    if (F.beast) { slot.e = e; beasts.born(e); }
+    if (F.beast) { slot.e = e; beastOf(e).born(e); }
     awake.push(e); return e;
   }
 
@@ -611,8 +616,8 @@ export async function createEnemies(G) {
     blendSoldier(e);
   }
   ember.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, drawRag, throwBody, freeze, spawn: (k, p, enc) => { const e = makeEnemy(k, enc || null, placeFor(k, enc || null, p.clone())); if (e && enc) enc.list.push(e); return e; } });
-  const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain, beast: beasts.brain };
-  beasts.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, steer });
+  const BRAIN = { soldier, archer, fish, lurker, siren, flyer: ember.brain, beast: (e, dt) => beastOf(e).brain(e, dt) };
+  for (const B of [beasts, newts]) B.use({ takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, steer });
 
   // what holds a foe outside its own head: ice, a lash, being thrown. True means its brain sits this step out
   function held(e, dt) {
@@ -725,7 +730,7 @@ export async function createEnemies(G) {
       const g = e.slot.g; g.position.copy(e.draw || e.pos); if (e.hidden) continue;
       e.u.uFlash.value *= Math.exp(-16 * dt);
       if (e.def.flyer) { ember.draw(e, dt); continue; }
-      if (e.def.beast) { beasts.draw(e, dt); continue; }
+      if (e.def.beast) { beastOf(e).draw(e, dt); continue; }
       if (e.state === 'dead') e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 1.25);
       qY.setFromAxisAngle(AY, e.heading);
       if (e.flA > 0) { e.flT += dt; if (e.flT > 0.8) e.flA = 0; }
@@ -745,7 +750,7 @@ export async function createEnemies(G) {
         if (e.state === 'tell' && G.fx.glint) { tipW.copy(e.pos); tipW.y += 0.5; tipW.x += Math.sin(e.heading) * 1.4; tipW.z += Math.cos(e.heading) * 1.4; G.fx.glint(tipW, 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }
       }
       if (e.stagger > 0 && G.fx.glint) { tipW.copy(e.pos); tipW.y += 1.5; G.fx.glint(tipW, 0xfff0a0, 0.12 + 0.1 * Math.sin(G.time * 11)); }
-    }    beasts.frame();
+    }    beasts.frame(); newts.frame();
   }
 
   return {
