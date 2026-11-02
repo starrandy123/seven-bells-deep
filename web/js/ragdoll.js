@@ -18,7 +18,7 @@ export function createRagdoll(model) {
   const bone = (n) => model.getObjectByName(n), B = NAMES.map(bone), P = new Float32Array(N * 3), O = new Float32Array(N * 3);
   if (!B.every(Boolean)) return null;
   const ORDER = ['hips', 'spine_1', 'spine_2', 'spine_3', 'neck', 'head', 'clav_R', 'arm_R', 'fore_R', 'hand_R', 'clav_L', 'arm_L', 'fore_L', 'hand_L', 'leg_R', 'shin_R', 'foot_R', 'leg_L', 'shin_L', 'foot_L'].map((n) => [n, bone(n)]).filter((x) => x[1]);
-  const Q0 = new Map(), W = new Map(); for (const [, b] of ORDER) { Q0.set(b, new THREE.Quaternion()); W.set(b, new THREE.Quaternion()); }
+  const Q0 = new Map(), W = new Map(), DRAWN = new Map(); for (const [, b] of ORDER) { Q0.set(b, new THREE.Quaternion()); W.set(b, new THREE.Quaternion()); DRAWN.set(b, new THREE.Quaternion()); }
   const sticks = [], folds = [], at = (i, v) => v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]);
   const qP0 = new THREE.Quaternion(), qC0 = new THREE.Quaternion(), dirs = new Map(), hipsWorld = new THREE.Vector3(), dHips = new THREE.Vector3();
   let acc = 0;
@@ -33,7 +33,7 @@ export function createRagdoll(model) {
   R.start = (v, push, spin) => {
     model.updateMatrixWorld(true); const v3 = a3;
     for (let i = 0; i < N; i++) { B[i].getWorldPosition(v3); P[i * 3] = v3.x; P[i * 3 + 1] = v3.y; P[i * 3 + 2] = v3.z; }
-    for (const [, b] of ORDER) b.getWorldQuaternion(Q0.get(b));
+    for (const [, b] of ORDER) { b.getWorldQuaternion(Q0.get(b)); DRAWN.get(b).copy(b.quaternion); }
     sticks.length = 0; folds.length = 0;
     const len = (i, j) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2]);
     for (const [i, j] of TRUNK) sticks.push([i, j, len(i, j), 1]);
@@ -93,8 +93,10 @@ export function createRagdoll(model) {
 
   const aimed = (base, from, to, n, out) => { const d = dirs.get(n); at(to, a0); at(from, a1); a0.sub(a1).normalize(); a1.copy(d).applyQuaternion(base); q2.setFromUnitVectors(a1, a0); return out.copy(q2).multiply(base); };
   const dArm = new THREE.Quaternion(), dLeg = new THREE.Quaternion(), dP = new THREE.Quaternion(), dC = new THREE.Quaternion(), qS = new THREE.Quaternion(), tmp = new THREE.Vector3();
-  // writes the figure over the pose the clips left, by weight w (0 the clips, 1 the figure). The model's matrices must be up to date
-  R.apply = (w) => {
+  // writes the figure over the pose the clips left, by weight w (0 the clips, 1 the figure). The model's matrices must be up to date.
+  // dt: the frame's time. No bone turns past 40 rad/s from the frame before (POSE_SOURCES.md): the figure's limbs are read off its points, and a point thrown round by the
+  // relaxation or the hinge turned a raider's forearm at up to 80 rad/s for a frame or two
+  R.apply = (w, dt = 1 / 60) => {
     if (w <= 0.001) return; R.w = w;
     dP.copy(basis(q0, TR, TL, CHEST, HIP)).multiply(q1.copy(qP0).invert()); dC.copy(basis(q0, SR, SL, CHEST, HIP)).multiply(q1.copy(qC0).invert());
     const set = (n, d) => { const b = bone2.get(n); if (b) W.get(b).copy(d).multiply(Q0.get(b)); };
@@ -104,7 +106,8 @@ export function createRagdoll(model) {
     aimed(dC, SL, EL, 'arm_L', dArm); set('arm_L', dArm); aimed(dArm, EL, HL, 'fore_L', dLeg); set('fore_L', dLeg); set('hand_L', dLeg);
     aimed(dP, TR, KR, 'leg_R', dArm); set('leg_R', dArm); aimed(dArm, KR, FR, 'shin_R', dLeg); set('shin_R', dLeg); set('foot_R', dLeg);
     aimed(dP, TL, KL, 'leg_L', dArm); set('leg_L', dArm); aimed(dArm, KL, FL, 'shin_L', dLeg); set('shin_L', dLeg); set('foot_L', dLeg);
-    for (const [, b] of ORDER) { const par = b.parent; if (W.has(par)) q0.copy(W.get(par)); else par.getWorldQuaternion(q0); q1.copy(q0).invert().multiply(W.get(b)); b.quaternion.slerp(q1, w); }
+    const lim = Math.min(1.4, 40 * Math.max(dt, 1 / 240));
+    for (const [, b] of ORDER) { const par = b.parent; if (W.has(par)) q0.copy(W.get(par)); else par.getWorldQuaternion(q0); q1.copy(q0).invert().multiply(W.get(b)); b.quaternion.slerp(q1, w); const d = DRAWN.get(b), a = 2 * Math.acos(Math.min(1, Math.abs(d.dot(b.quaternion)))); if (a > lim) b.quaternion.copy(d.slerp(b.quaternion, lim / a)); d.copy(b.quaternion); }
     const hp = B[0]; tmp.set(P[0], P[1], P[2]); hp.parent.worldToLocal(tmp); hp.position.lerp(tmp, w);
   };
   const bone2 = new Map(ORDER);

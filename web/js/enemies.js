@@ -201,7 +201,7 @@ export async function createEnemies(G) {
     if (e.def.flyer) ember.jetsBack(e);
   }
   function drawRag(e, dt) {
-    const r = e.rag; if (!r) return; r.w = r.out ? Math.max(0, r.w - dt / r.blend) : Math.min(1, r.w + dt / 0.05); e.slot.g.updateMatrixWorld(true); e.slot.rag.apply(r.w); if (r.out && r.w <= 0) { e.slot.rag.stop(); e.rag = null; }
+    const r = e.rag; if (!r) return; r.w = r.out ? Math.max(0, r.w - dt / r.blend) : Math.min(1, r.w + dt / 0.05); e.slot.g.updateMatrixWorld(true); e.slot.rag.apply(r.w, dt); if (r.out && r.w <= 0) { e.slot.rag.stop(); e.rag = null; }
   }
 
   function playClip(e, name, fade, once) {
@@ -718,6 +718,11 @@ export async function createEnemies(G) {
   }
 
   const tipW = new THREE.Vector3();
+  function faceOf(e, dt) {
+    if (e.dYaw === undefined) { e.dYaw = e.heading; e.dYawV = 0; }
+    const y = (2 * 0.69314718) / 0.06, x = Math.exp(-y * dt), j0 = wrap(e.dYaw - e.heading), j1 = e.dYawV + j0 * y;
+    e.dYaw = wrap(x * (j0 + j1 * dt) + e.heading); e.dYawV = x * (e.dYawV - j1 * y * dt); return e.dYaw;
+  }
   function animate(dt) {
     ember.frame(dt);
     swim.amp.value = 1 + (packT > 0 ? 0.6 : 0);
@@ -734,7 +739,9 @@ export async function createEnemies(G) {
       if (e.def.flyer) { ember.draw(e, dt); continue; }
       if (e.def.beast) { beastOf(e).draw(e, dt); continue; }
       if (e.state === 'dead') e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 1.25);
-      qY.setFromAxisAngle(AY, e.heading);
+      // the drawn facing follows the rules' on a critically damped spring, the short way round (Holden, Spring-It-On, MIT), as the bosses' turns do: the rules' turn
+      // starts at full rate from rest, 13 to 16 rad/s in its first frame
+      qY.setFromAxisAngle(AY, faceOf(e, dt));
       if (e.flA > 0) { e.flT += dt; if (e.flT > 0.8) e.flA = 0; }
       if (e.def.body === 'reaver') {
         const goal = e.onLand ? 0 : e.state === 'swimTo' ? clamp(e.vel.length() / 6, 0, 1) * 1.25 : 0.14; if (e.frozen <= 0) e.tilt = damp(e.tilt, goal, 6, dt);

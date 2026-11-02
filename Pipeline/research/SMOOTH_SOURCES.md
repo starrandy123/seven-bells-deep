@@ -41,3 +41,9 @@ The fix (`inertial.js`, `pre` and `mark`) keeps the mixer's own pose as it comes
 
 - Andy Nicholas's soft IK, as the Toolchefs Maya solver implements it (github.com/Toolchefs/softIkSolver, read at source; no licence file, so only the idea is taken). The README says: "the velocity of the joints that approach the full extension position is damped by an exponential function", applied as `dA + dSoft * (1 - exp(-(x - dA) / dSoft))`. `body.js` already gives each leg this soft reach (0.965 to 0.998 of its length). The knee snap at a landing at a run came from what the landing did on top of it: the lift that keeps the bent leg's reach was dropped to the ground in the frame a foot passed that reach.
 - Taken from the stride's own rule, that a foot run out of leg comes up and swings: a foot carried past the bent leg's reach in the brake now comes up. Its lift comes down at 6 m/s (ours), not in a frame. A settling step, the stance's tidy-up after a stop, now only fires when he's standing. A landing at a run turned the stride off for a frame and started one at 7 m/s.
+
+## Raiders, ragdolls and leaving the ground
+
+- The raiders' drawn facing follows the rules' facing on the same spring as the bosses' turns (Holden, MIT). The rules' turn starts at full rate from rest, 13 to 16 rad/s in its first frame.
+- The ragdoll (`ragdoll.js`, Jakobsen's method, `RAGDOLL_SOURCES.md`) reads its limbs off its points. Now no bone turns past the 40 rad/s of `POSE_SOURCES.md` from the frame before. A point thrown round by the relaxation or the hinge turned a forearm at up to 80 rad/s.
+- Leaving the ground, the root's height used to snap from the ground's spring to the rules' height. Now what that spring still had in hand dies away on the same spring, as the switches' offsets do. A difference past 0.6 m is a teleport and isn't carried.

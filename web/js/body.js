@@ -111,7 +111,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   function captureP(T) { offP = [0, 1, 2].map((k) => { const x0 = lastP[k] - poseP[k], xp = last2P[k] - poseP[k]; return quintic(x0, (x0 - xp) / Math.max(prevDt, 1 / 240), clamp(Math.sqrt((20 * Math.abs(x0)) / HIPS_EASE), T, 0.6)); }); }      // the hips' place: a quintic starts at its hardest, 20 x0 / T², so T is what keeps that under HIPS_EASE
   function offsetsP(t) { if (!offP) return; for (let k = 0; k < 3; k++) poseP[k] += at(offP[k], t); if (t >= Math.max(offP[0].T, offP[1].T, offP[2].T)) offP = null; }
   const inertia = (T = 0.22) => { pendingT = Math.max(pendingT, T); };
-  let pendingA = 0, inertA = 9, caught = 2;
+  let pendingA = 0, inertA = 9, caught = 2, airOff = 0, airOffV = 0, wasGround = false, rootY = 0;
   // No joint of the trunk or the arms turns faster than a body can, 40 rad/s (POSE_SOURCES.md, the rule inertial.js keeps for the mixers): whatever gets past the switches,
   // a clip's own bad frame among them (the fire side's capture turns a wrist 3 rad between two of its frames, 91 rad/s), is a jump, and gets a switch's treatment for that
   // bone alone: what it would have jumped becomes an offset dying away on the quintic, from the pose it had. Checked without making anything; an offset is made only on a jump
@@ -468,9 +468,17 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const pitchI = W ? W.pitch + (h.pitchT - W.pitch) * ab : h.pitchT, bodyPitchI = h.pitchT !== 0 ? (h.bodyPitch / h.pitchT) * pitchI : h.bodyPitch, leanI = W ? W.lean + ((h.surfLean || 0) - W.lean) * ab : h.surfLean || 0, rakeI = W ? W.rake + ((h.surfRake || 0) - W.rake) * ab : h.surfRake || 0, dodgeI = W && W.dodge > 0 && h.dodgeT > 0 ? W.dodge + (h.dodgeT - W.dodge) * ab : h.dodgeT || 0;
     const flyQI = W ? qFly.copy(W.q).slerp(h.flyQ, ab) : h.flyQ, flyUpI = upFly.set(0, 1, 0).applyQuaternion(flyQI);
     const free = h.drawPos.y - STAND * Math.cos(tiltI);
-    if (onGround) root.position.y = chase(P.ground, F.ground, h.drawPos.y - STAND, dt);
-    else { root.position.y = free; F.ground = follower(root.position.y); }
-    root.position.y = fallen(dt, onGround, free, root.position.y);
+    if (onGround) { root.position.y = chase(P.ground, F.ground, h.drawPos.y - STAND, dt); airOff = 0; airOffV = 0; }
+    else {
+      // off the ground the body hangs where the rules have him, but what the ground's spring still had in hand is carried over and dies away on a critically damped spring
+      // (Holden, Spring-It-On, MIT), the way the switches' offsets do: it snapped to the rules' height in the frame he left, 3,022 m/s² at the root as a held sprint rose onto its water.
+      // A difference past 0.6 m is a teleport, not a leap, and isn't carried
+      if (wasGround) { airOff = rootY - free; airOffV = 0; if (Math.abs(airOff) > 0.6) airOff = 0; }
+      if (airOff !== 0) { const y = (2 * 0.69314718) / 0.07, e = Math.exp(-y * dt), j1 = airOffV + airOff * y; airOff = e * (airOff + j1 * dt); airOffV = e * (airOffV - j1 * y * dt); if (Math.abs(airOff) < 1e-4 && Math.abs(airOffV) < 1e-3) airOff = airOffV = 0; }
+      root.position.y = free + airOff; F.ground = follower(root.position.y);
+    }
+    wasGround = onGround;
+    root.position.y = fallen(dt, onGround, free, root.position.y); rootY = root.position.y;
     // floating: nothing holds him, so he's never quite where he was. A slow rise and fall, a slow wander, and the whole body turning a little on the water
     const adrift = !onGround && !h.air && h.state !== 'surf' && !h.ride ? 1 - smooth(0.6, 2.8, speed) : 0, t0 = G.time;
     if (adrift > 0) { root.position.y += adrift * (0.07 * Math.sin(t0 * 0.83) + 0.03 * Math.sin(t0 * 1.71 + 1)); root.position.x += adrift * 0.06 * Math.sin(t0 * 0.47); root.position.z += adrift * 0.06 * Math.sin(t0 * 0.37 + 2); }
@@ -622,7 +630,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     const sY = Math.sin(h.heading), cY = Math.cos(h.heading); fwd[0] = sY; fwd[2] = cY; left[0] = cY; left[2] = -sY; body[0] = h.drawPos.x; body[2] = h.drawPos.z; vel[0] = vel[2] = 0; seen[0] = seen[2] = 0; fall.mode = 0; fall.was = 0;
     F.yaw = follower(h.heading); F.ground = follower(h.drawPos.y - STAND); F.stride = follower(0); lastYaw = h.heading; facing = h.heading; lastSpeed = 0; gaitOn = false;
     for (const l of legs) { const E = aim(l); plantAt(l, E, 0); l.A = ankleOn(l); l.cA = l.A; l.solo = 0; l.hover = 0; l.err = null; }
-    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null; caught = 2; flyWas = !!h.flyPose; fireWas = !!h.fireBody; if (h.was) { const k = h.was; k.tilt = h.tilt; k.bank = h.bank; k.pitch = h.pitchT; k.roll = h.roll || 0; k.lean = h.surfLean || 0; k.rake = h.surfRake || 0; k.dodge = h.dodgeT || 0; k.q.copy(h.flyQ); }       // what the last pose was doing doesn't follow him
+    for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null; caught = 2; flyWas = !!h.flyPose; fireWas = !!h.fireBody; airOff = airOffV = 0; wasGround = h.land && !h.air; rootY = root.position.y; if (h.was) { const k = h.was; k.tilt = h.tilt; k.bank = h.bank; k.pitch = h.pitchT; k.roll = h.roll || 0; k.lean = h.surfLean || 0; k.rake = h.surfRake || 0; k.dodge = h.dodgeT || 0; k.q.copy(h.flyQ); }       // what the last pose was doing doesn't follow him
     palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1];
     legClip = !(h.land && !h.air); mode = h.land && !h.air ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     ready = true;
