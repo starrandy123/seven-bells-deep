@@ -50,7 +50,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 45 | Fire can't raise water tornadoes; in the sea he blasts himself up instead | Built |
 | 46 | Flight controls as flight games have them: the stick points, Fly only drives forward | Built: flight-sim law, Invert flight in the settings |
 | 47 | Fire cities get their own foliage, lighting and ground variety | To do |
-| 48 | Ground cities with skyscrapers and full anime-style places to visit and fight in | To do |
+| 48 | Ground cities with skyscrapers and full anime-style places to visit and fight in | Doing now, on his word of 2 Nov night: "What about the skyscrapers cities? We need that design and implemented too" |
 | 49 | Real shadows | Built: buildings and sky islands in the sun bakes, capsule soft shadows under everyone who moves |
 | 50 | Water reflections | Built: the sea mirrors land, buildings and fire, a pass every other frame |
 | 51 | Fire lights the world: every flame, jet and blast casts light on the city and the ground, inside the budgets | Built: 16 lights on a world grid, every flash, comet, jet and burning field, with a glow in the air |
@@ -58,7 +58,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 53 | The fire side's pause says Ignite for resume | Built: the fire side reads Ignite |
 | 54 | Continue picks up where the player left off | Built: Continue goes on from where he left off, on his side |
 | 55 | The jet stream is shorter, and in flight the hands stay steady and consistent instead of flailing | Built: jets about six nozzle widths at full thrust (hands 1.1 to 0.6 m, the joined foot jet 3.1 to 1.5 m), read off real jets and jet-suit footage; one arm pose held low along the body in every flight mode, his and the Emberkin's, only blows move them. Before: his hands shifted 15-25 cm between modes, an Emberkin's whipped at 8.75 m/s while just circling; now 0 cm and 0.02 m/s. Wall E27 |
-| 56 | Dynamic waves and real, cool water movement in the ocean, done well | After the rest of the epic, on his word: "Finish the rest of the epic then apply this" |
+| 56 | Dynamic waves and real, cool water movement in the ocean, done well | Built: six trochoids from the JONSWAP spectrum for a wind that freshens and eases over minutes (Beaufort 3 to 5, storms more); heights within Beaufort's table, whitecaps on Monahan's measured share of the sea, no crest looping; swimmers ride the drawn surface. `Pipeline/research/OCEAN_SOURCES.md`, wall E30 |
 | 57 | His order, 2 Nov night: the animals, then the waves, then a full one-minute gameplay film of both sides, movement, fights and adventures, cutting between water and fire, for him to talk about online | The order the rest follows |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 

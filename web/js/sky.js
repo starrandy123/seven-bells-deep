@@ -92,16 +92,19 @@ vec3 ocAir(vec3 rd, float clouds) {
   return c;
 }`;
 
+// The open sea (Randy, 2 Nov: "We need dynamic waves too and actual cool water movement in the ocean! All must be done well"). Pipeline/research/OCEAN_SOURCES.md.
+// Six trochoids, Gerstner's waves as games draw them (Finch, GPU Gems ch. 1; Tessendorf 2001): each point of the surface turns in a circle, so crests come sharp and troughs broad, as a real sea's do.
+// Their lengths and heights are read off the JONSWAP spectrum for the wind of the hour (sky.js setWind). A height asked at a world point undoes the sideways pull first, two steps, so the CPU's water is the GPU's.
 const WAVE_GLSL = /* glsl */`
-uniform vec4 uW1, uW2, uW3, uW4;
-float ocWave(vec2 p, float t) {
-  return uW1.w*sin(dot(p, uW1.xy) + t*uW1.z) + uW2.w*sin(dot(p, uW2.xy) + t*uW2.z)
-       + uW3.w*sin(dot(p, uW3.xy) + t*uW3.z) + uW4.w*sin(dot(p, uW4.xy) + t*uW4.z);
-}
-vec2 ocWaveD(vec2 p, float t) {
-  return uW1.xy*uW1.w*cos(dot(p, uW1.xy) + t*uW1.z) + uW2.xy*uW2.w*cos(dot(p, uW2.xy) + t*uW2.z)
-       + uW3.xy*uW3.w*cos(dot(p, uW3.xy) + t*uW3.z) + uW4.xy*uW4.w*cos(dot(p, uW4.xy) + t*uW4.z);
-}`;
+#define OC_NW 6
+uniform vec4 ocGw[OC_NW]; uniform float ocGq[OC_NW];
+vec2 ocGd(vec2 q, float t) { vec2 d = vec2(0.0); for (int i = 0; i < OC_NW; i++) { vec4 w = ocGw[i]; d += (w.xy/max(length(w.xy), 1e-4))*ocGq[i]*w.w*cos(dot(q, w.xy) + t*w.z); } return d; }
+float ocGh(vec2 q, float t) { float y = 0.0; for (int i = 0; i < OC_NW; i++) { vec4 w = ocGw[i]; y += w.w*sin(dot(q, w.xy) + t*w.z); } return y; }
+// the slope at a point before its pull: the trochoid's own normal (Finch eq. 12) written as a gradient
+vec2 ocGs(vec2 q, float t) { vec2 s = vec2(0.0); float c = 0.0; for (int i = 0; i < OC_NW; i++) { vec4 w = ocGw[i]; float th = dot(q, w.xy) + t*w.z; s += w.xy*w.w*cos(th); c += ocGq[i]*length(w.xy)*w.w*sin(th); } return s/max(1.0 - c, .2); }
+vec2 ocUndo(vec2 p, float t) { vec2 q = p - ocGd(p, t); return p - ocGd(q, t); }
+float ocWave(vec2 p, float t) { return ocGh(ocUndo(p, t), t); }
+vec2 ocWaveD(vec2 p, float t) { return ocGs(ocUndo(p, t), t); }`;
 
 // The breakers (Randy, 1 Nov: "we need waves too we can surf"): surf.js breakerAt, the same formula line for line, so the CPU rides the water the GPU draws.
 // Each break: A = waterline x, z and the way out to sea; B = half its width along the shore, how far out the swell builds, its height, its phase. Swell sets
@@ -136,10 +139,20 @@ float ocLensS(vec2 ndc) {
   return L.y - ocWave(L.xz, ocTime) + .016*sin(ndc.x*8.0 + ocTime*3.3) + .009*sin(ndc.x*21.0 - ocTime*5.1);
 }`;
 
-// Long swells: x, z wave vector (2 pi / wavelength), speed from deep-water dispersion, amplitude in metres.
-function wave(dirDeg, lambda, amp) {
-  const k = 2 * Math.PI / lambda, a = dirDeg * Math.PI / 180;
-  return new THREE.Vector4(Math.cos(a) * k, Math.sin(a) * k, Math.sqrt(9.81 * k), amp);
+// The waves of the open sea, from a real spectrum. The frequencies are fixed about the peak of a 7 m/s wind, spread the way a wind sea spreads in direction, so no wave's phase ever jumps;
+// the wind of the hour sets how much of each there is, by JONSWAP: S(w) = a g^2 w^-5 exp(-5/4 (wp/w)^4) 3.3^r, peak wp = 0.855 g / U (Pierson-Moskowitz), a = 0.0081, and each one's height sqrt(2 S dw).
+// Steepness Q shares out so the sum of Q k A stays under 1 and no crest loops over itself (Finch); it rises with the wind, so the crests sharpen and fold into whitecaps as a real sea's do.
+const OCN = 6, G9 = 9.81, SEA = { dir: 0.31, mul: [0.8, 1.0, 1.22, 1.55, 2.0, 2.7], spread: [0, -0.42, 0.47, -0.7, 0.79, -0.21] };
+function seaWaves() {
+  const wp0 = 0.855 * G9 / 7, W = [], Q = new Float32Array(OCN), om = SEA.mul.map((m) => wp0 * m);
+  for (let i = 0; i < OCN; i++) { const w = om[i], k = w * w / G9, a = SEA.dir + SEA.spread[i]; W.push(new THREE.Vector4(Math.cos(a) * k, Math.sin(a) * k, w, 0)); }
+  return { W, Q, om, dw: om.map((w, i) => ((om[Math.min(OCN - 1, i + 1)] - om[Math.max(0, i - 1)]) / (i === 0 || i === OCN - 1 ? 1 : 2))) };
+}
+function setWind(S, U, storm) {
+  const wp = 0.855 * G9 / U, choppy = (0.42 + 0.36 * Math.min(1, Math.max(0, (U - 4) / 6))) * (1 + storm * 0.3); let sum = 0;
+  for (let i = 0; i < OCN; i++) { const w = S.om[i], sg = w <= wp ? 0.07 : 0.09, r = Math.exp(-((w - wp) ** 2) / (2 * sg * sg * wp * wp)), Sw = 0.0081 * G9 * G9 * w ** -5 * Math.exp(-1.25 * (wp / w) ** 4) * 3.3 ** r; S.W[i].w = Math.sqrt(2 * Sw * S.dw[i]) * (1 + storm * 1.1); }
+  for (let i = 0; i < OCN; i++) { const k = Math.hypot(S.W[i].x, S.W[i].y), kA = k * S.W[i].w; S.Q[i] = kA > 1e-5 ? Math.min(choppy, 0.95) / (kA * OCN) : 0; sum += S.Q[i] * kA; }
+  return sum;
 }
 
 // The cloud painting holds forms, not colours: grey is the light on the form, alpha the cloud. The shader colours it from the look's
@@ -211,7 +224,14 @@ function* paintClouds(sunAz, scale) {
 
 export function createSky({ scene, look, tier = 'phone', clock = true }) {
   const phone = tier === 'phone';
-  const WV = { uW1: { value: wave(18, 41, .36) }, uW2: { value: wave(-33, 23, .22) }, uW3: { value: wave(71, 13, .11) }, uW4: { value: wave(-64, 7.5, .05) } };
+  const SW = seaWaves(), sea = { U: 7 }; setWind(SW, 7, 0);
+  const WV = { ocGw: { value: SW.W }, ocGq: { value: SW.Q }, ocCapK: { value: 0.5 } };
+  // how much of the sea is white: Monahan and O'Muircheartaigh's measured cover, 3.84e-6 U^3.41 of the surface, about 0.3% at 7 m/s and 1.4% at 11. The fold the shader whitens below is set so that share of the sea folds that far
+  const CAP = Array.from({ length: 1500 }, () => [Math.random() * 3000, Math.random() * 3000, Math.random() * 600]), capJ = new Float32Array(CAP.length);
+  function capAt(U) {
+    const W = SW.W, Q = SW.Q; for (let n = 0; n < CAP.length; n++) { const [x, z, t] = CAP[n]; let jxx = 1, jzz = 1, jxz = 0; for (let i = 0; i < OCN; i++) { const w = W[i], k = Math.hypot(w.x, w.y) || 1, s = Math.sin(x * w.x + z * w.y + t * w.z) * Q[i] * w.w; jxx -= s * (w.x / k) * w.x; jzz -= s * (w.y / k) * w.y; jxz -= s * (w.x / k) * w.y; } capJ[n] = jxx * jzz - jxz * jxz; }
+    capJ.sort(); return capJ[Math.min(CAP.length - 1, Math.floor(CAP.length * 3.84e-6 * U ** 3.41))];
+  }
   const BRK = { ocBrkA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkK: { value: new THREE.Vector2(BREAK_K, BREAK_W) }, ocBrkN: { value: 0 } };
   const U = {
     ...look.uniforms, ...WV, ...BRK, uAbove: { value: 0 }, uLensOn: { value: 0 },
@@ -280,14 +300,19 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     uniform highp sampler2D tOcHeight; uniform vec4 ocMap;
     ${WAVE_GLSL}
     ${BREAK_GLSL}
-    varying vec3 vP; varying vec4 vClip; varying vec3 vBrk;
+    varying vec3 vP; varying vec4 vClip; varying vec3 vBrk; varying vec2 vQ; varying float vCap; uniform float ocCapK;
     float ocBedAt(vec2 q) { return texture(tOcHeight, (vec2(q.x - ocMap.x, -q.y - ocMap.y)/ocMap.z + .5)/ocMap.w).r; }
     void main() {
       vec3 p = position + vec3(cameraPosition.x, 0.0, cameraPosition.z);
       float fade = 1.0 - smoothstep(120.0, 620.0, length(position.xz));
       float bed = ocBedAt(p.xz);
       fade *= smoothstep(.0, 5.0, -bed);
-      p.y = ocWave(p.xz, ocTime)*fade + .10*sin(ocTime*.55 + p.x*.021 + p.z*.017)*(1.0 - fade) + .05*sin(ocTime*.91 - p.x*.043)*(1.0 - fade);
+      // the trochoids, each dropped where the grid's too coarse to carry it; and where the surface folds as it's squeezed into a crest, a whitecap (Tessendorf's Jacobian)
+      vec2 d = vec2(0.0); float y = 0.0, jxx = 1.0, jzz = 1.0, jxz = 0.0, sp = length(position.xz)*.12 + .4;
+      for (int i = 0; i < OC_NW; i++) { vec4 w = ocGw[i]; float k = length(w.xy), lam = 6.2832/k, A = w.w*fade*smoothstep(lam*.5, lam*.25, sp), Q = ocGq[i], th = dot(p.xz, w.xy) + ocTime*w.z, c = cos(th), s = sin(th); vec2 D = w.xy/k;
+        d += D*Q*A*c; y += A*s; jxx -= Q*A*D.x*w.x*s; jzz -= Q*A*D.y*w.y*s; jxz -= Q*A*D.x*w.y*s; }
+      vQ = p.xz; vCap = smoothstep(ocCapK + .05, ocCapK - .05, jxx*jzz - jxz*jxz);
+      p.y = y + .10*sin(ocTime*.55 + p.x*.021 + p.z*.017)*(1.0 - fade) + .05*sin(ocTime*.91 - p.x*.043)*(1.0 - fade);
       // the breakers, and their slope a metre over each way (the bed read again there) for the light, and their foam
       vBrk = vec3(0.0);
       if (ocBrkN > 0.0) {
@@ -295,7 +320,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         float b0 = ocBreak(p.xz, -bed, ocTime, f0), b1 = ocBreak(p.xz + vec2(1.0, 0.0), -ocBedAt(p.xz + vec2(1.0, 0.0)), ocTime, f1), b2 = ocBreak(p.xz + vec2(0.0, 1.0), -ocBedAt(p.xz + vec2(0.0, 1.0)), ocTime, f2);
         p.y += b0*near; vBrk = vec3(f0, b1 - b0, b2 - b0)*near;
       }
-      vP = p;
+      p.xz += d; vP = p;
       gl_Position = projectionMatrix*viewMatrix*vec4(p, 1.0);
       gl_Position.z = min(gl_Position.z, gl_Position.w*.99999);    // the sea runs on past the camera's far plane
       vClip = gl_Position;
@@ -303,10 +328,10 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     }`;
   const SURF_N = /* glsl */`
     ${WAVE_GLSL}
-    varying vec3 vBrk;
+    varying vec3 vBrk; varying vec2 vQ; varying float vCap;
     // The surface's normal: swells from the waves, ripples from two drifting layers of the noise tile; flatter with distance.
     vec3 ocSurfN(vec2 p, float dist, float gain) {
-      vec2 s = ocWaveD(p, ocTime)*(1.0 - smoothstep(120.0, 620.0, dist)) + vBrk.yz;      // the swell's slope, and the breakers'
+      vec2 s = ocGs(vQ, ocTime)*(1.0 - smoothstep(120.0, 620.0, dist)) + vBrk.yz;      // the swell's slope, read at the point before its pull, and the breakers'
       vec2 a = texture(tOcNoise, p*.0610 + ocTime*vec2(.0092, .0061)).rg - .5;
       vec2 b = texture(tOcNoise, p.yx*.1730 + ocTime*vec2(-.0139, .0116)).rg - .5;
       vec2 c = texture(tOcNoise, p*.4100 + ocTime*vec2(.0220, -.0240)).rg - .5;
@@ -453,6 +478,13 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
           float bf = smoothstep(.22, .66, vBrk.x*1.2 + (w1*.6 + w2*.4 - .5)*.85)*(1.0 - smoothstep(55.0, 150.0, dist));
           c = mix(c, vec3(1.22, 1.24, 1.22)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), bf);
           a = max(a, bf*.97);
+        }
+        if (vCap > .01) {      // whitecaps: where a crest folds, white water, torn and drifting, out to the horizon's middle distance
+          vec2 fq = vQ*.19;
+          float w1 = texture(tOcNoise, fq + ocTime*vec2(.012, .008)).b, w2 = texture(tOcNoise, fq*3.3 - ocTime*vec2(.021, .016)).a;
+          float cf = smoothstep(.34, .78, vCap + (w1*.62 + w2*.38 - .5)*.95)*(1.0 - smoothstep(260.0, 640.0, dist));
+          c = mix(c, vec3(1.16, 1.19, 1.17)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), cf*.92);
+          a = max(a, cf*.92);
         }
         if (ocBio > 0.0) {
           // the sea lit from within: broad slow drifts, two turned layers so no tile shows, and fine sparks close by where the ripples catch
@@ -647,13 +679,17 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   })();
 
   // Sea level under a point, for a breach or a splash.
-  const W = [WV.uW1.value, WV.uW2.value, WV.uW3.value, WV.uW4.value], W0 = W.map(v => v.w);
+  const W = SW.W, GQ = SW.Q;
+  // the trochoids at a world point, as the GPU draws them: the sideways pull undone in two steps, then the height
+  const pull = (x, z, t, out) => { let dx = 0, dz = 0; for (let i = 0; i < OCN; i++) { const w = W[i], k = Math.hypot(w.x, w.y) || 1, c = Math.cos(x * w.x + z * w.y + t * w.z) * GQ[i] * w.w; dx += (w.x / k) * c; dz += (w.y / k) * c; } out[0] = dx; out[1] = dz; return out; };
+  const pq = [0, 0];
   // the CPU's water is the GPU's: the swell flattening over a shallow bed as the vertex shader does it, and the breakers by the same formula
   let breaks = [], bedAt = null;
   const smooth01 = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   function waveAt(x, z) {
     const t = look.uniforms.ocTime.value; let y = 0;
-    for (const w of W) y += w.w * Math.sin(x * w.x + z * w.y + t * w.z);
+    pull(x, z, t, pq); let qx = x - pq[0], qz = z - pq[1]; pull(qx, qz, t, pq); qx = x - pq[0]; qz = z - pq[1];
+    for (const w of W) y += w.w * Math.sin(qx * w.x + qz * w.y + t * w.z);
     if (!bedAt) return y;
     const depth = -bedAt(x, -z);
     y *= smooth01(0, 5, depth);
@@ -722,8 +758,8 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
     U.ocSkyLC.value.copy(night < .5 ? SUN_C : MOON_C).multiplyScalar(g);
     rain.material.uniforms.uRain.value = wx.rain;
     { const h = U.ocHaze.value; rain.material.uniforms.uC.value.set(h.x * .34 + .02, h.y * .34 + .022, h.z * .34 + .026); }
-    const wave = 1 + st * 1.25;
-    for (let i = 0; i < 4; i++) W[i].w = W0[i] * wave;
+    // the wind of the hour: it freshens and eases over minutes, Beaufort 3 to 5, and a storm drives it on; the sea follows it (setWind), whitecaps from about 5 m/s as the Beaufort scale has them
+    { const tt = look.uniforms.ocTime.value; sea.U = sea.force ?? 6.6 + 2.0 * Math.sin(tt * 0.0299) + 0.8 * Math.sin(tt * 0.0885 + 1.3) + st * 5; const u = Math.min(15, Math.max(3.5, sea.U)); setWind(SW, u, st); U.ocCapK.value = capAt(u); }
   }
   let painter = null;
   function stepClouds(all) {
@@ -773,6 +809,6 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   function testCross(up, speed = 12) { tUp = tDown = 9; crossed(up, speed); }
 
   look.waveAt = waveAt;                                                // for what floats
-  const api = { above, update, waveAt, breakAt, setBreakers, get breaks() { return breaks; }, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
+  const api = { above, update, waveAt, breakAt, setBreakers, get breaks() { return breaks; }, get wind() { return sea.U; }, set wind(v) { sea.force = v; }, waves: SW, testCross, dome, below, above, lens, rain, setWeather, isNight, setHour, onBolt: null, get hour() { return hour; }, get weather() { return wxName; } };
   return api;
 }

@@ -289,6 +289,26 @@ await section(['E29'], async () => {
   line('E29', q.buried && q.ambush && q.tell >= 0.69 && q.speed > 2 && q.slip >= 0 && q.slip < q.speed * 0.35 && !real.length, `buried it can't be struck (${q.buried}); close in and it came up (${q.ambush}) with a ${q.tell} s tell, reached him ${q.struck}; sidewinding at ${q.speed.toFixed(1)} m/s its joints on the ground slid ${q.slip.toFixed(2)} m/s on average over ${q.contacts} contacts; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the open sea: heights by wind where Beaufort's table has them, whitecaps on the share of the sea Monahan measured, no crest looping over, and a swimmer riding the surface that's drawn
+await section(['E30'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, S = G.sky.waves, out = {};
+    for (const U of [4.6, 7, 9]) {
+      G.sky.wind = U; for (let f = 0; f < 20; f++) G.frame(1 / 60); const W = S.W; let hs = 0, n = 0, white = 0; const cut = G.sky.above.material.uniforms.ocCapK.value;
+      for (let i = 0; i < 20000; i++) { const x = Math.random() * 2000, z = Math.random() * 2000, t = Math.random() * 1000; let jxx = 1, jzz = 1, jxz = 0, y = 0; for (let k = 0; k < 6; k++) { const w = W[k], kk = Math.hypot(w.x, w.y), th = x * w.x + z * w.y + t * w.z, s = Math.sin(th); jxx -= S.Q[k] * w.w * (w.x / kk) * w.x * s; jzz -= S.Q[k] * w.w * (w.y / kk) * w.y * s; jxz -= S.Q[k] * w.w * (w.x / kk) * w.y * s; y += w.w * s; } if (jxx * jzz - jxz * jxz < cut) white++; hs += y * y; n++; }
+      out[U] = { Hs: 4 * Math.sqrt(hs / n), white: white / n, want: 3.84e-6 * U ** 3.41, loops: W.reduce((s, w, k) => s + S.Q[k] * Math.hypot(w.x, w.y) * w.w, 0) };
+    }
+    // a swimmer on the open sea rides it: his height follows the surface the CPU reads, which is the GPU's
+    G.sky.wind = 8; const sp = G.world.data.spawn; let far = 0, rise = [1e9, -1e9]; Q.swimAt(sp.x, sp.y, -0.3); h.inv = 1e6;
+    for (let f = 0; f < 240; f++) { G.frame(1 / 60); const y = G.sky.waveAt(h.pos.x, h.pos.z); rise[0] = Math.min(rise[0], y); rise[1] = Math.max(rise[1], y); far = Math.max(far, Math.abs(h.pos.y - y)); }
+    return { out, swim: { far, range: rise[1] - rise[0] } };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), o = r.out, ok = (U, lo, hi) => o[U].Hs >= lo && o[U].Hs <= hi && o[U].white > o[U].want * 0.4 && o[U].white < o[U].want * 2.5 && o[U].loops <= 1;
+  line('E30', ok(4.6, 0.4, 1.0) && ok(7, 0.8, 1.6) && ok(9, 1.7, 2.6) && !real.length, `significant height by wind: 4.6 m/s ${o[4.6].Hs.toFixed(2)} m (Beaufort 3: 0.6), 7 m/s ${o[7].Hs.toFixed(2)} m (4: 1.0-1.5), 9 m/s ${o[9].Hs.toFixed(2)} m (5: 2.0-2.5); whitecap cover ${[4.6, 7, 9].map((U) => (o[U].white * 100).toFixed(2) + '% for ' + (o[U].want * 100).toFixed(2) + '%').join(', ')} (Monahan); steepness sums ${[4.6, 7, 9].map((U) => o[U].loops.toFixed(2)).join(', ')} (under 1: no loops); a swimmer's surface moved ${r.swim.range.toFixed(2)} m in 4 s; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });
