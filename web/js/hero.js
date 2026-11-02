@@ -28,6 +28,8 @@ const RIDE_ACC = 90;
 const TURN_PULL = 40;
 // m, how far ahead of his feet a wader reads the depth
 const WADE_AHEAD = 1.4;
+// s, the half-life over which a ride at sea closes the gap between where he swam and the wave's top
+const SURF_SETTLE = 0.12;
 const SURF_LEAN = 0.47, SURF_LEAN_SHARE = 0.4;      // radians, the most the ride tips him from the feet (the pose's own lean goes on top of it); the share of a turn's pull he lies into
 const SURF_RIDE = 14, SURF_TOP = 26, SURF_OFF = 6, SURF_STORM = 20, SWELL_STORM = 1.7, SURF_TURN = 2.2, SURF_SWELL = 0.75, SURF_START = 9, SURF_SHALLOW = -1.0;      // the surf: speeds, how fast the stick carves, the swell's height, what it takes to get up on one
 const TIDE_TIERS = [0, 15.5, 20, 25], TIDE_WINDOW = 0.14, TIDE_HOLD = 1.8;      // Tidepulse: the speed of each tier (the first is BOOST), how far from a kick a press still counts, how long a tier lasts unrenewed
@@ -332,7 +334,9 @@ export async function createHero(G) {
     if (s.land && h.pos.y - (base + y + STAND * 0.86) > 1.6) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); return; }
     // on land his height goes to the water's top at no more than 12 m/s down and 30 up, and its speed changes by no more than RIDE_ACC a second, so a ride starts and crests on a curve
     // (the speed went from rest to 30 m/s in one step at the start of a land ride: 631-780 m/s² at the root)
-    if (s.land) { const want = clamp((base + y + STAND * 0.86 - h.pos.y) / Math.max(dt, 1e-4), -12, 30); s.vy = clamp(want, (s.vy || 0) - RIDE_ACC * dt, (s.vy || 0) + RIDE_ACC * dt); h.pos.y += s.vy * dt; } else { h.pos.y = base + y + STAND * 0.86; s.vy = 0; }
+    // at sea he rides the wave exactly, from where he was: he swims a metre or more under the wave's top, and that gap closes on a critically damped spring, not in the first step (2,018 m/s² at the root, and more)
+    if (s.land) { const want = clamp((base + y + STAND * 0.86 - h.pos.y) / Math.max(dt, 1e-4), -12, 30); s.vy = clamp(want, (s.vy || 0) - RIDE_ACC * dt, (s.vy || 0) + RIDE_ACC * dt); h.pos.y += s.vy * dt; }
+    else { const top = base + y + STAND * 0.86; if (s.off === undefined) { s.off = h.pos.y - top; s.offV = 0; } else damper(s, 'off', 'offV', 0, SURF_SETTLE, dt); h.pos.y = top + s.off; s.vy = 0; }
     h.swellY = y; h.surfBase = base;
     // the ends. On land: let go of Boost and the water runs out under him, and he runs on. At sea: into the shallows he runs up the beach; pressed down or out of speed he goes under
     if (s.land) { if (s.v < SURF_OFF) { const v = s.v; endSurf(); leave(0); h.jumps = 1; h.vel.set(Math.sin(h.heading) * v, 0, Math.cos(h.heading) * v); h.landSurfT = 0; G.audio.splash(); } return; }      // the water runs out under him and he steps down off it: a moment in the air and the landing's own body, so his legs never have to reach the ground from up on the wave
@@ -502,6 +506,8 @@ export async function createHero(G) {
   const TURN = { rate: 2.6, lat: 52, hl: 0.035, expoX: 0.3, bankHl: 0.08 }, PITCH = { max: 1.2, hl: 0.16, expoY: 0.5, floorLo: 3, floorHi: 25 };
   // the hover: the stick moves him where it points at up to v m/s, and he turns to face it at up to turn rad/s; a lifted thumb brakes him at half-life hlStop s
   const HOVER = { v: 8, turn: 7, hlStop: 0.15 };
+  // the flare of a landing: from FLARE.hi m over the ground to FLARE.lo his ground speed comes down to v m/s, braking at a half-life of hl s
+  const FLARE = { v: 4, lo: 0.5, hi: 6, hl: 0.3 };
   // latch: a thumb still pushing up when the flight starts doesn't swing the nose until it has come back to the middle, or for latchMax s. pushed: a stick this far out makes a Jump a dodge at once
   // THRUST: climbing costs a share of the speed, a full bank bleeds a share; the path follows the nose within tauCarve s (6-7° behind it in a full turn at cruise), at a pull of up to grip m/s²
   const STICK = { latch: 0.3, latchMax: 1.2, pushed: 0.25, tap: 0.16 }, NOSE = { bankMax: 1.204 }, THRUST = { climb: 0.22, bleed: 0.18, tauCarve: 0.07, coast: 0.5, grip: 60 }, DOWN = { perM: 0.12, max: 16, settle: 3 };
@@ -644,18 +650,28 @@ export async function createHero(G) {
     if (!h.hover) flyGoal.copy(nose).multiplyScalar(fly ? top * (1 - THRUST.climb * nose.y) * (1 - THRUST.bleed * share) : 0);
     else { const mx = striking ? 0 : clamp(u.mx || 0, -1, 1), my = striking ? 0 : clamp(u.my || 0, -1, 1), cy = G.camYaw, k = HOVER.v * Math.min(1, Math.hypot(mx, my)) / Math.max(Math.hypot(mx, my), 1e-6); flyGoal.set((Math.sin(cy) * my - Math.cos(cy) * mx) * k, 0, (Math.cos(cy) * my + Math.sin(cy) * mx) * k); }
     const overLand = g0 > SWIM_Y - STAND - 0.1, down = h.flyDown || (!fly && overLand && clear < DOWN.settle);
-    if (down) { const fl = Math.hypot(flyGoal.x, flyGoal.z); if (fl > FLY.carry) { flyGoal.x *= FLY.carry / fl; flyGoal.z *= FLY.carry / fl; } flyGoal.y = -clamp(FLY.glide + DOWN.perM * clear, FLY.glide, DOWN.max); }
+    // the flare: near the ground a descent sheds its ground speed, so he comes in standing on his jets at a jog (FLARE.v), not as an arrow at 18 m/s that the ground pose then took over 3 frames at 73 rad/s
+    if (down) { const fl = Math.hypot(flyGoal.x, flyGoal.z), carry = FLY.carry + (FLARE.v - FLY.carry) * (1 - smooth(FLARE.lo, FLARE.hi, clear)); if (fl > carry) { flyGoal.x *= carry / fl; flyGoal.z *= carry / fl; } flyGoal.y = -clamp(FLY.glide + DOWN.perM * clear, FLY.glide, DOWN.max); }
     else { const ahead = Math.max(groundAt(h.pos.x + h.vel.x * 0.9, h.pos.z + h.vel.z * 0.9), 0) + STAND + 2 - h.pos.y; if (ahead > 0) flyGoal.y = Math.max(flyGoal.y, ahead * 2); }
     const low = smooth(0.4, FLY.flare, clear); if (flyGoal.y < 0) flyGoal.y *= 0.3 + 0.7 * low; if (G.birds && !down) flyGoal.y += G.birds.lift(h.pos);
     // 4. the carve: direction and speed apart. With the whole velocity on one spring the path trails the nose by 35° and he skids; apart it's under 8°
     if (striking) { h.flySp = V; if (V > 1) flyDir.copy(h.vel).divideScalar(V); flyA.multiplyScalar(Math.exp(-6 * dt)); }
+    else if (h.hover) {
+      // a hover isn't carved: each part of his velocity goes to the goal's on its own spring, as the skim's does, so letting go of Fly at speed brakes him along his path and a held Jump
+      // lowers him at the descent's own rate. Carved as a flight, a 30 m/s path was steered down at the descent and he hit the ground at 29 m/s
+      const gl = flyGoal.length(), hl = Math.min(gl < V * 0.7 ? FLY.hlStop * smooth(4, 20, V) + HOVER.hlStop * (1 - smooth(4, 20, V)) : FLY.hlHover, down && clear < FLARE.hi ? FLARE.hl : 9), y = (2 * 0.69314718) / hl, e = Math.exp(-y * dt); flyDt = dt;
+      flySpring('x', flyGoal.x, y, e); flySpring('y', flyGoal.y, y, e); flySpring('z', flyGoal.z, y, e);
+      h.flySp = h.vel.length(); if (h.flySp > 1e-3) flyDir.copy(h.vel).divideScalar(h.flySp); h.flySpA = flyA.dot(flyDir);
+    }
     else {
       const gl = flyGoal.length();
       if (gl > 1) { flyP.copy(flyGoal).divideScalar(gl); if (V < 4) flyDir.copy(flyP); else { const ang = flyDir.angleTo(flyP), most = Math.min((THRUST.grip * (fly && !h.hover ? 1 : THRUST.coast)) / V, ang / THRUST.tauCarve) * dt; if (ang <= most) flyDir.copy(flyP); else { flyAx.crossVectors(flyDir, flyP); if (flyAx.lengthSq() < 1e-6) flyAx.set(0, 1, 0); flyDir.applyAxisAngle(flyAx.normalize(), most).normalize(); } } }
       // a hover's lifted thumb holds him still (M1's helicopter): from a walker's pace the brake is crisp; from cruise it's the long glide to a stop it was
-      const hl = gl < V * 0.7 ? (h.hover ? FLY.hlStop * smooth(4, 20, V) + HOVER.hlStop * (1 - smooth(4, 20, V)) : FLY.hlStop * smooth(2, 20, V) + FLY.hlHover * (1 - smooth(2, 20, V))) : FLY.hlHover + (FLY.hlFast - FLY.hlHover) * smooth(4, 26, V);
+      const hl = Math.min(gl < V * 0.7 ? (h.hover ? FLY.hlStop * smooth(4, 20, V) + HOVER.hlStop * (1 - smooth(4, 20, V)) : FLY.hlStop * smooth(2, 20, V) + FLY.hlHover * (1 - smooth(2, 20, V))) : FLY.hlHover + (FLY.hlFast - FLY.hlHover) * smooth(4, 26, V), down && clear < FLARE.hi ? FLARE.hl : 9);
       damper(h, 'flySp', 'flySpA', gl, hl, dt); if (h.flySp < 0) h.flySp = 0; flyPrev.copy(h.vel); h.vel.copy(flyDir).multiplyScalar(h.flySp); flyA.copy(h.vel).sub(flyPrev).divideScalar(Math.max(dt, 1e-4)); if (flyA.lengthSq() > 3600) flyA.setLength(60);
     }
+    // a descent is never faster than its own rate (the descent goal, slowed near the ground): flying with Jump held, the carve swung a 30 m/s path down into the ground
+    if (down && !striking && flyGoal.y < 0 && h.vel.y < flyGoal.y) { h.vel.y = flyGoal.y; h.flySp = h.vel.length(); if (h.flySp > 1e-3) flyDir.copy(h.vel).divideScalar(h.flySp); }
     // 5. move. A wall takes his speed, or he'd press into it at 44 m/s and shoot off its end
     moved0.copy(h.pos); slide(h.vel.x * dt, h.vel.y * dt, h.vel.z * dt, 0.42, false);
     { const t = terrain(h.pos.x, h.pos.z) + 0.42; if (h.pos.y < t) h.pos.y = t; } h.apexY = h.pos.y;
@@ -670,7 +686,8 @@ export async function createHero(G) {
     // 7. the body
     h.flyLat = damp(h.flyLat, (h.nBank / NOSE.bankMax) * smooth(FLY.arrow0, FLY.arrow1, V), 5, dt); h.flyBrake = damp(h.flyBrake, V > 4 && !fly ? clamp(-flyA.dot(h.vel) / (V * 10), 0, 1) : 0, 4, dt); flyBody(dt, (1 - low) * (1 - smooth(6, 14, V))); h.flyThrottle = clamp(0.42 + flyA.length() / 40 + V / 90, 0.35, 1);
     // 8. the ground
-    if (overLand && h.vel.y <= 0.6 && h.pos.y <= g0 + STAND + 0.2) { h.endFly(); landOn(g0); }
+    // a landing from flight hands his pose to the ground's through a longer inertial blend: the jets' pose to the landing legs in one of body.js's 0.24 s blends showed in the feet
+    if (overLand && h.vel.y <= 0.6 && h.pos.y <= g0 + STAND + 0.2) { h.endFly(); body.inertia(0.34); landOn(g0); }
     else if (h.pos.y < -0.2 && g0 < SWIM_Y - STAND) { h.endFly(); h.air = false; h.land = false; G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, -0.05, h.pos.z), 7, 1.1, 0xe8fbff); G.fx.bubbles(h.pos, 26, 1.6); }
   }
   function stepFly(u, dt, held, inputAmt) {
