@@ -1,0 +1,41 @@
+{
+ "url": "http://127.0.0.1:8852/index.html?fresh&tier=phone&film&qa",
+ "hud": false,
+ "shots": [
+  {
+   "name": "life_day",
+   "still": true,
+   "seconds": 0,
+   "warm": 240,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.45); F.path([{t:0,p:[-646,640,8.6],at:[-646,760,12],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "life_dusk",
+   "still": true,
+   "seconds": 0,
+   "warm": 240,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.74); F.path([{t:0,p:[-646,640,8.6],at:[-646,760,12],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "life_night",
+   "still": true,
+   "seconds": 0,
+   "warm": 240,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.9); F.path([{t:0,p:[-646,640,8.6],at:[-646,760,12],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "life_corner",
+   "still": true,
+   "seconds": 0,
+   "warm": 240,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.45); F.path([{t:0,p:[-655,655,11],at:[-630,680,8],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "life_air",
+   "still": true,
+   "seconds": 0,
+   "warm": 240,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.74); F.path([{t:0,p:[-560,560,45],at:[-648,680,8],fov:60}],{hideHero:true}); 'ok'"
+  }
+ ]
+}

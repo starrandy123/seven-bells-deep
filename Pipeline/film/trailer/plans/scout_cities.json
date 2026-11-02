@@ -1,0 +1,104 @@
+{
+ "url": "http://127.0.0.1:8852/index.html?fresh&tier=phone&film&qa",
+ "hud": false,
+ "shots": [
+  {
+   "name": "st_m_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[360,200,-28],at:[440,246,-32],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_m_b",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[400,300,-45],at:[440,246,-30],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_m_c",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[470,200,-38],at:[440,246,-30],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_t_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[20,-250,-30],at:[20,-150,-45],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_t_b",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[80,-60,-25],at:[20,-96,-35],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_t_c",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[-40,-40,-20],at:[20,-88,-45],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_v_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[-205,500,-135],at:[-205,579,-150],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_v_b",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[-150,600,-140],at:[-205,579,-152],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_r_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[-40,760,-22],at:[-40,838,-32],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_r_b",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[40,880,-20],at:[-40,838,-35],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_c_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[700,-540,-100],at:[752,-640,-120],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_h_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[152,160,-28],at:[152,208,-36],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_a_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[20,20,-40],at:[20,62,-55],fov:58}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "st_k_a",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('water', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); F.quiet(); if (G.sky.setHour) G.sky.setHour(0.5); F.path([{t:0,p:[-400,26,-45],at:[-436,26,-52],fov:58}],{hideHero:true}); 'ok'"
+  }
+ ]
+}

@@ -1,0 +1,48 @@
+{
+ "url": "http://127.0.0.1:8852/index.html?fresh&tier=phone&film&qa",
+ "hud": false,
+ "shots": [
+  {
+   "name": "salt_day",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.45); F.path([{t:0,p:[-648,600,8.7],at:[-648,760,14],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "salt_dusk",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.74); F.path([{t:0,p:[-648,600,8.7],at:[-648,760,14],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "salt_night",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.9); F.path([{t:0,p:[-648,600,8.7],at:[-648,760,14],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "salt_air_dusk",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.74); F.path([{t:0,p:[-430,520,70],at:[-680,700,40],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "salt_air_night",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.9); F.path([{t:0,p:[-430,520,70],at:[-680,700,40],fov:60}],{hideHero:true}); 'ok'"
+  },
+  {
+   "name": "salt_side",
+   "still": true,
+   "seconds": 0,
+   "warm": 40,
+   "setup": "G.filmCam = null; G.ember.setSide('fire', { place: false, quiet: true }); G.enemies.clearAll && G.enemies.clearAll(); if (G.sky.setHour) G.sky.setHour(0.74); F.path([{t:0,p:[-620,640,9.5],at:[-700,650,12],fov:60}],{hideHero:true}); 'ok'"
+  }
+ ]
+}
