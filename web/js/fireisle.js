@@ -35,7 +35,7 @@ export function raiseIsle(data, Hz, n, cell, ox, oy) {
 // black rock wherever the isle stands (biome2, red: cinder. On land that's black rock)
 export function paintIsle(b, bn, c, ox, oy) {
   const near = Math.ceil((ISLE.R * 1.3) / c), ci = Math.round((ISLE.x - ox) / c), cj = Math.round((ISLE.y - oy) / c);
-  for (let j = Math.max(0, cj - near); j <= Math.min(bn - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(bn - 1, ci + near); i++) { const k = 1 - smooth((edge(ox + i * c, oy + j * c) - 1.16) / 0.16), o = (j * bn + i) * 4; if (k <= 0) continue; const c0 = Math.round(255 * k + b[o] * (1 - k)), g = Math.round(b[o + 1] * (1 - k)), r = Math.round(b[o + 2] * (1 - k)); b[o] = c0; b[o + 1] = g; b[o + 2] = r; b[o + 3] = 255 - c0 - g - r; }
+  for (let j = Math.max(0, cj - near); j <= Math.min(bn - 1, cj + near); j++) for (let i = Math.max(0, ci - near); i <= Math.min(bn - 1, ci + near); i++) { const k = 1 - smooth((edge(ox + i * c, oy + j * c) - 1.0) / 0.12), o = (j * bn + i) * 4; if (k <= 0) continue; const c0 = Math.round(255 * k + b[o] * (1 - k)), g = Math.round(b[o + 1] * (1 - k)), r = Math.round(b[o + 2] * (1 - k)); b[o] = c0; b[o + 1] = g; b[o + 2] = r; b[o + 3] = 255 - c0 - g - r; }
   return b;
 }
 // the rock the High City stands on: flat on top, a broken cone below it, split by the same molten seams as an Emberkin

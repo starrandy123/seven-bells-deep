@@ -7,9 +7,10 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { planCities } from './city.js';
-import { addIsle, raiseIsle, paintIsle, skyRock } from './fireisle.js';
+import { addIsle, raiseIsle, paintIsle, skyRock, ISLE } from './fireisle.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
+import { dressDunes } from './dunes.js';
 import { fallStrips, FALL_V, FALL_F } from './falls.js';
 import { createWetMap } from './wetmap.js';
 import { CITY_VERTEX_DECL, CITY_VERTEX_BEND, CITY_PARS, CITY_ALBEDO, CITY_POST, CITY_GLOW } from './city_glsl.js';
@@ -388,6 +389,9 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           wetK = 1.0 - smoothstep(.15, 1.05, P.y - lap + (m1 - .5)*.5);
           float n3 = ocTile(P, Nbase, .083, vec2(.0), slope).b, n4 = mix(ocTile(P.zyx, Nbase.zyx, .27, wand, slope).a, .5, smoothstep(24.0, 110.0, camD));
           vec3 beach = mix(ocLandSand*(.88 + .16*macro + .10*n4), ocLandWet, wetK*.9);
+          // the bands of a real shore: the bare berm, then a foredune where dune grass comes in by clumps, then the green. Dune grass is paler and drier than a meadow's, and the sand shows between it
+          float upBeach = smoothstep(1.0, 3.8, hA + (n4 - .5)*1.3), clumps = smoothstep(.42, .60, n3*.5 + n4*.5 + upBeach*.3 - .1);
+          vec3 duneG = mix(ocLandGL*vec3(1.05, .96, .72), ocLandGD*vec3(1.1, 1.02, .78), n4); beach = mix(beach, duneG, clumps*upBeach*(1.0 - wetK));
           float mdw = ocMeadow(P.xz);
           vec3 grass = mix(ocLandGD, ocLandGL, smoothstep(.26, .74, mdw + (n4 - .5)*.12))*ocMeadowTint(P.xz);
           vec3 jungle = mix(ocLandJ*.32, ocLandJ, n3*.6 + n4*.4);
@@ -398,7 +402,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           vec3 pale = mix(ocLandP*.5, ocLandP, smoothstep(.3, .72, n3*.6 + n4*.4));
           vec3 black = mix(vec3(.014, .014, .018), vec3(.075, .072, .08), smoothstep(.3, .75, n3*.5 + n4*.5));
           float bsum = max(bw.r + bw.g + bw.b + bw.a, .001);
-          vec3 ground = (beach*bw.r + mix(beach, green, smoothstep(.8, 2.0, hA + (n4 - .5)*1.6))*bw.g + pale*bw.b + black*bw.a)/bsum;
+          vec3 ground = (beach*bw.r + mix(beach, green, smoothstep(1.2, 3.6, hA + (n4 - .5)*1.6))*bw.g + pale*bw.b + black*bw.a)/bsum;
           ground = mix(ground, stone*(.6 + 1.2*bw.b + .2*bw.r) + black*bw.a*.5, steep*(1.0 - bw.r*.4));
           ground = mix(ground, vec3(.40, .43, .48)*(.90 + .16*macro), b2.g*(1.0 - steep*.7));          // snow: a little under what the sun will make white
           ground = mix(ground, vec3(.040, .036, .040)*(.8 + .6*n3), b2.r);                             // ash
@@ -768,6 +772,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
+  { const busy = new Set(), K = (x, y) => Math.floor(x / 10) * 100003 + Math.floor(y / 10); for (const c of (data.colliders || []).concat(cityPlan.colliders)) { if (c.z1 < .5) continue; const r = c.t === 'cyl' ? c.r : Math.hypot(c.hx, c.hy); if (r > 40) continue; for (let dx = -r - 3; dx <= r + 3; dx += 8) for (let dy = -r - 3; dy <= r + 3; dy += 8) busy.add(K(c.x + dx, c.y + dy)); }
+    data.instances.grass_tuft = (data.instances.grass_tuft || []).concat(dressDunes({ data, heightAt, skip: (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R + 10 || busy.has(K(x, y)) })); }
   const tLeaf = data.instances.tree_oak_a || data.instances.tree_oak_b ? leafMask() : null;
   // Cards scattered over a mesh's foliage (its green corners), in real metres; `normal` points out from the canopy, so the mass lights as one.
   function leafCards(G, want) {

@@ -23,8 +23,8 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 17 | Nice buildings on land and in the fire cities | To do |
 | 18 | A volcano world to contrast the waterfall | To do |
 | 19 | The water against fire fight shows every power, for showcase clips | To do |
-| 20 | Sand and grass on the water side's beaches, a real transition | To do |
-| 21 | Running stops feeling stiff | To do |
+| 20 | Sand and grass on the water side's beaches, a real transition | Build 44, his eye |
+| 21 | Running stops feeling stiff | Build 44, his eye |
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
 

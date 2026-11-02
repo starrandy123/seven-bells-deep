@@ -15,7 +15,7 @@ const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t
 const damp = (cur, tgt, k, dt) => cur + (tgt - cur) * (1 - Math.exp(-k * dt));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 5.9, LAND_SPRINT = 9.1, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
+const CRUISE = 7.5, BOOST = 15.5, SUPER = 48, LAND_RUN = 7.4, LAND_SPRINT = 10.5, LAND_SUPER = 36, STAND = 0.92, SWIM_Y = -0.55;     // SWIM_Y: where he floats, head out, and the depth at which his feet leave the bottom
 // The jump, in the numbers a designer chooses (DESIGN.md §Movement): height and time; gravity and speed follow. One gravity for every jump, so the air always feels the same.
 const LAND_SWELL = 0.13, LAND_RIDE_SWELL = 0.42;      // m: what's left of the water under him at the end of a land ride, where he stands, at STAND; and how high the water carries him on land at speed (the sea's swell, 0.75 m, stood him on a stilt once the water under him was made narrow)
 const WALK_TOP = 2.6, WALK_EASE = 2.4;      // m/s, m/s²: the speed below which he's walking, and how hard a walk starts and stops

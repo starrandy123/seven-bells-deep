@@ -384,7 +384,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   }
   const tvW = new THREE.Quaternion(), tvP = new THREE.Vector3();
   // ---------------------------------------------------------------- a leap's body: one curve from the nose to the toes, the shape of the path he's on. Going up he's long and a little arched back, over the top he folds round it, and he goes in long again, with a slow wave running down him all the way
-  let flyK = 0; const faceL = new THREE.Vector3(...K.qrot(K.qconj(REST.q.head), [0, 0, 1])), lookC = [bones.spine_3, bones.neck, bones.head], lookS = [0.14, 0.38, 0.48];
+  let flyK = 0; const landLook = new THREE.Vector3(), lookNS = [0.42, 0.58], lookN = [bones.neck, bones.head]; const faceL = new THREE.Vector3(...K.qrot(K.qconj(REST.q.head), [0, 0, 1])), lookC = [bones.spine_3, bones.neck, bones.head], lookS = [0.14, 0.38, 0.48];
   const sideAxisZ = {}, flyW = [1, 0, 0, 0], FLY_CL = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'];
   const sideAxis = {}, LEG0 = 0.34, SHIN0 = -0.42;       // the legs long: what takes the swim-dodge pose's bent hips and knees out
   function bend(n, a) { const i = index[n]; if (i === undefined || !a) return; const ax = sideAxis[n] || (sideAxis[n] = K.qrot(K.qconj(REST.q[n]), [1, 0, 0])), q = K.qaxis(ax, a), o = i * 4, r = K.qmul([pose[o], pose[o + 1], pose[o + 2], pose[o + 3]], q); pose[o] = r[0]; pose[o + 1] = r[1]; pose[o + 2] = r[2]; pose[o + 3] = r[3]; }
@@ -480,7 +480,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
 
     // ---- lean: the body goes into what the feet are doing, on followers, at the hips
     const accel = dt > 0 ? (speed - lastSpeed) / Math.max(dt, 1 / 240) : 0, turnRate = dt > 0 ? nearAngle(0, yaw - lastYaw) / Math.max(dt, 1 / 240) : 0; lastSpeed = speed; lastYaw = yaw;
-    const gLean = onGround ? clamp(-accel * 0.016, -0.36, 0.3) : 0, gBank = onGround ? clamp(-turnRate * speed * 0.016, -0.42, 0.42) : 0;
+    // a runner leans into what he's asking of his feet, atan(a / g), and a game takes about half of that: 0.05 rad per m/s² here (Randy, 2 Nov: "Running also feels stiff"). On top of it the steady lean a run has at speed
+    const gLean = onGround ? clamp(-accel * 0.045 - 0.17 * smooth(3, 9, speed), -0.55, 0.3) : 0, gBank = onGround ? clamp(-turnRate * speed * 0.05, -0.5, 0.5) : 0;
     const lf = chase(P.leanF, F.leanF, gLean, dt), ls = chase(P.leanS, F.leanS, gBank, dt);
     if (Math.abs(lf) + Math.abs(ls) > 1e-4) {
       const qm = K.qmul(K.qaxis([1, 0, 0], -lf), K.qaxis([0, 0, 1], ls)), ql = K.qmul(K.qmul(Pmi, qm), Pm), i = index.hips, o = i * 4, r = K.qmul(ql, [pose[o], pose[o + 1], pose[o + 2], pose[o + 3]]);
@@ -525,6 +526,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     hb.position.set(poseP[0], poseP[1], poseP[2]); last2P = lastP; lastP = poseP.slice();
     wear(dc);
     if (flyK > 0.02) aimChain(lookC, lookS, bones.head, faceL, h.flyLook, 1.42, flyK);
+    // on his feet the head goes first: it stays level through the stride and looks into a turn before the body gets there
+    else if (onGround && speed > 1.5 && !shot) { const ahead = h.heading + clamp(nearAngle(0, wanted - facing) * 2.5 + turnRate * 0.34, -0.7, 0.7); landLook.set(Math.sin(ahead), 0, Math.cos(ahead)); aimChain(lookN, lookNS, bones.head, faceL, landLook, 0.9, 0.8 * smooth(1.5, 4, speed)); }
     prevDt = dt;
     swing(dt, speed, onGround);
     if (h.ride) { root.updateWorldMatrix(true, false); bones.hand_R.updateWorldMatrix(true, false); bones.hand_L.updateWorldMatrix(true, false); tv.setFromMatrixPosition(bones.hand_R.matrixWorld); tv2.setFromMatrixPosition(bones.hand_L.matrixWorld); h.handsR = tv.clone(); h.handsL = tv2.clone(); gripRel.copy(tv).add(tv2).multiplyScalar(0.5).sub(root.position); }
