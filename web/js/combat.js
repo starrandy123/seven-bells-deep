@@ -180,7 +180,7 @@ export function createCombat(G, h, api) {
     }
     if (u.cast) { u.cast = false; buf.push('cast', now); }
     // Jump held on the water raises the spout. A tap stays a leap: nothing here happens until it's been held a moment
-    jumpIsHeld = !!u.jumpHeld; const onSea = !h.land && !h.dead && h.pos.y < 6 && G.world.heightAt(h.pos.x, -h.pos.z) < -1.5;
+    jumpIsHeld = !!u.jumpHeld; const onSea = G.sideNow !== 'fire' && !h.land && !h.dead && h.pos.y < 6 && G.world.heightAt(h.pos.x, -h.pos.z) < -1.5;      // the sea answers the water side: the man in red has no tornado
     if (onSea && !spoutTold && (seaT += dt) > 12) { spoutTold = true; teach('spout_open', 'Tornado', 'Hold Jump on the water: it lifts you up'); }      // it has no button of its own, so it's said once
     if (!jumpIsHeld) spoutHold = 0; else if (onSea && spoutHold >= 0) { spoutHold += dt; if (spoutHold >= D.spout.hold_s) { spoutHold = -1; if (P && !P.spout.on) buf.push('spout', now); } }
     if (P) P.spout.stick = [stickX, stickY];
@@ -348,7 +348,7 @@ export function createCombat(G, h, api) {
 
   function land(e, a, mul = 1) {
     if (a.hits.has(e)) return; a.hits.add(e); a.landed = true;
-    const d = a.def, el = d.element || stance, st = D.stances[el], dmg = d.damage * st.damage_mul * mul * (G.ember ? G.ember.heroMul() : 1) * (a.id === 'riptide' && lv('riptide') >= 1 ? D.upgrades.riptide.damage : 1);
+    const d = a.def, el = d.element || stance, st = D.stances[el], dmg = d.damage * st.damage_mul * mul * (G.ember ? G.ember.heroMul() : 1) * (G.turf ? G.turf.dealt() : 1) * (a.id === 'riptide' && lv('riptide') >= 1 ? D.upgrades.riptide.damage : 1);
     const info = { move: a.id, melee: d.kind === 'strike' && a.id !== 'whip', element: el, status: a.status || d.status || st.status, shatters: !!d.shatters, knock: d.knock || 0, stun: (d.stun_s || 0) * (a.stunMul || 1), poise: d.poise || 0, launch: (d.launch || 0) * (a.launchMul || 1), heavy: d.impact === 'heavy' || d.impact === 'finisher' };
     const res = e.onHit(dmg, a.from || h.pos, d.clip || a.id, info);
     if (res === 'blocked') {
@@ -410,7 +410,7 @@ export function createCombat(G, h, api) {
       G.ui.tip('Parried', 1.2);
       h.guardFroze = !!d.freezes; h.guardHold = d.freezes && lv('guard') >= 2 ? D.upgrades.guard.frozen : 1; return 'parried';
     }
-    let dmg = amount; if (h.state === 'parry') dmg *= 0.4;
+    let dmg = amount; if (h.state === 'parry') dmg *= 0.4; if (G.turf) dmg *= G.turf.taken();
     h.hp -= dmg; h.inv = 0.45; log('hurt', { dmg, hp: h.hp });
     if (!(G.settings && G.settings.shake === false)) G.shake(0.5);
     G.audio.hit(false); G.ui.hurt(0.8);

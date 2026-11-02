@@ -80,7 +80,7 @@
   "spout": {
     "_doc": "the water tornado. Jump held hold_s on the water raises it round him; it carries him apex_m over the sea in rise_s; he leaps off when he lets go, or after top_s. The stick walks it across the sea. Foes inside pull_m are drawn in and round, inside grab_m spun up it and thrown.",
     "hold_s": 0.2, "apex_m": 26, "rise_s": 1.3, "top_s": 1.1, "radius_m": 4.2, "sway_m": 4, "spin_rad": 11, "drift_mps": 7, "cam_arm": 26, "cam_drop": 8.5, "cam_low": 24, "cam_pitch": 0.03, "leap_mps": 14, "leap_up_mps": 7, "fall_s": 1.3,
-    "pull_m": 20, "grab_m": 6.5, "draw": 7, "swirl": 5, "spun_s": 1.9, "spun_up_m": 13, "spun_rad": 7, "spun_damage": 12, "throw_mps": 22, "throw_damage": 45
+    "elevator_m": 132, "climb_mps": 26, "climb_tide": 5, "big_k": 1.2, "sling_m": 170, "sling_below_m": 14, "sling_cos": 0.55, "sling_mps": 46, "pull_m": 20, "grab_m": 6.5, "draw": 7, "swirl": 5, "spun_s": 1.9, "spun_up_m": 13, "spun_rad": 7, "spun_damage": 12, "throw_mps": 22, "throw_damage": 45
   },
   "shoal": {
     "_doc": "Shoalsong (P13). Gulls keep him company on land, where no sea creature can (P13c). Holding Call spreads the ring: a tap reaches ring_tap_m, held it goes on to ring_m. What it touches follows him lead_s. jobs (P13b): a school shields, rays light the dark, turtles lift him, sharks hunt what he marks, the whale breaks armour. always answer: the rest answer once Minnow's book has logged them (P13d). tiers (P13e), the hold's top: the pack, then the breach, which needs the whale logged.",
@@ -131,6 +131,10 @@
       { "id": "land_frost_fort", "at": "frost_fort", "dy": 32, "r": 28, "mix": ["frost_wight", "archer", "captain", "frost_wight"] },
       { "id": "land_cinder_rim", "at": "cindermere", "dx": -112, "dy": -108, "r": 24, "mix": ["magma_husk", "archer", "magma_husk"] }
     ]
+  },
+  "turf": {
+    "_doc": "fire fears the water, water fears the sky, and each can still reach the other (turf.js). fire: over open water below low_m the jets are weak (speed_k) and the tide drains; in the sea he burns away, and a Boost out costs out_tide. water: above high_m with no water near, the tide drains, then the hp; while there he deals dealt_k and takes taken_k. disarm_s: what the sea does to a boss or a champion dragged into it, with hurt_k on every blow",
+    "low_m": 7, "speed_k": 0.72, "low_tide": 5, "sea_tide": 12, "sea_hp": 6, "out_tide": 20, "high_m": 34, "sky_tide": 7, "sky_hp": 3, "dealt_k": 0.6, "taken_k": 1.35, "disarm_s": 4, "hurt_k": 2, "drown_s": 3
   },
   "rag": {
     "_doc": "a body thrown by a blow (ragdoll.js, enemies.js throwBody). at_knock: a blow with this knock or a heavy one throws him. carry: metres a second of throw for each point of knock. up_mps and spin_rad at ref_mps of throw. down_s: how long the body is the ragdoll's in air, water_s in water, where the throw carries water_carry as far and the body drifts. back_s: the blend back to the clips. min_s: he isn't given back sooner. relight_s: the jets stutter this long",

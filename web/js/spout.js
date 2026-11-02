@@ -8,16 +8,16 @@ const ease = (t) => t * t * (3 - 2 * t);
 const NU = 36, NV = 54;
 
 export function createSpout(G, h, D, C) {
-  const S = D.spout, U = { uT: { value: 0 }, uFall: { value: 0 }, uBase: { value: new THREE.Vector3() }, uTop: { value: new THREE.Vector3() }, uR: { value: S.radius_m }, uSway: { value: 0 }, uAlpha: { value: 1 }, tN: { value: G.fx.noiseT }, uSun: { value: G.fx.sunDir } };
+  const S = D.spout, U = { uLen: { value: 1 }, uT: { value: 0 }, uFall: { value: 0 }, uBase: { value: new THREE.Vector3() }, uTop: { value: new THREE.Vector3() }, uR: { value: S.radius_m }, uSway: { value: 0 }, uAlpha: { value: 1 }, tN: { value: G.fx.noiseT }, uSun: { value: G.fx.sunDir } };
   const V = new Float32Array((NU + 1) * (NV + 1) * 2), P0 = new Float32Array((NU + 1) * (NV + 1) * 3), I = []; let k = 0;
   for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) { V[k++] = i / NU; V[k++] = j / NV; }
   for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + 1, c = a + NU + 1, d = c + 1; I.push(a, c, b, b, c, d); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P0, 3)); geo.setAttribute('aUV', new THREE.BufferAttribute(V, 2)); geo.setIndex(I);
-  const vs = `attribute vec2 aUV; uniform float uT, uR, uSway; uniform vec3 uBase, uTop; varying vec3 vN, vW; varying vec2 vQ;
+  const vs = `attribute vec2 aUV; uniform float uT, uR, uSway, uLen; uniform vec3 uBase, uTop; varying vec3 vN, vW; varying vec2 vQ;
     vec3 axis(float v) { float s = sin(v * 3.14159); vec2 w = vec2(sin(v * 5.0 - uT * 1.7) + 0.5 * sin(v * 11.0 + uT * 2.3), cos(v * 4.3 - uT * 1.4) + 0.5 * cos(v * 9.0 - uT * 2.1)) * s * uSway; return vec3(mix(uBase.x, uTop.x, v) + w.x, mix(uBase.y, uTop.y, v), mix(uBase.z, uTop.z, v) + w.y); }
     float rad(float v) { return uR * (0.62 + 0.34 * v) + uR * 1.7 * exp(-v * 13.0) + uR * 0.5 * smoothstep(0.88, 1.0, v); }
-    vec3 at(float a, float v) { float A = a + v * 15.0 - uT * 6.5, R = rad(v) * (1.0 + 0.24 * sin(A * 3.0) + 0.07 * sin(A * 7.0 + v * 30.0 - uT * 9.0)); return axis(v) + vec3(cos(A), 0.0, sin(A)) * R; }
-    void main() { float a = aUV.x * 6.28318, v = aUV.y; vec3 p = at(a, v), dA = at(a + 0.02, v) - p, dV = at(a, v + 0.012) - p; vN = normalize(cross(dV, dA)); vW = p; vQ = vec2(a + v * 15.0 - uT * 6.5, v); gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`;
+    vec3 at(float a, float v) { float A = a + v * 15.0 * uLen - uT * 6.5, R = rad(v) * (1.0 + 0.24 * sin(A * 3.0) + 0.07 * sin(A * 7.0 + v * 30.0 - uT * 9.0)); return axis(v) + vec3(cos(A), 0.0, sin(A)) * R; }
+    void main() { float a = aUV.x * 6.28318, v = aUV.y; vec3 p = at(a, v), dA = at(a + 0.02, v) - p, dV = at(a, v + 0.012) - p; vN = normalize(cross(dV, dA)); vW = p; vQ = vec2(a + v * 15.0 * uLen - uT * 6.5, v); gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0); }`;
   const fs = `uniform float uT, uFall, uAlpha; uniform sampler2D tN; uniform vec3 uSun; varying vec3 vN, vW; varying vec2 vQ;
     void main() {
       vec3 Vw = normalize(cameraPosition - vW), N = normalize(vN); if (!gl_FrontFacing) N = -N;
@@ -45,23 +45,44 @@ export function createSpout(G, h, D, C) {
     v1.set(T.base.x, 0.1, T.base.z); G.fx.sheet(v1, 3.6, S.radius_m); G.life && G.life.scatter && G.life.scatter(h.pos, 30);
   }
   // off the top: on along where he's looking, or straight down with Strike
+  // the sky city he's looking at, near enough to reach from up here
+  function skyTarget() {
+    const fx = Math.sin(G.camYaw), fz = Math.cos(G.camYaw); let best = null, bd = 1e9;
+    for (const p of G.world.data.poi || []) { if (!p.fort && p.id !== 'sky_city') continue; const dx = p.x - h.pos.x, dz = -p.y - h.pos.z, d = Math.hypot(dx, dz); if (d - p.r > S.sling_m || h.pos.y < p.z - S.sling_below_m || (dx * fx + dz * fz) / d < S.sling_cos) continue; if (d < bd) { bd = d; best = p; } }
+    return best;
+  }
+  // off the top and across: the column throws him, an arc of water behind him, down onto the near side of the city. It lands him on his feet
+  function sling(p) {
+    const d = Math.hypot(p.x - h.pos.x, -p.y - h.pos.z), k = Math.max(0, d - p.r * 0.55) / d, to = new THREE.Vector3(h.pos.x + (p.x - h.pos.x) * k, p.z + 1.4, h.pos.z + (-p.y - h.pos.z) * k), from = h.pos.clone(), L = from.distanceTo(to);
+    T.sl = { from, to, t: 0, T: clamp(L / S.sling_mps, 0.9, 3.2), up: 4 + L * 0.07, c: { p: from.clone(), yaw: Math.atan2(to.x - from.x, to.z - from.z), arm: 16, drop: 0 } }; h.heading = T.sl.c.yaw; h.carried = T.sl.c; G.audio.splash(); C.log('sling', { to: p.id });
+  }
+  function stepSling(dt) {
+    const s = T.sl; s.t += dt; const q = clamp(s.t / s.T, 0, 1), e = q * (2 - q); s.c.p.lerpVectors(s.from, s.to, e); s.c.p.y += Math.sin(q * Math.PI) * s.up; if ((T.beadT = (T.beadT || 0) - dt) <= 0) { T.beadT = 0.03; G.fx.bubbles && G.fx.sp('bead', s.c.p, 0.1, 0.7, BEAD, { s0: 0.3, s1: 0.06, hot: 0.5, add: 0.6, grav: 9, vx: (Math.random() - 0.5) * 3, vy: Math.random() * 2, vz: (Math.random() - 0.5) * 3 }); }
+    if (q >= 1) { T.sl = null; h.carried = null; h.vel.set(0, -5, 0); h.apexY = h.pos.y; h.fallSafe = 1; G.fx.sheet && G.fx.sheet(h.pos.clone(), 2.2, 4); G.audio.splash(); C.log('slung', {}); }
+  }
   function leap(slam) {
     if (!T.on || (T.mode !== 'rise' && T.mode !== 'top')) return; h.carried = null; T.mode = 'fall'; T.t = 0; fwd.set(Math.sin(G.camYaw), 0, Math.cos(G.camYaw));
+    // Strike at the top takes him and all it's spinning down into the sea
+    if (slam) T.drag = G.time + S.spun_s + 0.4; else { const p = skyTarget(); if (p) { sling(p); return; } }
     h.vel.set(fwd.x * S.leap_mps, S.leap_up_mps, fwd.z * S.leap_mps); h.heading = G.camYaw; h.apexY = h.pos.y; if (!slam) h.breach = { v: S.leap_mps, H: h.pos.y + (S.leap_up_mps * S.leap_up_mps) / 40 }; C.log('leapt', { y: +h.pos.y.toFixed(1), slam: !!slam });      // the dolphin's arc: the body along it, and in head first G.audio.swing(); if (G.audio.spoutRoar) G.audio.spoutRoar(false);
     if (slam) { h.vel.set(fwd.x * 6, 2, fwd.z * 6); G.combat.startAttack('plunge'); }
   }
+  const BEAD = new THREE.Color(0.8, 0.95, 1);
   function step(dt, held) {
+    if (T.sl) stepSling(dt);
     if (!T.on) return; T.t += dt; U.uT.value += dt; const fx = G.fx;
     if (h.dead || h.state === 'cine') { clear(); return; }
     if (T.mode === 'rise' || T.mode === 'top') {
       // the stick walks it across the sea, and him with it
       const mx = T.stick[0], my = T.stick[1], sn = Math.sin(G.camYaw), cs = Math.cos(G.camYaw), nx = T.base.x + (sn * my - cs * mx) * S.drift_mps * dt, nz = T.base.z + (cs * my + sn * mx) * S.drift_mps * dt; if (G.world.heightAt(nx, -nz) < -1.5) { T.base.x = nx; T.base.z = nz; }
       if (T.mode === 'rise') { const q = clamp(T.t / S.rise_s, 0, 1); T.topY = T.y0 + (S.apex_m + 2 - T.y0) * (1 - (1 - q) * (1 - q) * (1 - q)); if (q >= 1) { T.mode = 'top'; T.t = 0; v1.set(T.base.x, T.topY - 2.4, T.base.z); fx.sheet(v1, 2.2, S.radius_m * 0.7); } }
+      // held at the top it goes on climbing, thicker and thicker, as far as there's tide to drive it: the elevator to the sky cities (Randy, 2 Nov)
+      else if (held && T.topY < S.elevator_m && h.tide > 1) { T.topY = Math.min(S.elevator_m, T.topY + S.climb_mps * dt); h.tide -= S.climb_tide * dt; T.t = 0; }
       else if (!held || T.t >= S.top_s) { leap(false); }
       // it starts as a rope of water round him and thickens as it climbs, so the lens is outside it from the first
-      U.uR.value = 1.2 + (S.radius_m - 1.2) * clamp((T.topY - T.y0) / (S.apex_m * 0.7), 0, 1); U.uSway.value = Math.min(S.sway_m, (T.topY - T.base.y) * 0.14); U.uBase.value.copy(T.base); U.uTop.value.set(T.base.x, T.topY, T.base.z);
+      { const big = clamp((T.topY - S.apex_m) / (S.elevator_m - S.apex_m), 0, 1); U.uR.value = (1.2 + (S.radius_m - 1.2) * clamp((T.topY - T.y0) / (S.apex_m * 0.7), 0, 1)) * (1 + S.big_k * big); U.uSway.value = Math.min(S.sway_m * (1 + big), (T.topY - T.base.y) * 0.14); U.uLen.value = (T.topY - T.base.y) / 28; U.uBase.value.copy(T.base); U.uTop.value.set(T.base.x, T.topY, T.base.z); }
       // the lens backs off as it goes up, and looks across the column, him high in the frame and the sea at the foot of it
-      { const q = clamp((T.topY - T.y0) / (S.apex_m - T.y0), 0, 1); T.c.arm = 6 + (S.cam_arm - 6) * q; T.c.drop = S.cam_drop * q; }
+      { const q = clamp((T.topY - T.y0) / (S.apex_m - T.y0), 0, 1), up = Math.max(0, T.topY - S.apex_m); T.c.arm = 6 + (S.cam_arm - 6) * q + up * 0.12; T.c.drop = S.cam_drop * q; }
       if (h.carried) { T.spin += dt * (T.mode === 'top' ? 3 : S.spin_rad); const orbit = T.mode === 'top' ? 0.5 : 1.3, w = U.uT.value * 4; T.c.p.set(T.base.x + Math.cos(w) * orbit, T.topY + 0.3, T.base.z + Math.sin(w) * orbit); T.c.yaw = T.mode === 'top' ? G.camYaw : T.spin; h.inv = Math.max(h.inv, 0.2); G.heroGlow.value = Math.max(G.heroGlow.value, 4); G.camPitch += (S.cam_pitch - G.camPitch) * (1 - Math.exp(-2.4 * dt)); }
       if (G.enemies) G.enemies.spout(T.base, T.topY, dt);
     } else {
@@ -71,6 +92,6 @@ export function createSpout(G, h, D, C) {
     if ((T.foamT -= dt) <= 0) { T.foamT = 0.55; v1.set(T.base.x, 0.1, T.base.z); fx.sheet(v1, T.mode === 'fall' ? 1.4 : 2.2, U.uR.value * 1.3); }
     if (T.mode !== 'fall' || U.uFall.value < 0.5) fx.spoutSpray(T.base, T.topY, S.radius_m, T.mode === 'fall' ? 0.5 : 1, U.uFall.value);
   }
-  function clear() { if (h.carried === T.c) { h.carried = null; h.shotYaw = undefined; } T.on = false; T.mode = 'off'; show(false); if (G.audio.spoutRoar) G.audio.spoutRoar(false); }
+  function clear() { if (h.carried === T.c || (T.sl && h.carried === T.sl.c)) { h.carried = null; h.shotYaw = undefined; } T.sl = null; T.on = false; T.mode = 'off'; show(false); if (G.audio.spoutRoar) G.audio.spoutRoar(false); }
   return { start, leap, step, clear, T, set stick(v) { T.stick = v; }, get on() { return T.on; }, get riding() { return T.on && (T.mode === 'rise' || T.mode === 'top'); }, near, far };
 }

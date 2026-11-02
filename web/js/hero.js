@@ -262,6 +262,7 @@ export async function createHero(G) {
   const leanF = second({ f: 1.7, z: 0.6 }), rakeF = second({ f: 1.5, z: 0.8 }); let leanS = follower(0), rakeS = follower(0);
   const waveY = (x, z) => (G.sky && G.sky.waveAt ? G.sky.waveAt(x, z) : 0);
   function startSurf() {
+    if (G.sideNow === 'fire') return;      // the wave is the water side's
     if (G.sideNow === 'fire') return;      // the sea doesn't carry the man in red
     const v = Math.hypot(h.vel.x, h.vel.z); h.state = 'surf'; h.surf = { v: Math.min(v, SURF_TOP), t: 0 }; h.heading = Math.atan2(h.vel.x, h.vel.z); h.vel.y = 0; carveS = follower(0); swellS = follower(0); leanS = follower(h.surfLean || 0); rakeS = follower(h.surfRake || 0); h.surgeLock = true;
     G.audio.splash(); G.fx.ring(new THREE.Vector3(h.pos.x, 0.05, h.pos.z), 6, 0.7, 0xe8fbff); G.quest && G.quest.note('surf');
@@ -514,7 +515,14 @@ export async function createHero(G) {
     if (h.climb || h.ride || h.dead) return;
     const lifting = h.fireAir && !h.skim && (h.launchT ?? 9) < LAUNCH.t; h.stallT = Math.max(0, (h.stallT || 0) - dt); if (h.air && (h.state === 'attack' || h.state === 'parry')) h.stallT = FLY.stall;
     const onIt = u.boost || h.stallT > 0;
-    if (!h.air) { if (h.fireAir) { h.fireAir = false; h.fly = false; h.glide = false; } if (u.boost && h.pos.y > -1.4) startSkim(); }
+    if (!h.air) {
+      if (h.fireAir) { h.fireAir = false; h.fly = false; h.glide = false; }
+      // out of the sea on the jets, at a price: a man with no tide left has to swim for it
+      const wet = h.pos.y < -0.2 && !h.land, cost = wet ? G.combat.data.turf.out_tide : 0;
+      // in the sea Jump blasts him up and out on the jets, in a burst of steam. That's fire's way out: the water won't lift him
+      if (wet && h.jumpBuf > 0 && h.tide >= cost) { h.jumpBuf = 0; h.tide -= cost; const sx = h.pos.x, sz = h.pos.z; h.pos.y = Math.max(h.pos.y, -0.3); launch(); h.launchT = LAUNCH.dip; G.ember.steamBlast && G.ember.steamBlast(sx, sz); }
+      else if (u.boost && h.pos.y > -1.4 && h.tide >= cost) { h.tide -= cost; startSkim(); }
+    }
     else if (h.skim) {      // a right thumb can't hold Boost and press Jump: for a moment after it leaves Boost the jets stay on, so it can slide across
       h.skimOff = u.boost ? 0 : (h.skimOff || 0) + dt;
       if (h.jumpBuf > 0) { h.jumpBuf = 0; h.skim = false; h.fly = false; launch(); h.launchT = LAUNCH.dip; } else if (h.skimOff > FLY.slide) stopSkim();
@@ -540,7 +548,7 @@ export async function createHero(G) {
     const sp = h.vel.length(), g0 = groundAt(h.pos.x, h.pos.z), floor = Math.max(g0, 0), clear = h.pos.y - floor - STAND;
     // the goal: the way he looks with the stick, and the longer the stick stays pushed the harder the turbines run. No stick and he hovers; Jump held takes him down
     h.flyRun = inputAmt > 0.6 ? (h.flyRun || 0) + dt : Math.max(0, (h.flyRun || 0) - dt * 2);
-    flyGoal.copy(wish).multiplyScalar((FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * inputAmt);
+    flyGoal.copy(wish).multiplyScalar((FLY.cruise + (FLY.boost - FLY.cruise) * smooth(1.2, 3.8, h.flyRun)) * inputAmt * (G.turf ? G.turf.speed() : 1));
     if (inputAmt < 0.08) flyGoal.set(0, 0, 0);
     if (h.skim) {        // on the ground: level, at the ground's own height a little ahead of him, on the jets
       const fl = wish.x * wish.x + wish.z * wish.z, k = fl > 1e-4 ? (FLY.skim * inputAmt) / Math.sqrt(fl) : 0; flyGoal.set(wish.x * k, 0, wish.z * k);

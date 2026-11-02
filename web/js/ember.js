@@ -14,6 +14,7 @@ import { createFlames } from './flame.js';
 import { createFireKit } from './firekit.js';
 import { createChampions } from './champion.js';
 import { createRoad } from './road.js';
+import { createTurf } from './turf.js';
 import { aimChain, faceIn } from './formulas/aim.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -302,6 +303,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     e.jetOut = true; e.jetBlown = e.spool || 0.6; e.blowT = 0; e.spool = 0; e.relightT = 0; const s = e.slot; for (const p of s.jets) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 0.6, 0.7, SMOKE, { s0: 0.25, s1: 1.1, a: 0.3, add: 0, hot: 0, vy: 0.8, drag: 1, rot: Math.random() * 6.28 }); G.fx.sparks(v1, 3, e.side === 'water' ? 0xbfefff : 0xffa040, 5); }
   }
   // the man in red loses his jets too: they cough and go dark, and the turbine has to spin up again
+  // fire leaving the sea: the water under him flashes to steam
+  function steamBlast(x, z) { v1.set(x, 0.3, z); fx().sheet && fx().sheet(v1, 3, 0); hissAt(v1, 3); steam(v1, 9, 1.8); fx().ring(v1.clone(), 7, 0.5, 0xe8fbff, Y); }
   function heroFlameout() { if (!H2.on || !H2.pairs) return; for (const p of H2.pairs.slice(0, 3)) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 0.6, 0.7, SMOKE, { s0: 0.25, s1: 1.1, a: 0.3, add: 0, hot: 0, vy: 0.8, drag: 1, rot: Math.random() * 6.28 }); G.fx.sparks(v1, 3, 0xffa040, 5); } H2.spool = 0; if (H2.jetS) for (const S of H2.jetS) { S.L = 0; S.on = false; } }
   function jetsBack(e) { e.jetOut = false; e.relightT = D.rag.relight_s; e.spool = 0.15; if (e.jetS) for (const S of e.jetS) { S.L = 0; S.on = false; } }
   // a blow that doesn't knock them out still throws the stream: its tip goes the way the blow went
@@ -430,7 +433,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (h.body && h.body.learn) h.body.learn(gltf.animations);
   }
   function showHero() { const s = H2.sup > 0; for (const o of H2.own) o.visible = !H2.on; if (H2.man) { H2.man.visible = H2.on && !s; H2.fire.visible = H2.on && s; } }
-  G.road = createRoad(G);
+  G.road = createRoad(G); G.turf = createTurf(G);
   CH = createChampions(G, { D, Q, X: new Proxy({}, { get: (_, k) => X[k] }), R, aim, goto, faceHim, form, bolt, floorAt: (x, z) => Math.max(groundAt(x, z), 0), film: FLAG.film });
   // where the man in red comes back to: the harbour's square if he fell near it, the High City otherwise. The sea's start is the Warden's
   function home(from) {
@@ -484,7 +487,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); CH.frame(); JET.flush(G.time); if (A().jet) A().jet(loud, H2.spool || loud); loud = 0; }
 
   return {
-    pool, brain, keepOut, draw, struck, died, step, frame, home, fresh, jetsLost, jetsBack, jolt, heroFlameout, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
+    pool, brain, keepOut, draw, struck, died, step, frame, home, fresh, jetsLost, jetsBack, jolt, heroFlameout, steamBlast, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
     champions: () => CH, raids: R, warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },

@@ -165,8 +165,14 @@ export async function createEnemies(G) {
     if (e.def.flyer) ember.jetsLost(e, dir);
     G.combat.log.push({ t: G.time, type: 'thrown', foe: e.kind, carry: +carry.toFixed(1), under }); return true;
   }
+  // dragged down by the water tornado (Randy, 2 Nov): the jets die, and what can't swim goes under. A soldier drowns; a champion is disarmed for a moment and takes every blow twice over
+  function dragUnder(e) {
+    const Q = D.turf; ragV.set(0, -1, 0); if (!throwBody(e, ragV, 26, { T: e.champ ? Q.disarm_s : Q.drown_s + 2 })) return; e.rag.drown = e.champ ? 0 : Q.drown_s; e.disarmT = e.champ ? Q.disarm_s : 0; G.combat.log.push({ t: G.time, type: 'dragged', foe: e.kind });
+    if (e.champ) G.ui.toast(e.B.name + ' is disarmed', 'Strike now, while the sea has him', 3);
+  }
   function stepRag(e, dt) {
     const r = e.rag, R = e.slot.rag; r.t += dt;
+    if (r.drown > 0 && e.pos.y < SEA_Y) { r.drown -= dt; if ((r.bub = (r.bub || 0) - dt) <= 0) { r.bub = 0.25; G.fx.bubbles(e.pos, 5, 1); } if (r.drown <= 0 && e.hp > 0) { e.lastD = AY; e.lastKnock = 0; e.hp = 0; r.dead = true; r.drown = 0; die(e); G.combat.log.push({ t: G.time, type: 'drowned', foe: e.kind }); } }
     if (r.last) { const dx = e.pos.x - r.last.x, dz = e.pos.z - r.last.z; if (dx || dz) R.shift(dx, 0, dz); }
     R.hips(ragP); const g = footAt(ragP.x, ragP.z, ragP.y + 0.4), under = ragP.y < SEA_Y; R.step(dt, g, under); R.hips(e.pos); (r.last || (r.last = new THREE.Vector3())).copy(e.pos); e.vel.set(0, 0, 0);
     if (under && !r.wet) { r.wet = true; ember.fellIn && ember.fellIn(e); }
@@ -223,6 +229,7 @@ export async function createEnemies(G) {
     if (e.armour > 0) { if (e.shatter) e.armour = 0; else if (info.heavy) e.armour -= 40; if (e.armour <= 0) { e.armour = 0; G.combat.teach('armour', 'Armour broken', 'It feels every blow now'); G.fx.shatter && G.fx.shatter(e.pos, 8, 1.2); G.audio.boom(); G.combat.log.push({ t: G.time, type: 'armour', foe: e.kind }); } else mul *= F.armour_mul; }
     if (F.needs_soak && e.soaked <= 0) mul *= F.needs_soak;
     if (F.soaked_mul && e.soaked > 0) mul *= F.soaked_mul;
+    if (e.disarmT > 0) mul *= D.turf.hurt_k;
     e.hp -= dmg * mul * (F.flank_mul && e.state === 'recover' ? F.flank_mul : 1);
     e.u.uFlash.value = 1;
     if (e.hp <= 0) { e.lastD = new THREE.Vector3().subVectors(e.pos, from).normalize(); e.lastKnock = info.knock; die(e); return 'dead'; }
@@ -601,6 +608,7 @@ export async function createEnemies(G) {
     if (e.spun) {
       const s = e.spun, Q = D.spout, rode = G.combat.powers.spout.riding; s.t -= dt; s.a += Q.spun_rad * dt; s.y += (s.top - s.y) * (1 - Math.exp(-2.2 * dt)); e.pos.set(s.base.x + Math.cos(s.a) * s.r, s.y, s.base.z + Math.sin(s.a) * s.r); e.vel.set(0, 0, 0); e.heading = wrap(e.heading + 11 * dt);
       if ((s.hitT -= dt) <= 0) { s.hitT = 0.5; takeBlow(e, Q.spun_damage, s.base, 'spout', { move: 'spout', element: 'water', status: { soak: 1 }, knock: 0, stun: 0, poise: 0 }); }
+      if ((s.t <= 0 || !rode) && e.hp > 0 && (G.combat.powers.spout.T.drag || 0) > G.time) { e.spun = null; dragUnder(e); return true; }
       if ((s.t <= 0 || !rode) && e.hp > 0) { const a = s.a; e.spun = null; e.state = 'stun'; e.t = 1.2; e.launched = 1.4; e.vel.set(Math.cos(a) * Q.throw_mps, 7, Math.sin(a) * Q.throw_mps); takeBlow(e, Q.throw_damage, s.base, 'spout', { move: 'spout', element: 'water', knock: 0, stun: 1.2, poise: 60, heavy: true }); e.vel.set(Math.cos(a) * Q.throw_mps, 7, Math.sin(a) * Q.throw_mps); G.combat.log.push({ t: G.time, type: 'thrown', foe: e.kind }); G.fx.sparks(e.pos, 12, 0xcff6ff, 8); }
       if (e.hp <= 0) e.spun = null;
       return true;
@@ -615,6 +623,7 @@ export async function createEnemies(G) {
     if (e.def.spined) { const Q = e.def.spined; if ((e.spineT -= dt) <= 0) { e.spine = !e.spine; e.spineT = e.spine ? Q.up_s : Q.flat_s; G.combat.log.push({ t: G.time, type: e.spine ? 'spines' : 'flat', foe: e.kind }); if (e.spine && G.fx.spines) G.fx.spines(e.pos, e.r); if (!e.spine && e.state !== 'tell') e.u.uTell.value = 0; } if (e.spine) { if (e.state !== 'tell') e.u.uTell.value = 0.7; if ((e.barbT = (e.barbT || 0) - dt) <= 0) { e.barbT = 0.3; if (G.fx.spines) G.fx.spines(e.pos, e.r); } } }
     if (e.stunGuard > 0) e.stunGuard -= dt;
     if (e.stagger > 0) e.stagger -= dt;
+    if (e.disarmT > 0) e.disarmT -= dt;
     e.u.uFrost.value = damp(e.u.uFrost.value, e.frozen > 0 ? 1 : 0, e.frozen > 0 ? 18 : 6, dt);
     if (e.slot.mat.U.uAmp) e.slot.mat.U.uAmp.value = e.frozen > 0 ? 0 : 1;
     if (e.frozen > 0) {

@@ -97,7 +97,7 @@ function step(dt) {
   const d = dt * scale;
   G.hero.prev.copy(G.hero.pos); G.enemies.keep();
   if (G.bot) { const u = G.ui.input; const s = G.ui.sample; G.ui.sample = () => { const v = s(); G.bot.drive(v, dt); return v; }; G.hero.step(d); G.ui.sample = s; } else G.hero.step(d);
-  G.enemies.step(d); G.boss.step(d); G.quest.step(dt);
+  G.enemies.step(d); G.boss.step(d); G.quest.step(dt); G.turf.step(dt);
 }
 
 // One part of the world throwing must not leave the player looking at a stopped picture: the frame still draws. The error isn't caught, so it's still reported.

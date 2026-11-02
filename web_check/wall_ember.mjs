@@ -61,6 +61,32 @@ await section(['E17'], async () => {
   line('E17', high(r.one) && r.one.land && !r.one.dead && !r.two.under && r.two.p[0] < 0 && high(r.three) && r.three.road === 0 && r.woke && r.saved !== '1' && !real.length, `dead on the isle he's back on the High City ${r.one.p}, dead by the harbour he's back in its square ${r.two.p}, New Game goes home with the road at ${r.three.road}, the Seawall woke ${r.woke} and isn't marked beaten; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the elevator: from the sea, Jump held, up past the sky cities, off the top onto the one he's looking at. And what he pays when he's there
+await section(['E18'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => {
+    const G = window.__game, h = G.hero, Q = window.__qa, V = G.camera.position.constructor, run = (n) => { for (let i = 0; i < n; i++) G.frame(1 / 30); };
+    for (const k in h.powers) h.powers[k] = true; h.maxTide = 200; h.tide = 200; h.inv = 1e6; const y0 = -0.5; h.respawn(new V(470, y0, 900), 0); h.land = false; h.air = false; h.state = 'swim'; h.place && h.place();
+    G.camYaw = Math.atan2(446 - 470, 792 - 900); h.inv = 1e6; run(5); const S = G.combat.powers.spout; h.tide = 200; S.start(); let top = 0; for (let i = 0; i < 300 && h.pos.y < 126; i++) { Q.drive({ my: 0, mx: 0, jumpHeld: true, boost: false }); h.tide = 200; G.combat.powers.spout.step(0, true); G.frame(1 / 30); top = Math.max(top, h.pos.y); }
+    G.camYaw = Math.atan2(446 - h.pos.x, 792 - (-h.pos.z) * -1 >= 0 ? (-792 * -1 + -h.pos.z * 0) : 1); const dx = 446 - h.pos.x, dz = 792 - h.pos.z; G.camYaw = Math.atan2(dx, dz); S.leap(false); const slung = !!S.T.sl; for (let i = 0; i < 160; i++) { Q.drive({ my: 0, mx: 0, jumpHeld: false, boost: false }); G.frame(1 / 30); }
+    const at = { x: Math.round(h.pos.x), y: Math.round(h.pos.y), z: Math.round(h.pos.z), land: h.land, air: h.air }, t0 = h.tide; h.inv = 0; run(60); return { top: Math.round(top), slung, at, drain: Math.round(t0 - h.tide), where: G.turf.where, d: Math.round(Math.hypot(at.x - 446, at.z - 792)) };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E18', r.top > 118 && r.slung && r.d < 34 && r.at.y > 116 && r.drain > 4 && r.where === 'sky' && !real.length, `the tornado takes him from the sea to ${r.top} m, throws him ${r.slung ? 'across' : 'nowhere'} onto the Keep ${JSON.stringify(r.at)}, ${r.d} m from its heart; up there the tide runs out, ${r.drain} in 2 s; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
+// the man in red in the sea: no tornado and no wave, and Jump blasts him out
+await section(['E19'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => {
+    const G = window.__game, h = G.hero, Q = window.__qa, V = G.camera.position.constructor, run = (n, w) => { for (let i = 0; i < n; i++) { Q.drive(w); G.frame(1 / 30); } };
+    G.ember.setSide('fire', { place: true, quiet: true }); for (const k in h.powers) h.powers[k] = true; h.respawn(new V(600, -0.5, 1000), 0); h.land = false; h.air = false; h.state = 'swim'; h.tide = h.maxTide; h.place && h.place(); run(10, { my: 0, mx: 0, jumpHeld: false, boost: false });
+    run(30, { my: 0, mx: 0, jumpHeld: true, boost: false, jump: false }); const spout = G.combat.powers.spout.on; h.jumpBuf = 0; run(6, { my: 0, mx: 0, jumpHeld: false, boost: false }); const y0 = h.pos.y; h.air = false; h.land = false; h.pos.y = -0.5; h.tide = h.maxTide; h.jumpBuf = 0.2; run(14, { my: 0, mx: 0, jumpHeld: false, boost: false }); return { spout, y0: +y0.toFixed(1), y: +h.pos.y.toFixed(1), air: h.fireAir };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E19', !r.spout && r.air && r.y > 2 && !real.length, `in the sea Jump held raises no tornado (${r.spout}); a Jump blasts him out to ${r.y} m; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });
