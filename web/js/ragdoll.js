@@ -10,7 +10,7 @@ const TRUNK = [[HIP, CHEST], [CHEST, SR], [CHEST, SL], [SR, SL], [HIP, TR], [HIP
 const CHAIN = [[CHEST, HEAD], [SR, ER], [ER, HR], [SL, EL], [EL, HL], [TR, KR], [KR, FR], [TL, KL], [KL, FL]];
 // how far a limb may fold, as a shortest distance between its ends: an inequality, as the paper has it
 const FOLD = [[SR, HR, ER, 0.42], [SL, HL, EL, 0.42], [TR, FR, KR, 0.55], [TL, FL, KL, 0.55]];
-const STEP = 1 / 60, RELAX = 4;
+const STEP = 1 / 60, RELAX = 4, SLIDE = 0.7 * 9.81 * STEP * STEP;
 
 const a0 = new THREE.Vector3(), a1 = new THREE.Vector3(), a2 = new THREE.Vector3(), a3 = new THREE.Vector3(), mt = new THREE.Matrix4(), q0 = new THREE.Quaternion(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion();
 
@@ -72,10 +72,11 @@ export function createRagdoll(model) {
     for (const [m, x, y, s] of [[KR, TR, FR, 1], [KL, TL, FL, 1], [ER, SR, HR, -1], [EL, SL, HL, -1]]) { const o = m * 3, ax = x * 3, ay = y * 3, mx = P[o] - (P[ax] + P[ay]) * 0.5, my = P[o + 1] - (P[ax + 1] + P[ay + 1]) * 0.5, mz = P[o + 2] - (P[ax + 2] + P[ay + 2]) * 0.5, d = (mx * fx + my * fy + mz * fz) * s; if (d < 0.02) { const k = (0.02 - d) * s * 0.5; P[o] += fx * k; P[o + 1] += fy * k; P[o + 2] += fz * k; } }
   }
   function floor() {
-    const f = R.floor; let moved = 0;
+    const f = R.floor; let moved = 0; R.down = 0;
     for (let i = 0; i < N; i++) {
       const o = i * 3, r = i === HEAD ? 0.13 : i <= CHEST ? 0.16 : 0.08; moved += Math.abs(P[o] - O[o]) + Math.abs(P[o + 1] - O[o + 1]) + Math.abs(P[o + 2] - O[o + 2]);
-      if (P[o + 1] < f + r) { P[o + 1] = f + r; const fr = 0.5; O[o] += (P[o] - O[o]) * fr; O[o + 2] += (P[o + 2] - O[o + 2]) * fr; O[o + 1] = P[o + 1]; }
+      // on the ground it slides on friction of about 0.7, the figure for a body on a road, so a body down at 6 m/s stops in 2.6 m and at 10 m/s in 7 m
+      if (P[o + 1] < f + r) { P[o + 1] = f + r; O[o + 1] = P[o + 1]; const dx = P[o] - O[o], dz = P[o + 2] - O[o + 2], sp = Math.hypot(dx, dz), k = sp > 1e-6 ? Math.max(0, sp - SLIDE) / sp : 0; O[o] = P[o] - dx * k; O[o + 2] = P[o + 2] - dz * k; if (i === HIP || i === CHEST) R.down = 1; }
     }
     R.settled = moved < 0.05 ? R.settled + STEP : 0;
   }

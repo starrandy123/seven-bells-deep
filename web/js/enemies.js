@@ -159,8 +159,8 @@ export async function createEnemies(G) {
   function throwBody(e, dir, carry, o = {}) {
     const s = e.slot, Q = D.rag; if (!e.def.flyer && e.def.body !== 'reaver') return false; if (s.rag === undefined) s.rag = createRagdoll(s.g); if (!s.rag) return false; if (e.rag) return false;
     const under = e.pos.y < SEA_Y, k = under ? Q.water_carry : 1; ragV.copy(dir).multiplyScalar(carry * k); ragV.y += (under ? Q.water_up : Q.up_mps) * Math.min(1, carry / Q.ref_mps);
-    ragS.set(-dir.z, 0, dir.x).multiplyScalar(Q.spin_rad * Math.min(1, carry / Q.ref_mps) * k); ragS.y = (Math.random() - 0.5) * Q.spin_rad;
-    s.g.updateMatrixWorld(true); s.rag.start(e.vel, ragV, ragS); e.vel.set(0, 0, 0); dropToken(e); if (!o.dead) endTell(e); if (e.cur) e.cur.fadeOut(0.1); e.cur = null;
+    ragS.set(-dir.z, 0, dir.x).multiplyScalar(Q.spin_rad * Math.min(1, carry / Q.ref_mps) * k); ragS.y = (Math.random() - 0.5) * Q.spin_rad * 0.5;
+    s.g.updateMatrixWorld(true); s.rag.start(e.vel, ragV, ragS); if (!under) { ragP.copy(e.pos); G.fx.sparks(ragP, 6, 0xb8a890, 9); } e.vel.set(0, 0, 0); dropToken(e); if (!o.dead) endTell(e); if (e.cur) e.cur.fadeOut(0.1); e.cur = null;
     e.rag = { t: 0, T: o.T || (under ? Q.water_s : Q.down_s), w: 0, out: false, last: null, dead: !!o.dead }; if (!o.dead) { e.state = 'thrown'; e.t = 9; }
     if (e.def.flyer) ember.jetsLost(e, dir);
     G.combat.log.push({ t: G.time, type: 'thrown', foe: e.kind, carry: +carry.toFixed(1), under }); return true;
@@ -176,6 +176,8 @@ export async function createEnemies(G) {
     if (r.last) { const dx = e.pos.x - r.last.x, dz = e.pos.z - r.last.z; if (dx || dz) R.shift(dx, 0, dz); }
     R.hips(ragP); const g = footAt(ragP.x, ragP.z, ragP.y + 0.4), under = ragP.y < SEA_Y; R.step(dt, g, under); R.hips(e.pos); (r.last || (r.last = new THREE.Vector3())).copy(e.pos); e.vel.set(0, 0, 0);
     if (under && !r.wet) { r.wet = true; ember.fellIn && ember.fellIn(e); }
+    // where the body comes down, and the wake it drags: dust scaled to how fast it's going
+    if (!under && R.down) { R.velocity(ragV); const sp = Math.hypot(ragV.x, ragV.z); if (!r.hitGround) { r.hitGround = true; if (sp > 1) { G.fx.silt(e.pos, 1.4, true); G.audio.hit(true); } } if (sp > 2 && (r.dust = (r.dust || 0) - dt) <= 0) { r.dust = 0.07; G.fx.silt(e.pos, 0.5 + sp * 0.06, true); } }
     if (!r.dead && !r.out && (r.t >= r.T || (R.settled > D.rag.still_s && r.t > D.rag.min_s))) wakeRag(e, under, ragP.y - g < 1.2);
     return true;
   }
@@ -245,7 +247,7 @@ export async function createEnemies(G) {
     e.poise -= info.poise || 0;
     if (F.flyer) ember.jolt(e, d, 0.3 + 0.1 * (info.knock || 0));
     // a heavy blow in the open throws him: the ragdoll, not a clip
-    { const kn = info.knock === undefined ? 6 : info.knock, Q = D.rag; if (!e.rag && e.frozen <= 0 && (info.heavy || kn >= Q.at_knock) && throwBody(e, d, kn * (kn >= Q.finish_knock ? Q.carry_finish : Q.carry), {})) return 'hit'; }
+    { const kn = info.knock === undefined ? 6 : info.knock, Q = D.rag; if (!e.rag && e.frozen <= 0 && (info.heavy || kn >= Q.at_knock) && e.def && (e.def.flyer || e.def.body === 'reaver')) { e.vel.addScaledVector(d, -kn); if (throwBody(e, d, kn * (kn >= Q.finish_knock ? Q.carry_finish : Q.carry), {})) return 'hit'; e.vel.addScaledVector(d, kn); } }
     if (e.poise <= 0) { stagger(e); return 'hit'; }
     // a light blow doesn't stop a foe in its stride: it finishes what it told, and it can't be held down by mashing. A heavy blow, or a Siren's song, is what breaks a blow
     const told = e.state === 'tell' || e.state === 'strike', stops = info.heavy || F.fragile || (!told && e.stunGuard <= 0);

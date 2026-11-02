@@ -298,7 +298,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ drawing: the tilt, the clips by how he's moving, the flame at each palm and sole
   const WEIGHTS = ['fly_hover', 'fly_forward', 'fly_boost', 'fly_brake'], footA = new THREE.Vector3(), footB = new THREE.Vector3();
   // the jets: a turbine's at each palm and one under the feet, held together (Randy: "Make sure the foot thrusters are one"). The foot jet is the big one: it holds him up. Each leaves along its limb, leaning to the line of the body. `spool` is the turbine's: it comes up and down over a moment and doesn't follow the throttle (turbine.js)
-  // a blow that carries knocks the jets out: they cough a puff of smoke and go dark, and he drops. They come back with a stutter. Randy, 2 Nov: "losing their air thrusters when hit"
+  // a blow that carries knocks the jets out: in the footage thrust is gone at once and completely, with no flicker, and he drops. Randy, 2 Nov: "losing their air thrusters when hit"
   function jetsLost(e) {
     e.jetOut = true; e.jetBlown = e.spool || 0.6; e.blowT = 0; e.spool = 0; e.relightT = 0; const s = e.slot; for (const p of s.jets) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 0.6, 0.7, SMOKE, { s0: 0.25, s1: 1.1, a: 0.3, add: 0, hot: 0, vy: 0.8, drag: 1, rot: Math.random() * 6.28 }); G.fx.sparks(v1, 3, e.side === 'water' ? 0xbfefff : 0xffa040, 5); }
   }
@@ -306,7 +306,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   // fire leaving the sea: the water under him flashes to steam
   function steamBlast(x, z) { v1.set(x, 0.3, z); fx().sheet && fx().sheet(v1, 3, 0); hissAt(v1, 3); steam(v1, 9, 1.8); fx().ring(v1.clone(), 7, 0.5, 0xe8fbff, Y); }
   function heroFlameout() { if (!H2.on || !H2.pairs) return; for (const p of H2.pairs.slice(0, 3)) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 0.6, 0.7, SMOKE, { s0: 0.25, s1: 1.1, a: 0.3, add: 0, hot: 0, vy: 0.8, drag: 1, rot: Math.random() * 6.28 }); G.fx.sparks(v1, 3, 0xffa040, 5); } H2.spool = 0; if (H2.jetS) for (const S of H2.jetS) { S.L = 0; S.on = false; } }
-  function jetsBack(e) { e.jetOut = false; e.relightT = D.rag.relight_s; e.spool = 0.15; if (e.jetS) for (const S of e.jetS) { S.L = 0; S.on = false; } }
+  function jetsBack(e) { e.jetOut = false; e.relightT = D.rag.relight_s; e.spool = 1; if (e.jetS) for (const S of e.jetS) { S.L = 0; S.on = false; } for (const p of e.slot.jets) { p[1].getWorldPosition(v1); G.fx.sp('smoke', v1, 1, 0.9, FOAM, { s0: 0.3, s1: 1.8, a: 0.34, add: 0, hot: 0, vy: -1.4, drag: 1, rot: Math.random() * 6.28 }); } A().fwoosh && A().fwoosh(); }
   // a blow that doesn't knock them out still throws the stream: its tip goes the way the blow went
   function jolt(e, dir, k) { if (!e.jetS) return; for (const S of e.jetS) { S.a.addScaledVector(dir, k); S.b.addScaledVector(dir, k * 0.6); } }
   // Each jet keeps where its tip was: two followers behind where the tip should be now, so a nozzle that moves leaves its stream curving behind it. `box` holds that for one body
@@ -349,8 +349,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     if (e.state === 'tell' && !fights(e) && !e.friend) G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));
     const wetBody = e.side === 'water', JET = wetBody ? SEA : FIRE, CORE = wetBody ? FOAM : HOT, AIRY = wetBody ? 0.28 : 0.55;
     let lit = e.hp > 0 && e.frozen <= 0 && e.doused <= 0 && e.state !== 'landed' && !e.jetOut ? clamp(e.heat * 1.6, 0.15, 1) : 0;
-    // a flameout: for a moment after they relight the jets catch and die, and catch again
-    if (e.relightT > 0) { e.relightT -= dt; if (Math.random() < 0.5) lit = 0; else if ((e.smokeT2 = (e.smokeT2 || 0) - dt) <= 0) { e.smokeT2 = 0.09; A().crackle && A().crackle(0.25); } }
+    // thrust comes back as a burst, longer and brighter than cruise, not a fade-in: in the footage a relight leaves a streak and a white cloud behind
+    if (e.relightT > 0) { e.relightT -= dt; e.spool = Math.max(e.spool || 0, 1); }
     X.drawRag(e, dt);
     g.updateMatrixWorld(true);
     // the flame blown off the nozzle: for a moment it goes on burning, cut away from the nozzle end
