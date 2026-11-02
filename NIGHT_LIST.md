@@ -27,36 +27,36 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 21 | Running stops feeling stiff | Build 44, his eye |
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
-| 24 | The duel's water fighter is the Warden with the trident, from the start of the game | To do |
-| 25 | The fighting stops looking choppy and sloppy | To do |
-| 26 | Lava meeting the sea turns into steam and solid rock at the bottom | To do |
-| 27 | Ragdoll physics: characters pushed back by attacks | To do |
-| 28 | Thrusters are lost when hit | Ragdoll and flameout working on the blue men, Build 64 |
-| 40 | Thrusters look alive: they bend, trail and kick when the body moves or is hit, not painted on | To do |
-| 29 | Body and movement requirements read off real fight frames, from the two references he named | Started |
-| 31 | Ice in the fights and the duel, the water side's second element | To do |
+| 24 | The duel's water fighter is the Warden with the trident, from the start of the game | Built: the duel's water side is the Warden, his own mesh and trident clips on a fighter's bones; the fire side a man in red who goes all fire when ice breaks or at half health. Local, waits the upload |
+| 25 | The fighting stops looking choppy and sloppy | Built: inertialized poses (Bollo, Holden's MIT code). Fastest limb over a whole duel from 50 m/s to 14, nothing over 25. Wide shots closer |
+| 26 | Lava meeting the sea turns into steam and solid rock at the bottom | Part: steam where lava meets the sea already; the black bench and rock still to do |
+| 27 | Ragdoll physics: characters pushed back by attacks | Built: Verlet ragdoll, throws tiered, a rising path, under half a turn, a slide on friction 0.7 (film study) |
+| 28 | Thrusters are lost when hit | Built: thrust gone at once on a heavy blow, a burst on relight |
+| 40 | Thrusters look alive: they bend, trail and kick when the body moves or is hit, not painted on | Built: hose-model jets that bend, trail and blow off |
+| 29 | Body and movement requirements read off real fight frames, from the two references he named | Done: Souls and film studies read, numbers in `Pipeline/research/RAGDOLL_SOURCES.md`, `POSE_SOURCES.md` |
+| 31 | Ice in the fights and the duel, the water side's second element | Built: Frost Lance volleys and a frost cone in the duel; the man in red held in ice until his fire breaks it |
 | 32 | The blue foes are their own people, separate from the water elementals, and fight and fly better | To do |
-| 33 | Fire burns and breaks the world; water puts fire out, freezes and breaks it; buildings recover | To do |
-| 34 | Dodge in the air | To do |
+| 33 | Fire burns and breaks the world; water puts fire out, freezes and breaks it; buildings recover | Part: fire runs through grass and trees as a cell fire and stops, water puts it out and soaks, frost, all grows back (`scorch.js`). Buildings next |
+| 34 | Dodge in the air | Built: Jump tapped in flight dodges in the nose's plane |
 | 35 | Near the sea, the water tornado drags fire and other foes in: henchmen drown, bosses and the main character are disarmed and badly hurt | To do |
-| 36 | Turf: fire fears the water, water fears the sky, and they can still reach each other | To do |
-| 37 | A great water tornado, summoned near water, lifts a water elemental to the sky cities | To do |
+| 36 | Turf: fire fears the water, water fears the sky, and they can still reach each other | Built for the player; fire and water foes keeping to their turf still to do |
+| 37 | A great water tornado, summoned near water, lifts a water elemental to the sky cities | Built |
 | 38 | Fire animals the fire side fights, as the water side has its beasts and bosses | To do |
 | 39 | Peaceful birds to fly with, and beautiful views | To do |
-| 41 | Lava with real body and motion, not a sheet of paper; the ground burns round it | To do |
+| 41 | Lava with real body and motion, not a sheet of paper; the ground burns round it | Part: skin-age surface, Planck colour, lit crust, Jeffreys' speeds, levee walls. Falls and rerouting still to do |
 | 42 | Earth to ocean transitions as good games do them, on every coast | To do |
 | 43 | Better foliage textures, leaves in the wind, leaves falling in some places | After the rest |
 | 44 | The boss health bar stops blocking the screen on phones | After the rest |
-| 45 | Fire can't raise water tornadoes; in the sea he blasts himself up instead | Doing now |
-| 46 | Flight controls as flight games have them: the stick points, Fly only drives forward | To do |
+| 45 | Fire can't raise water tornadoes; in the sea he blasts himself up instead | Built |
+| 46 | Flight controls as flight games have them: the stick points, Fly only drives forward | Built: flight-sim law, Invert flight in the settings |
 | 47 | Fire cities get their own foliage, lighting and ground variety | To do |
 | 48 | Ground cities with skyscrapers and full anime-style places to visit and fight in | To do |
-| 49 | Real shadows | To do |
-| 50 | Water reflections | To do |
-| 51 | Fire lights the world: every flame, jet and blast casts light on the city and the ground, inside the budgets | To do |
+| 49 | Real shadows | Built: buildings and sky islands in the sun bakes, capsule soft shadows under everyone who moves |
+| 50 | Water reflections | Built: the sea mirrors land, buildings and fire, a pass every other frame |
+| 51 | Fire lights the world: every flame, jet and blast casts light on the city and the ground, inside the budgets | Built: 16 lights on a world grid, every flash, comet, jet and burning field, with a glow in the air |
 | 52 | Nothing of the Warden shows when the man in red flies | Fixed: at speed `wake.js` drew afterimages from the Warden's own mesh |
-| 53 | The fire side's pause says Ignite for resume | After the rest |
-| 54 | Continue picks up where the player left off | After the rest |
+| 53 | The fire side's pause says Ignite for resume | Built: the fire side reads Ignite |
+| 54 | Continue picks up where the player left off | Built: Continue goes on from where he left off, on his side |
 | 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After the rest |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
