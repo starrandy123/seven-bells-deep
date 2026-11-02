@@ -15,7 +15,7 @@ export const STACK_HTML = `
 <tr><td>The ocean</td><td>Our own shaders: depth absorption, caustics, sun shafts, Snell's window</td></tr>
 <tr><td>Missions</td><td>Data files: every chapter, person, tablet and event is text a builder can change without touching the code</td></tr>
 <tr><td>Portraits</td><td>Painted by code, stroke by stroke, in the page</td></tr>
-<tr><td>Sound</td><td>Web Audio only, no sound files: water, whales, bells and the score are synthesised live</td></tr>
+<tr><td>Sound</td><td>Web Audio only, no sound files: water, fire, whales, bells and the score are synthesised live</td></tr>
 <tr><td>Hosting</td><td>NotesMosaic, which runs it on web and phones</td></tr>
 </table>
 <h3>The method</h3>
@@ -23,5 +23,5 @@ export const STACK_HTML = `
 <h3>Build yours</h3>
 <p>You can make something like this. Connect your AI to NotesMosaic, tell it what you want, and it can write the game, put it on your phone to play, and publish it when you say so. No build tools to set up and no server to run. A laptop like this one is enough.</p>
 <h3>Credits</h3>
-<p>three.js (MIT). meshoptimizer and gltfpack (MIT). The Warden's and the Reavers' bodies start from Microsoft Rocketbox avatars (MIT), rebuilt and dressed for this game. His land motion is Rocketbox capture too; his front crawl is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu, funded by NSF EIA-0196217). Blender was the tool (GPL). NotesMosaic's port kit carries the saves (MIT-0). Everything else in this game was made for it.</p>
+<p>three.js (MIT). meshoptimizer and gltfpack (MIT). The Warden's and the Reavers' bodies start from Microsoft Rocketbox avatars (MIT), rebuilt and dressed for this game. His land motion is Rocketbox capture too; his front crawl, and the strikes, kicks and guard of the man in red, are motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu, funded by NSF EIA-0196217). The man in red starts from a Rocketbox avatar too. His flight runs on Daniel Holden's springs (Spring-It-On, MIT). The flames and the jets are written new from the methods of two open shaders on godotshaders.com: Stylized Fire 3D, after Minions Art (MIT), and Engine flame (CC0). Blender was the tool (GPL). NotesMosaic's port kit carries the saves (MIT-0). Everything else in this game was made for it.</p>
 `;

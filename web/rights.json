@@ -58,6 +58,12 @@
    "by": "Engine flame, godotshaders.com",
    "license": "CC0",
    "from": "https://godotshaders.com/shader/engine-flame/"
+  },
+  {
+   "what": "The method of the flames in js/flame.js: noise times a mask, minus how far the flame has burnt away, then a hard edge. Written new; the idea comes from this shader",
+   "by": "Stylized Fire 3D, godotshaders.com, after Minions Art",
+   "license": "MIT",
+   "from": "https://godotshaders.com/shader/stylized-fire-3d/"
   }
  ]
 }
