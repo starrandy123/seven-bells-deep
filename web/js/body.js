@@ -299,8 +299,10 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     legs.forEach((l, k) => {
       const s = l.s, S0 = hipJ[k];
       // a hard landing: the feet stay up under him, knees bent, until the ground comes to them. A near-straight leg is the one that spins fastest
-      if (fall.mode === 1) { const most = lerp(1, 0.76, smooth(3, 9, fall.hit || 0)) * l.L, dx = S0[0] - l.A[0], dz = S0[2] - l.A[2], r2 = most * most - dx * dx - dz * dz; l.hover = r2 > 0 ? Math.max(0, S0[1] - Math.sqrt(r2) - l.A[1]) : 0; }
-      else l.hover = Math.max(0, (l.hover || 0) - HOVER_OUT * (1 / 60));
+      // A foot further out than the bent leg reaches can't be held under him: it keeps the lift it has, and a lift going down comes down at HOVER_OUT. It was dropped to the
+      // ground in the frame the foot passed that reach, and the knee straightened at 61 rad/s at the bottom of a landing at a run (M3, 3,384°/s)
+      if (fall.mode === 1) { const most = lerp(1, 0.76, smooth(3, 9, fall.hit || 0)) * l.L, dx = S0[0] - l.A[0], dz = S0[2] - l.A[2], r2 = most * most - dx * dx - dz * dz, was = l.hover || 0, want = r2 > 0 ? Math.max(0, S0[1] - Math.sqrt(r2) - l.A[1]) : was; l.hover = want >= was ? want : Math.max(want, was - HOVER_OUT * dt); }
+      else l.hover = Math.max(0, (l.hover || 0) - HOVER_OUT * dt);
       if (l.hover > 0) l.A = [l.A[0], l.A[1] + l.hover, l.A[2]];
       // the capture's leg, turned only as far as reaching this place takes: left alone it's the capture to the degree, twist and all
       // the last of a leg's reach is soft: a knee coming out of straight turns fastest of all, so nothing asks for the very end of it
