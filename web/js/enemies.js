@@ -740,7 +740,7 @@ export async function createEnemies(G) {
         const goal = e.onLand ? 0 : e.state === 'swimTo' ? clamp(e.vel.length() / 6, 0, 1) * 1.25 : 0.14; if (e.frozen <= 0) e.tilt = damp(e.tilt, goal, 6, dt);
         g.position.y -= 0.9 * Math.cos(e.tilt); qX.setFromAxisAngle(AX, e.tilt); g.quaternion.copy(qY).multiply(qX);
         if (e.flA > 0) { flAxis.set(e.flZ, 0, -e.flX); qF.setFromAxisAngle(flAxis, Math.sin(Math.min(1, e.flT / 0.05) * 1.5708) * Math.exp(-e.flT * 6.5) * e.flA); g.quaternion.premultiply(qF); }
-        if (e.slot.mixer && e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; e.slot.mixer.update(t); if (e.slot.still) e.slot.still.apply(t); }
+        if (e.slot.mixer && e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; if (e.slot.still) e.slot.still.pre(); e.slot.mixer.update(t); if (e.slot.still) { e.slot.still.mark(); e.slot.still.apply(t); } }
         drawRag(e, dt);
         if (e.state === 'tell') G.fx.edge(e.pos, e.blow && e.blow.unblockable);
         if (e.state === 'tell' && e.slot.tip && G.fx.glint) { e.slot.tip.getWorldPosition(tipW); G.fx.glint(tipW, e.blow && e.blow.unblockable ? 0xff4422 : 0xffb238, clamp(e.clock / e.blow.tell_s, 0, 1)); }

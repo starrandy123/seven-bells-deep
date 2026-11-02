@@ -17,7 +17,7 @@ import { createFireKit } from './firekit.js';
 import { createChampions } from './champion.js';
 import { createRoad } from './road.js';
 import { createTurf } from './turf.js';
-import { aimChain, faceIn } from './formulas/aim.js';
+import { aimChain, faceIn, lookState, lookSpring } from './formulas/aim.js';
 import { PALM, PALM_FIX, palmTurn, turnOver, toGround } from './formulas/palm.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -406,8 +406,14 @@ export async function createEmber(G, { foeMaterial, D }) {
     const holding = rest > 0 && e.hp > 0 && !e.rag && !e.warden && e.frozen <= 0 && (e.champ ? !!e.B && (e.B.st === 'idle' || e.B.st === 'intro' || (e.B.st === 'open' && !e.cur)) : e.state !== 'tell' && e.state !== 'strike' && e.state !== 'recover'); e.armHold = damp(e.armHold || 0, holding ? 1 : 0, holding ? 3 : 12, dt);
     // his palms to the ground whenever his jets carry him, as the man the player flies: in with the held arms, out with them for a blow, and before the inertial blend, so nothing turns faster than a body can
     const carry = e.hp > 0 && e.doused <= 0 && e.state !== 'landed' && !e.jetOut && !e.rag && !e.warden; e.palmJ = damp(e.palmJ || 0, carry ? 1 : 0, carry ? 3 : 12, dt); const pw = (e.armHold || 0) * e.palmJ;
-    if (e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; s.mixer.update(t); const H = e.armHold > 0.002 && armsOf(s); if (H) for (const a of H) a.bone.quaternion.slerp(a.q, e.armHold); if (H && pw > 1e-3) palmsOver(s, e, pw, t); if (s.still) s.still.apply(t); }
-    if (rest > 0 && e.hp > 0 && e.frozen <= 0 && !e.rag) { const tg = e.target || G.hero; v1.copy(sp > 6 ? e.vel : v2.subVectors(tg.pos, e.pos)).normalize(); aimChain(s.look, LOOK_S, s.head, s.face, v1, 1.42, e.w[0] * 0.8 + 1 - e.w[0]); }
+    if (e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; if (s.still) s.still.pre(); s.mixer.update(t); if (s.still) s.still.mark(); const H = e.armHold > 0.002 && armsOf(s); if (H) for (const a of H) a.bone.quaternion.slerp(a.q, e.armHold); if (H && pw > 1e-3) palmsOver(s, e, pw, t); if (s.still) s.still.apply(t); }
+    // where he looks: at his foe when he's slow, along his flight when he's fast, eased between the two by speed; the look and its weight on springs (formulas/aim.js), so a new foe, a speed crossing a line or a blow
+    // starting turns his head instead of throwing it. Measured over a duel before this: neck and head at up to 187 rad/s, 190 frames past 40 in 15 s
+    if (e.frozen <= 0) {
+      const tg = e.target || G.hero, on = rest > 0 && e.hp > 0 && !e.rag, L = e.look || (e.look = lookState()); v2.subVectors(tg.pos, e.pos); const lt = v2.length(); if (lt > 1e-3) v2.divideScalar(lt); else v2.set(Math.sin(e.heading), 0, Math.cos(e.heading));
+      if (sp > 0.5) { const f = clamp((sp - 4) / 4, 0, 1), fk = f * f * (3 - 2 * f); v1.copy(e.vel).divideScalar(sp).multiplyScalar(fk).addScaledVector(v2, 1 - fk); if (v1.lengthSq() > 1e-4) v2.copy(v1).normalize(); }
+      lookSpring(L, v2.x, v2.y, v2.z, on ? e.w[0] * 0.8 + 1 - e.w[0] : 0, dt); if (L.k > 1e-3) aimChain(s.look, LOOK_S, s.head, s.face, v1.set(L.x, L.y, L.z), 1.42, L.k);
+    }
     e.u.uHeat.value = damp(e.u.uHeat.value, e.heat, 6, dt);
     if (e.hp <= 0 && e.t < 1.4) e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 0.8);
     if (e.state === 'tell' && !fights(e) && !e.friend) G.fx.edge(e.pos, !!(e.blow && e.blow.unblockable));

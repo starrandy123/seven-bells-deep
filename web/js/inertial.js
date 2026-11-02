@@ -9,6 +9,10 @@ export function createInertial(model) {
   // the last two poses out, the offset of each bone as a scaled angle-axis, and its velocity. Then the hips' position, the only bone that travels
   const Q0 = new Float32Array(n * 4), Q1 = new Float32Array(n * 4), X = new Float32Array(n * 3), V = new Float32Array(n * 3), P0 = new Float32Array(3), P1 = new Float32Array(3), PX = new Float32Array(3), PV = new Float32Array(3);
   let seen = 0, armed = false, on = false, half = HALF, last = 1 / 60;
+  // three's mixer writes a bone only when its mixed value changed since the frame before (PropertyMixer.apply, r185: "value has changed -> update scene graph").
+  // A pose it holds still would keep whatever was laid on it afterwards, an offset, a look, a ragdoll's weight, and the next frame would lay it on again, frame on frame.
+  // So the mixer's own pose is kept as it comes out (mark) and put back before it runs again (pre): what's laid on top always lands on the mixer's pose
+  const M = new Float32Array(n * 4), MP = new Float32Array(3); let marked = false;
 
   function keep() { Q1.set(Q0); P1.set(P0); for (let i = 0, k = 0; i < n; i++, k += 4) { const q = bones[i].quaternion; Q0[k] = q.x; Q0[k + 1] = q.y; Q0[k + 2] = q.z; Q0[k + 3] = q.w; } P0[0] = hips.position.x; P0[1] = hips.position.y; P0[2] = hips.position.z; seen = Math.min(2, seen + 1); }
   // log of a unit quaternion, twice: axis times angle. The short way round
@@ -37,7 +41,11 @@ export function createInertial(model) {
   return {
     // a change this frame: h is how fast it dies away, in half-lives of a spring. Hit reactions want it short so the blow reads at once
     kick(h = HALF) { armed = true; half = h; },
-    reset() { seen = 0; armed = false; on = false; X.fill(0); V.fill(0); PX.fill(0); PV.fill(0); },
+    reset() { seen = 0; armed = false; on = false; marked = false; X.fill(0); V.fill(0); PX.fill(0); PV.fill(0); },
+    // before the mixer runs: its last pose back on the bones
+    pre() { if (!marked) return; for (let i = 0, k = 0; i < n; i++, k += 4) bones[i].quaternion.set(M[k], M[k + 1], M[k + 2], M[k + 3]); hips.position.set(MP[0], MP[1], MP[2]); },
+    // straight after it runs: its pose, kept
+    mark() { for (let i = 0, k = 0; i < n; i++, k += 4) { const q = bones[i].quaternion; M[k] = q.x; M[k + 1] = q.y; M[k + 2] = q.z; M[k + 3] = q.w; } MP[0] = hips.position.x; MP[1] = hips.position.y; MP[2] = hips.position.z; marked = true; },
     // after the mixer has written this frame's pose, before anything bends it
     apply(dt) {
       if (dt <= 0) return;

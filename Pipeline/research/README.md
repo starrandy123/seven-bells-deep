@@ -6,3 +6,4 @@ One file per feature, written before the code: the references, the proven open w
 - `FIRE_SOURCES.md`: flame, the fire kit, the fighting styles, usable motion capture.
 - `BEACH_SOURCES.md`: shore bands and dune grass.
 - `WORLD_SOURCES.md`: sunken buildings, the shape grammar, lava, bosses.
+- `SMOOTH_SOURCES.md`: smooth movement, the mixer's write rule, the look, frame pacing.
