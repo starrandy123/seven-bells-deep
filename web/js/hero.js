@@ -467,7 +467,7 @@ export async function createHero(G) {
   // Randy, 2 Nov: "Boost, hold it like the water, jump to do big fire jump and while in the air, the boost button becomes fly and we can press and hold that to fly or even hover". Boost held on the ground runs on the jets, a hand's width off it, leaning into it. Jump from there is a big fire jump. In the air Boost reads Fly: held, he goes where he looks with the stick, and with no stick he hovers. Let go and he falls, unless Jump is held, which glides him down. A blow in the air keeps him up long enough to land it, so a thumb can leave Fly to fight
   // Newton: thrust, drag and gravity, summed, so he carries his speed and a turn at speed is a carved arc. The velocity follows its goal on Daniel Holden's character spring (Spring-It-On, MIT), so the acceleration never jumps
   // The body has two shapes and goes between them with his speed (Pipeline/research/FLIGHT_SOURCES.md). Slow, he stands on his jets, tipped toward what he's asking of them. Fast, he's an arrow: head first along his path, a few degrees nose up, and the lift that turns him comes off his back, so he rolls about his length to aim it, as an aircraft banks. The face looks where he's going
-  const FLY = { cruise: 24, boost: 44, skim: 21, skimH: 0.3, glide: 4, carry: 16, grip: 26, hlHover: 0.3, hlFast: 0.6, hlStop: 0.8, hlBody: 0.2, arrow0: 7, arrow1: 20, nose: 0.15, flare: 5, look: 1.5, stall: 0.75, stopRise: 7 }, LAUNCH = { dip: 0.11, t: 0.5, up: 26, g: 11 };
+  const FLY = { cruise: 24, boost: 44, skim: 21, skimH: 0.3, glide: 4, carry: 16, grip: 26, hlHover: 0.3, hlFast: 0.6, hlStop: 0.8, hlBody: 0.2, arrow0: 7, arrow1: 20, nose: 0.15, flare: 5, look: 1.5, stall: 0.75, stopRise: 7, slide: 0.32 }, LAUNCH = { dip: 0.11, t: 0.5, up: 26, g: 11 };
   const flyA = new THREE.Vector3(), flyGoal = new THREE.Vector3(), flyDir = new THREE.Vector3(0, 0, 1), flyP = new THREE.Vector3(), flyAx = new THREE.Vector3(), flyW = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0);
   const fbX = new THREE.Vector3(), fbY = new THREE.Vector3(), fbZ = new THREE.Vector3(), fbF = new THREE.Vector3(), fbL = new THREE.Vector3(), fbB = new THREE.Vector3(), fbM = new THREE.Matrix4(), fbQ = new THREE.Quaternion(), fbD = new THREE.Quaternion(), fbJ0 = new THREE.Vector3(), fbJ1 = new THREE.Vector3(), fbR = new THREE.Vector3();
   h.flyQ = new THREE.Quaternion(); h.flyUp = new THREE.Vector3(0, 1, 0); h.flyLook = new THREE.Vector3(0, 0, 1); h.flyThrottle = 0; h.flyLat = 0; h.flyBrake = 0;
@@ -514,7 +514,10 @@ export async function createHero(G) {
     const lifting = h.fireAir && !h.skim && (h.launchT ?? 9) < LAUNCH.t; h.stallT = Math.max(0, (h.stallT || 0) - dt); if (h.air && (h.state === 'attack' || h.state === 'parry')) h.stallT = FLY.stall;
     const onIt = u.boost || h.stallT > 0;
     if (!h.air) { if (h.fireAir) { h.fireAir = false; h.fly = false; h.glide = false; } if (u.boost && h.pos.y > -1.4) startSkim(); }
-    else if (h.skim) { if (!u.boost) stopSkim(); else if (h.jumpBuf > 0) { h.jumpBuf = 0; h.skim = false; h.fly = false; launch(); h.launchT = LAUNCH.dip; } }
+    else if (h.skim) {      // a right thumb can't hold Boost and press Jump: for a moment after it leaves Boost the jets stay on, so it can slide across
+      h.skimOff = u.boost ? 0 : (h.skimOff || 0) + dt;
+      if (h.jumpBuf > 0) { h.jumpBuf = 0; h.skim = false; h.fly = false; launch(); h.launchT = LAUNCH.dip; } else if (h.skimOff > FLY.slide) stopSkim();
+    }
     else if (!lifting) {
       if (onIt && !h.fly && (h.vel.y < FLY.stopRise || !h.fireAir || u.my > 0.3)) { h.fireAir = true; startFly(); }
       else if (!onIt && h.fly) { h.fly = false; h.apexY = h.pos.y; flyW.set(0, 0, 0); }

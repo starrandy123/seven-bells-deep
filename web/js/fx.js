@@ -591,11 +591,13 @@ export function createFx(G) {
   }
   function thaw(e) { const l = crusts.get(e); if (l) { for (const i of l) { const c = crystals[i]; if (c.follow === e) { c.follow = null; c.life = c.age + 0.2; } } crusts.delete(e); } }
   function plate(p, r, hold) {
+    if (G.sideNow === 'fire') { const f = sp('frost', p, r * 1.5, hold, tmpLava.setRGB(0.9, 0.24, 0.04), { b: 0, s0: r * 0.5, add: 0.6, hot: 0.8, a: 0.9, inF: 0.02, outF: 0.9 }); planeAxes(f, Y, Math.random() * TAU); for (let k = 0; k < 3; k++) { v2.set(p.x + rnd(-r, r), 0.2, p.z + rnd(-r, r)); sp('smoke', v2, 2, rnd(0.8, 1.4), C.foam, { s0: 0.8, s1: 2.6, a: 0.3, add: 0, hot: 0, vy: 2.4, drag: 0.8, rot: rnd(0, TAU) }); } return; }      // Lava Path: the sea crusts over, hissing
     // an ice plate on the sea: a flat crystal, and the frost feathering out from it
     v1.set(rnd(-0.03, 0.03), 1, rnd(-0.03, 0.03)).normalize(); crystal(p, v1, 0.3, r * 0.75, hold, { grow: 0.12 });
     const f = sp('frost', p, r * 1.5, hold, C.ice, { b: 0, s0: r * 0.5, add: 0.8, hot: 0.65, a: 0.9, inF: 0.02, outF: 0.9 }); planeAxes(f, Y, Math.random() * TAU);
     for (let k = 0; k < 3; k++) { v2.set(p.x + rnd(-r, r), 0.1, p.z + rnd(-r, r)); sp('glint', v2, rnd(0.2, 0.4), 0.3, C.foam, { hot: 1, delay: rnd(0, 0.4), rot: Math.random() * TAU }); }
   }
+  const tmpLava = new THREE.Color();
   function stagger(e) { v1.copy(e.pos); v1.y += 1.5; const s = sp('ring', v1, 2.4, 0.4, C.gold, { b: 1, s0: 0.7, s1: 2.4, hot: 0.9, outF: 0.25 }); v2.copy(G.camera.position).sub(v1).normalize(); planeAxes(s, v2); }
 
   // ------------------------------------------------------------------ magic circles: a shader, so they stay crisp at any size

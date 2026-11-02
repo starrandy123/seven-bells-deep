@@ -444,7 +444,7 @@ export async function createEmber(G, { foeMaterial, D }) {
       for (let i = 0; i < 6; i++) { const t = i * 1.047 + G.time * 0.7, cx = x + Math.cos(t) * 3, cz = z + Math.sin(t) * 3, Lk = 0.9 + 0.3 * Math.sin(G.time * 7 + i * 2), W2 = 0.42; v3.set(0, 1, 0); viewX.set(cx - cam.x, 0, cz - cam.z).normalize().cross(v3).normalize(); G.fx.now(i % 2 ? 'flame' : 'flame2', cx, y + Lk, cz, viewX.x * W2, 0, viewX.z * W2, 0, Lk, 0, FIRE, 1, 1, 0.6); }
     }
   }
-  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); CH.frame(); JET.flush(G.time); if (A().jet) A().jet(loud); loud = 0; }
+  function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); CH.frame(); JET.flush(G.time); if (A().jet) A().jet(loud, H2.spool || loud); loud = 0; }
 
   return {
     pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },

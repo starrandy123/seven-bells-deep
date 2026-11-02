@@ -134,7 +134,7 @@ export function createCombat(G, h, api) {
       if (!open(id)) { G.ui.lockedTip(D.locked_tip[id] || 'Not yet'); return true; }
       if (!afford(id) || coolOf(id) > 0) { log('denied', { id, tide: h.tide, cool: coolOf(id) }); G.fx.denied && G.fx.denied(); return true; }
     }
-    if (id === 'icepath' && G.world.heightAt(h.pos.x, -h.pos.z) > -1) { log('denied', { id, tide: h.tide, cool: 0 }); G.fx.denied && G.fx.denied(); G.ui.tip('Ice Path needs the sea under you', 2); return true; }
+    if (id === 'icepath' && G.world.heightAt(h.pos.x, -h.pos.z) > -1) { log('denied', { id, tide: h.tide, cool: 0 }); G.fx.denied && G.fx.denied(); G.ui.tip(G.sideNow === 'fire' ? 'Lava Path needs the sea under you' : 'Ice Path needs the sea under you', 2); return true; }
     if (d.motion === 'free') { P.instant(id); return true; }
     begin(id); return true;
   }

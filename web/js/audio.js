@@ -169,8 +169,12 @@ export function createAudio() {
 
   // the jets: a low roar that the nearest flyer sets, fire leaving a hand, and water on hot stone
   let jetG = null, jetF = null;
-  function jet(level) {
+  // a gas turbine has two voices: the roar of the burn, which follows the push, and the whine of the blades, which climbs with the shaft's speed and lags it
+  let jetW = null, jetW2 = null, jetWG = null;
+  function jet(level, spool = level) {
     if (!ctx || !noiseBuf) return; const t = ctx.currentTime;
+    if (!jetW) { jetW = ctx.createOscillator(); jetW2 = ctx.createOscillator(); jetW.type = 'triangle'; jetW2.type = 'sine'; jetWG = ctx.createGain(); jetWG.gain.value = 0; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 0.8; jetW.connect(bp); jetW2.connect(bp); bp.connect(jetWG); jetWG.connect(sfx); jetW.start(); jetW2.start(); }
+    const f = 900 + 2100 * Math.min(1, spool); jetW.frequency.setTargetAtTime(f, t, 0.28); jetW2.frequency.setTargetAtTime(f * 1.503, t, 0.28); jetWG.gain.setTargetAtTime(level > 0.01 ? 0.012 + 0.03 * Math.min(1, spool) : 0, t, 0.16);
     if (!jetG) { const n = ctx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; jetF = ctx.createBiquadFilter(); jetF.type = 'bandpass'; jetF.frequency.value = 240; jetF.Q.value = 0.7; jetG = ctx.createGain(); jetG.gain.value = 0; n.connect(jetF); jetF.connect(jetG); jetG.connect(sfx); n.start(); }
     jetG.gain.setTargetAtTime(Math.min(0.5, level) * 1.5, t, 0.08); jetF.frequency.setTargetAtTime(200 + level * 420, t, 0.12);
   }

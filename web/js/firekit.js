@@ -80,6 +80,10 @@ export function createFireKit(G, F) {
     parry(p) { burst(p, 0.9); }, block(p) { burst(p, 0.6); },
     dodge(p, dir) { v1.copy(dir).multiplyScalar(-1); for (let i = 0; i < 5; i++) F.puff(p, rnd(0.4, 0.7), 0.26, v1.x * rnd(5, 11) + rnd(-2, 2), rnd(-1, 2), v1.z * rnd(5, 11) + rnd(-2, 2), 5, 1, 1.6); },
     perfect(p) { burst(p, 1.2); }, stance(p) { v1.copy(p); v1.y += 0.9; burst(v1, 0.7); },
+    // the magma stance: what's ice on the water side is rock and fire here
+    spike(p, dir, len, width) { v1.copy(dir).normalize(); F.tongue(p, v1, width * 1.5, len * 1.5, 0.36); F.tongue(p, v1, width * 0.7, len * 1.9, 0.28); G.fx.sparks(p, 3, 0xff9040, 5); },
+    crystal() { return { place(np, nd) { v1.copy(nd).normalize().negate(); F.tongue(np, v1, 0.9, 6.5, 0.07); F.tongue(np, v1, 0.45, 8, 0.06); F.puff(np, 0.5, 0.16, v1.x * 3, v1.y * 3, v1.z * 3, 4, 2, 1.5); }, kill() {} }; },
+    shatter(p, n, scale = 1) { burst(p, 0.8 * scale, null); }, frostBurst(p, r) { burst(p, 0.5 * r, null); },
   };
   function install(fire) {
     if (fire && !water) { water = {}; for (const k in look) { water[k] = G.fx[k]; G.fx[k] = look[k]; } }
