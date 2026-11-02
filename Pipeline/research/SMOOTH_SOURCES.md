@@ -16,3 +16,10 @@ The fix (`inertial.js`, `pre` and `mark`) keeps the mixer's own pose as it comes
 
 - Daniel Holden, Spring-It-On, `simple_spring_damper_exact` (MIT, github.com/orangeduck/Spring-It-On). The look's direction follows its goal on a critically damped spring, turned the short way round in scaled angle-axis, the same spring as the flight's body in `hero.js`. Its weight follows on a spring of its own. A goal that jumps, such as a new foe, a speed crossing a line or a blow starting, turns the head instead of snapping it. Half-lives are 0.12 s for the direction and 0.1 s for the weight (ours).
 - Godot, `scene/3d/look_at_modifier_3d.cpp` (MIT), read at source. It detects a flip, when the target crosses behind the limit, and starts a timed transition that interpolates "via rest ... for preventing to penetrate the bone into the body". Taken: a goal crossing his back must take the head through its rest. Here the turn past the limit gives way smoothly to none straight behind (`aimChain`), so the axis flip there moves nothing.
+
+## The bosses
+
+- The same spring as above (Holden, MIT) turns the Kraken, the Colossus and the Seawall to face him, the short way round. The Kraken and the Colossus turned in a single step whenever he passed close. The Seawall's turn was eased on the raw angle, so it could spin the long way when the angle wrapped. It also moves the Kraken's arm tips and the Colossus's fists toward their goals, so they start and stop instead of jumping a share of the way each frame.
+- A slam goes from where it was raised to its mark over the strike's own time, on a constant acceleration (ours), so it is fastest at the hit. Before, it was a first-order lerp at 40 to 44 a second, which covers half the way in the first frame. The timing of the hit is unchanged.
+- The serpent's lunge reaches its 27 m/s over a tenth of a second on the same spring, instead of in one frame.
+- Measured but left alone: a slam's reach has no limit. An arm or a fist sent at a Warden 50 m away still covers about 11 m in its last frame. Limiting it is a design call, because it changes who can be hit.

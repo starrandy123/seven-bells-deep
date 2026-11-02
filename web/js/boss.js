@@ -7,7 +7,7 @@ import { createKraken, createColossus, createSeawall } from './bosses2.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * (1 - Math.exp(-k * dt));
-const N = 128, RISE = 4.2;
+const N = 128, RISE = 4.2, AXES = ['x', 'y', 'z'];
 
 function fallbackGeometry() { return new THREE.CylinderGeometry(0.4, 2.2, 60, 14, 120, false).rotateX(Math.PI / 2); }
 
@@ -84,7 +84,7 @@ function makeSerpent(G, C) {
   const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.visible = false; G.scene.add(mesh);
 
   const pts = []; for (let i = 0; i < N; i++) pts.push(new THREE.Vector3());
-  const seg = len / (N - 1), head = new THREE.Vector3(), headV = new THREE.Vector3(), goal = new THREE.Vector3(), tmp = new THREE.Vector3();
+  const seg = len / (N - 1), head = new THREE.Vector3(), headV = new THREE.Vector3(), goal = new THREE.Vector3(), tmp = new THREE.Vector3(), lungeV = new THREE.Vector3(), lungeA = new THREE.Vector3();
 
   const orbs = [];
   const orbMat = new THREE.MeshBasicMaterial({ color: C.orb, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -152,10 +152,12 @@ function makeSerpent(G, C) {
       case 'spit': headV.multiplyScalar(Math.exp(-3 * dt)); jawTo(0.1, 6, dt); U.uGlow.value = Math.max(U.uGlow.value, 1.4 + (1.1 - b.t) * 1.6); if (b.t <= 0) { spit(); U.uJaw.value = 0.3; b.mode = 'circle'; b.t = 3.5 / speedUp; } break;
       case 'rear': {
         tmp.subVectors(h.pos, head); const dr = tmp.length() || 1; goal.copy(head).addScaledVector(tmp, -(16 - Math.min(16, dr)) / dr); goal.y += 0.5; headV.lerp(tmp.subVectors(goal, head).multiplyScalar(5), 1 - Math.exp(-6 * dt)); U.uGlow.value = 2.4; G.shake(0.12); jawTo(0.42, 7, dt);
-        if (b.t <= 0) { b.mode = 'bite'; b.t = 1.05; tmp.subVectors(h.pos, head).normalize(); headV.copy(tmp).multiplyScalar(27 * speedUp); b.bit = false; b.cue = false; }
+        if (b.t <= 0) { b.mode = 'bite'; b.t = 1.05; tmp.subVectors(h.pos, head).normalize(); lungeV.copy(tmp).multiplyScalar(27 * speedUp); lungeA.set(0, 0, 0); b.bit = false; b.cue = false; }
         break;
       }
       case 'bite': {
+        // the lunge gathers over its first tenth of a second on a critically damped spring (Holden, Spring-It-On, MIT): it went from rest to 27 m/s in one frame, 1,600 m/s² for that frame
+        { const y = (2 * 0.69314718) / 0.04, e = Math.exp(-y * dt); for (const k of AXES) { const j0 = headV[k] - lungeV[k], j1 = lungeA[k] + j0 * y; headV[k] = e * (j0 + j1 * dt) + lungeV[k]; lungeA[k] = e * (lungeA[k] - j1 * y * dt); } }
         const d = head.distanceTo(h.pos);
         jawTo(d < 6 ? -0.46 : 0.46, d < 6 ? 30 : 8, dt);
         if (!b.cue && d < 22) { b.cue = true; G.ui.cue('parry'); }

@@ -9,6 +9,21 @@ const damp = (c, t, k, dt) => c + (t - c) * (1 - Math.exp(-k * dt));
 const rand = (a, b) => a + Math.random() * (b - a);
 const UP = new THREE.Vector3(0, 1, 0);
 const smoothstep01 = (x) => { const t = clamp(x * 2, 0, 1); return t * t * (3 - 2 * t); };
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a)), LN2X2 = 2 * 0.69314718;
+// A heavy body turns to face him on a critically damped spring, the short way round: simple_spring_damper_exact, Daniel Holden, Spring-It-On (MIT).
+// No snap when he passes close by it, and never a spin the long way when the angle crosses its wrap. o.yaw, o.yawV: its facing and its rate
+function yawTo(o, goal, dt, half) { const y = LN2X2 / half, j0 = wrapA(o.yaw - goal), j1 = o.yawV + j0 * y, e = Math.exp(-y * dt); o.yaw = wrapA(e * (j0 + j1 * dt) + goal); o.yawV = e * (o.yawV - j1 * y * dt); return o.yaw; }
+// a limb's end follows its goal on the same spring, in three axes, with its own velocity: it starts and stops moving instead of jumping toward where it's sent
+function reach(p, v, goal, dt, half) {
+  const y = LN2X2 / half, e = Math.exp(-y * dt);
+  let j0 = p.x - goal.x, j1 = v.x + j0 * y; p.x = e * (j0 + j1 * dt) + goal.x; v.x = e * (v.x - j1 * y * dt);
+  j0 = p.y - goal.y; j1 = v.y + j0 * y; p.y = e * (j0 + j1 * dt) + goal.y; v.y = e * (v.y - j1 * y * dt);
+  j0 = p.z - goal.z; j1 = v.z + j0 * y; p.z = e * (j0 + j1 * dt) + goal.z; v.z = e * (v.z - j1 * y * dt);
+}
+// A slam is thrown down, not teleported: from where it was raised to the mark over the strike's own time, on a constant acceleration, so it's fastest at the hit.
+// It was a first-order lerp at 40 to 44 a second, half the way in its first frame. u: 0 as the strike starts, 1 at the hit
+function slamPath(out, from, mark, u) { const k = u <= 0 ? 0 : u >= 1 ? 1 : u * u; out.lerpVectors(from, mark, k); }
+const STRIKE_K = 0.14, SLAM_ARM = 0.13;
 
 // what every boss here shares: the rule of a wake, the log the walls read, the end
 function shell(G, C, b, onWake, onStop) {
@@ -65,23 +80,24 @@ export function createKraken(G, C) {
   // an arm is a chain of segments: one instanced draw for all of them, each cylinder laid between two points
   const arms = [], M = new THREE.InstancedMesh(armGeo, armMat, C.arms * SEG); M.frustumCulled = false; M.visible = false; G.scene.add(M);
   const q = new THREE.Quaternion(), v = new THREE.Vector3(), s = new THREE.Vector3(), m4 = new THREE.Matrix4(), tmp = new THREE.Vector3();
-  for (let i = 0; i < C.arms; i++) { const pts = []; for (let k = 0; k <= SEG; k++) pts.push(new THREE.Vector3()); arms.push({ pts, base: new THREE.Vector3(), tip: new THREE.Vector3(), state: 'idle', t: 0, hp: C.arm_hp, frozen: 0, phase: i * 1.3, r: 1.4, pos: new THREE.Vector3(), mark: new THREE.Vector3(), hitDone: false, gone: false }); }
+  for (let i = 0; i < C.arms; i++) { const pts = []; for (let k = 0; k <= SEG; k++) pts.push(new THREE.Vector3()); arms.push({ pts, base: new THREE.Vector3(), tip: new THREE.Vector3(), tv: new THREE.Vector3(), from: new THREE.Vector3(), arch: 1, sw: 1, state: 'idle', t: 0, hp: C.arm_hp, frozen: 0, phase: i * 1.3, r: 1.4, pos: new THREE.Vector3(), mark: new THREE.Vector3(), hitDone: false, gone: false }); }
   const b = { facing: new THREE.Vector3(0, 0, 1) }; G.fx.warmList.push(body, M);
-  shell(G, C, b, () => { body.visible = true; M.visible = true; b.nextT = 2.6; b.exposed = false; for (const a of arms) { a.state = 'idle'; a.hp = C.arm_hp; a.gone = false; a.frozen = 0; } b.hp = b.dead ? b.hp : C.hp; b.bodyHit = 0; }, () => { body.visible = false; M.visible = false; });
+  shell(G, C, b, () => { body.visible = true; M.visible = true; b.nextT = 2.6; b.exposed = false; b.turn = { yaw: Math.atan2(b.facing.x, b.facing.z), yawV: 0 }; for (const a of arms) { a.state = 'idle'; a.hp = C.arm_hp; a.gone = false; a.frozen = 0; } b.hp = b.dead ? b.hp : C.hp; b.bodyHit = 0; }, () => { body.visible = false; M.visible = false; });
   b.headT = { pos: b.head, r: 4.6, onHit: (d) => { if (!b.exposed) { b.log('blocked', 'mantle'); b.hurt(d * 0.1); return; } b.hurt(d); } };
   const lay = (a, i, dt) => {
-    const swing = (a.state === 'idle' || a.state === 'tell' ? 1 : 0.15) * (b.mode === 'rise' ? 3 : 1), n = a.pts.length - 1; let goal = a.tip;
+    // the wobble and the arch ease from one state's to the next: switched in a frame they moved the arm's middle up to 2.7 m at once
+    a.sw = damp(a.sw, (a.state === 'idle' || a.state === 'tell' ? 1 : 0.15) * (b.mode === 'rise' ? 3 : 1), 10, dt); a.arch = damp(a.arch, a.state === 'down' ? 0.15 : 1, 10, dt);
+    const swing = a.sw, n = a.pts.length - 1;
     a.pts[0].copy(a.base);
-    if (a.state === 'idle') { const t = G.time * 0.9 + a.phase; const out = a.out === undefined ? a.phase * 2 : a.out; goal = tmp.set(a.base.x + Math.cos(out) * 7 + Math.sin(t) * 2, a.base.y + 8 + Math.sin(t * 1.3) * 2, a.base.z + Math.sin(out) * 7 + Math.cos(t) * 2); }
-    a.tip.lerp(goal === a.tip ? a.tip : goal, 1 - Math.exp(-5 * dt));
-    for (let k = 1; k <= n; k++) { const u = k / n; v.lerpVectors(a.base, a.tip, u); v.y += Math.sin(u * Math.PI) * 3.2 * (a.state === 'down' ? 0.15 : 1); v.x += Math.sin(u * 5 + G.time * 2 + a.phase) * 0.7 * swing * u; v.z += Math.cos(u * 4 + G.time * 1.7 + a.phase) * 0.7 * swing * u; a.pts[k].copy(v); }
+    if (a.state === 'idle') { const t = G.time * 0.9 + a.phase; const out = a.out === undefined ? a.phase * 2 : a.out; reach(a.tip, a.tv, tmp.set(a.base.x + Math.cos(out) * 7 + Math.sin(t) * 2, a.base.y + 8 + Math.sin(t * 1.3) * 2, a.base.z + Math.sin(out) * 7 + Math.cos(t) * 2), dt, 0.16); }
+    for (let k = 1; k <= n; k++) { const u = k / n; v.lerpVectors(a.base, a.tip, u); v.y += Math.sin(u * Math.PI) * 3.2 * a.arch; v.x += Math.sin(u * 5 + G.time * 2 + a.phase) * 0.7 * swing * u; v.z += Math.cos(u * 4 + G.time * 1.7 + a.phase) * 0.7 * swing * u; a.pts[k].copy(v); }
     a.pos.copy(a.pts[n - 2]);
     for (let k = 0; k < n; k++) {
       const p0 = a.pts[k], p1 = a.pts[k + 1]; v.subVectors(p1, p0); const l = v.length() || 1, w = a.gone ? 0 : R0 * Math.pow(1 - k / n, 0.8) + 0.06; q.setFromUnitVectors(UP, v.multiplyScalar(1 / l)); m4.compose(p0, q, s.set(w, l * 1.18, w)); M.setMatrixAt(i * SEG + k, m4);
     }
   };
   function slam(a) {
-    const h = G.hero; a.state = 'tell'; a.t = C.tell_s; a.mark.copy(h.pos); a.mark.y = Math.max(G.world.heightAt(h.pos.x, -h.pos.z) + 0.3, h.pos.y - 1.2); a.tip.copy(a.base).add(tmp.set(0, 13, 0)).lerp(a.mark, 0.25); a.hitDone = false;
+    const h = G.hero; a.state = 'tell'; a.t = C.tell_s; a.mark.copy(h.pos); a.mark.y = Math.max(G.world.heightAt(h.pos.x, -h.pos.z) + 0.3, h.pos.y - 1.2); a.hitDone = false;
     G.fx.circle(a.mark, null, C.radius_m, 'water', C.tell_s + 0.1); b.log('tell', 'slam', { tell_s: C.tell_s }); G.audio.tell && G.audio.tell(false);
   }
   b.step = (dt) => {
@@ -93,7 +109,7 @@ export function createKraken(G, C) {
       if (rose >= 0.8) b.roarNow(tmp.copy(b.head).setY(b.head.y + 1), 0xffc040); if (b.t <= 0) b.mode = 'fight';
     }
     { const open = clamp((rose - 0.76) / 0.08, 0.06, 1); for (const m of eyes) m.scale.y = open; slit.value = 0.3 - 0.2 * clamp((rose - 0.82) / 0.1, 0, 1); }
-    b.facing.set(h.pos.x - body.position.x, 0, h.pos.z - body.position.z); if (b.facing.lengthSq() > 0.01) b.facing.normalize(); else b.facing.set(0, 0, 1); if (b.mode !== 'die') body.rotation.y = Math.atan2(b.facing.x, b.facing.z);
+    b.facing.set(h.pos.x - body.position.x, 0, h.pos.z - body.position.z); if (b.facing.lengthSq() > 0.01) b.facing.normalize(); else b.facing.set(0, 0, 1); if (b.mode !== 'die') body.rotation.y = yawTo(b.turn, Math.atan2(b.facing.x, b.facing.z), dt, 0.35);
     if (b.mode === 'die') { body.position.y -= dt * 2; if (b.t <= 0) b.stop(); }
     body.position.x = b.centre.x; body.position.z = b.centre.z; b.head.copy(body.position); b.frame.set(b.centre.x, Math.max(b.head.y, G.world.heightAt(b.centre.x, -b.centre.z) + 3), b.centre.z);
     arms.forEach((a, i) => {
@@ -102,8 +118,8 @@ export function createKraken(G, C) {
       a.t -= dt;
       if (a.frozen > 0) { a.frozen -= dt; }
       switch (a.state) {
-        case 'tell': a.tip.lerp(tmp.copy(a.base).add(v.set(0, 14, 0)), 1 - Math.exp(-3 * dt)); if (a.t <= 0) { a.state = 'strike'; a.t = 0.14; b.log('strike', 'slam'); G.audio.swing(); } break;
-        case 'strike': a.tip.lerp(a.mark, 1 - Math.exp(-40 * dt)); if (!a.hitDone && a.t <= 0) { a.hitDone = true; G.fx.shock(a.mark, C.radius_m, 'water'); if (a.mark.distanceTo(h.pos) < C.radius_m + 1) { const res = h.damage(C.slam, a.mark, { heavy: true }); b.log('contact', 'slam', { res }); if (res === 'parried') a.frozen = h.guardFroze ? 4 : 0; } else b.log('contact', 'slam', { res: 'clear' }); a.state = 'down'; a.t = C.down_s; } break;
+        case 'tell': reach(a.tip, a.tv, tmp.copy(a.base).add(v.set(0, 14, 0)).lerp(a.mark, 0.12), dt, 0.3); if (a.t <= 0) { a.state = 'strike'; a.from.copy(a.tip); a.t = STRIKE_K; b.log('strike', 'slam'); G.audio.swing(); } break;
+        case 'strike': slamPath(a.tip, a.from, a.mark, 1 - a.t / STRIKE_K); a.tv.set(0, 0, 0); if (!a.hitDone && a.t <= 0) { a.hitDone = true; G.fx.shock(a.mark, C.radius_m, 'water'); if (a.mark.distanceTo(h.pos) < C.radius_m + 1) { const res = h.damage(C.slam, a.mark, { heavy: true }); b.log('contact', 'slam', { res }); if (res === 'parried') a.frozen = h.guardFroze ? 4 : 0; } else b.log('contact', 'slam', { res: 'clear' }); a.state = 'down'; a.t = C.down_s; } break;
         case 'down': if (a.t <= 0 && a.frozen <= 0) a.state = 'idle'; break;
       }
       lay(a, i, dt);
@@ -137,14 +153,14 @@ export function createColossus(G, C) {
   { const inner = mat.onBeforeCompile; mat.onBeforeCompile = function (s, r) { inner.call(this, s, r); s.uniforms.uHeat = heat; s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uHeat;').replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       { vec3 cq = vOcP * 0.85; float crack = abs(sin(cq.x + sin(cq.y * 1.3) * 1.7)) * abs(sin(cq.y * 0.8 + sin(cq.z * 1.1) * 1.9)) * abs(sin(cq.z * 0.9 + cq.x * 0.4)); totalEmissiveRadiance += vec3(1.0, 0.3, 0.05) * smoothstep(0.03, 0.004, crack) * uHeat * 2.6; }`); }; }
   const body = new THREE.Mesh(geo, mat); body.visible = false; body.frustumCulled = false; G.scene.add(body);
-  const fistGeo = new THREE.IcosahedronGeometry(2.1, 1), fists = [-1, 1].map(() => { const m = new THREE.Mesh(fistGeo, mat); m.visible = false; m.frustumCulled = false; G.scene.add(m); return { m, pos: new THREE.Vector3(), rest: new THREE.Vector3(), state: 'idle', t: 0, mark: new THREE.Vector3(), hitDone: false }; });
+  const fistGeo = new THREE.IcosahedronGeometry(2.1, 1), fists = [-1, 1].map(() => { const m = new THREE.Mesh(fistGeo, mat); m.visible = false; m.frustumCulled = false; G.scene.add(m); return { m, pos: new THREE.Vector3(), v: new THREE.Vector3(), from: new THREE.Vector3(), rest: new THREE.Vector3(), state: 'idle', t: 0, mark: new THREE.Vector3(), hitDone: false, fresh: true }; });
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffa040 }), core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), coreMat); core.visible = false; G.scene.add(core);
   // his eyes: dark until the last of the rise. One mesh for the two
   const slitEye = (s) => new THREE.SphereGeometry(0.46, 12, 8).scale(1.6, 0.5, 0.55).rotateZ(s * 0.34).translate(s * 0.82, 12, 2.3);
   const eyeM = new THREE.Mesh(mergeGeometries([slitEye(-1), slitEye(1)], false), new THREE.ShaderMaterial({ vertexShader: 'varying vec3 vN, vV; void main() { vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }', fragmentShader: 'varying vec3 vN, vV; void main() { float f = pow(max(dot(normalize(vN), normalize(vV)), 0.0), 2.2); gl_FragColor = vec4(mix(vec3(0.8, 0.14, 0.02), vec3(1.0, 0.92, 0.62), f), 1.0); }' })); body.add(eyeM);
   const b = { facing: new THREE.Vector3(0, 0, 1), fire: true }, vents = [], tmp = new THREE.Vector3(); G.fx.warmList.push(body, core, ...fists.map((f) => f.m));
   const ventDef = { radius_m: 2.6, tell_s: 0.6, last_s: 2.2, name: 'vent' };
-  shell(G, C, b, () => { body.visible = true; core.visible = true; for (const f of fists) f.m.visible = true; b.nextT = 2.8; b.ventT = 1.5; b.openT = 0; vents.length = 0; for (let i = 0; i < C.vents; i++) { const a = (i / C.vents) * 6.283 + 0.6; vents.push({ p: new THREE.Vector3(b.centre.x + Math.cos(a) * 11, 0, b.centre.z + Math.sin(a) * 11), l: null, capped: false }); } }, () => { body.visible = false; core.visible = false; for (const f of fists) f.m.visible = false; });
+  shell(G, C, b, () => { body.visible = true; core.visible = true; b.turn = { yaw: Math.atan2(b.facing.x, b.facing.z), yawV: 0 }; for (const f of fists) { f.m.visible = true; f.fresh = true; f.state = 'idle'; } b.nextT = 2.8; b.ventT = 1.5; b.openT = 0; vents.length = 0; for (let i = 0; i < C.vents; i++) { const a = (i / C.vents) * 6.283 + 0.6; vents.push({ p: new THREE.Vector3(b.centre.x + Math.cos(a) * 11, 0, b.centre.z + Math.sin(a) * 11), l: null, capped: false }); } }, () => { body.visible = false; core.visible = false; for (const f of fists) f.m.visible = false; });
   b.headT = { pos: new THREE.Vector3(), r: 4, onHit: (d) => { if (b.openT > 0) b.hurt(d); else { b.hurt(d * C.armour_mul); b.log('blocked', 'crust'); } } };
   function slam(f) {
     const h = G.hero; f.state = 'tell'; f.t = C.tell_s; f.mark.copy(h.pos); f.mark.y = Math.max(G.world.heightAt(h.pos.x, -h.pos.z) + 0.3, h.pos.y - 1.2); f.hitDone = false;
@@ -157,12 +173,14 @@ export function createColossus(G, C) {
     if (b.mode !== 'die') body.position.set(b.centre.x, floor - 13 * (1 - ease(clamp((rise - 0.16) / 0.6, 0, 1))), b.centre.z);
     eyeM.scale.setScalar(Math.max(0.001, clamp((rise - 0.76) / 0.1, 0, 1)));
     b.facing.set(h.pos.x - body.position.x, 0, h.pos.z - body.position.z); if (b.facing.lengthSq() > 0.01) b.facing.normalize(); else b.facing.set(0, 0, 1);
-    body.lookAt(h.pos.x, body.position.y, h.pos.z); b.head.copy(body.position); b.head.y += 7.8; b.frame.set(b.centre.x, Math.max(b.head.y, floor + 3), b.centre.z); b.headT.pos.copy(b.head); core.position.copy(b.head); core.scale.setScalar(b.openT > 0 ? 1.5 + Math.sin(G.time * 9) * 0.15 : 0.5); heat.value = damp(heat.value, b.mode === 'rise' ? 0.1 + rise * rise * 1.1 : b.openT > 0 ? 0.08 : 1.2 + (b.flash || 0) * 1.4, 5, dt); b.flash = Math.max(0, (b.flash || 0) - dt * 6);
+    const yaw = yawTo(b.turn, Math.atan2(b.facing.x, b.facing.z), dt, 0.35), sideX = Math.cos(yaw), sideZ = -Math.sin(yaw); body.rotation.set(0, yaw, 0); b.head.copy(body.position); b.head.y += 7.8; b.frame.set(b.centre.x, Math.max(b.head.y, floor + 3), b.centre.z); b.headT.pos.copy(b.head); core.position.copy(b.head); core.scale.setScalar(b.openT > 0 ? 1.5 + Math.sin(G.time * 9) * 0.15 : 0.5); heat.value = damp(heat.value, b.mode === 'rise' ? 0.1 + rise * rise * 1.1 : b.openT > 0 ? 0.08 : 1.2 + (b.flash || 0) * 1.4, 5, dt); b.flash = Math.max(0, (b.flash || 0) - dt * 6);
     fists.forEach((f, i) => {
-      const s = i ? 1 : -1; f.rest.copy(b.head).add(tmp.set(Math.cos(h.heading) * s * 7, -2 + Math.sin(G.time + i) * 0.8, -Math.sin(h.heading) * s * 7)); f.t -= dt;
-      if (f.state === 'idle') f.pos.lerp(f.rest, 1 - Math.exp(-3 * dt));
-      if (f.state === 'tell') { f.pos.lerp(tmp.copy(f.mark).add(UP.clone().multiplyScalar(11)), 1 - Math.exp(-4 * dt)); if (f.t <= 0) { f.state = 'strike'; f.t = 0.13; b.log('strike', 'slam'); G.audio.swing(); } }
-      if (f.state === 'strike') { f.pos.lerp(f.mark, 1 - Math.exp(-44 * dt)); if (f.t <= 0 && !f.hitDone) { f.hitDone = true; G.fx.shock(f.mark, C.radius_m, 'water'); if (f.mark.distanceTo(h.pos) < C.radius_m + 1) { const res = h.damage(C.slam, f.mark, { heavy: true }); b.log('contact', 'slam', { res }); } else b.log('contact', 'slam', { res: 'clear' }); f.state = 'down'; f.t = 1.2; } }
+      // at his own sides as he turns: they were set by the Warden's heading, so they swung round the giant's head whenever the player turned. And they wake where they rest: they flew in from the middle of the map, 18.7 m in a frame
+      const s = i ? 1 : -1; f.rest.copy(b.head).add(tmp.set(sideX * s * 7, -2 + Math.sin(G.time + i) * 0.8, sideZ * s * 7)); f.t -= dt;
+      if (f.fresh) { f.fresh = false; f.pos.copy(f.rest); f.v.set(0, 0, 0); }
+      if (f.state === 'idle') reach(f.pos, f.v, f.rest, dt, 0.24);
+      if (f.state === 'tell') { reach(f.pos, f.v, tmp.copy(f.mark).addScaledVector(UP, 11), dt, 0.22); if (f.t <= 0) { f.state = 'strike'; f.from.copy(f.pos); f.t = SLAM_ARM; b.log('strike', 'slam'); G.audio.swing(); } }
+      if (f.state === 'strike') { slamPath(f.pos, f.from, f.mark, 1 - f.t / SLAM_ARM); f.v.set(0, 0, 0); if (f.t <= 0 && !f.hitDone) { f.hitDone = true; G.fx.shock(f.mark, C.radius_m, 'water'); if (f.mark.distanceTo(h.pos) < C.radius_m + 1) { const res = h.damage(C.slam, f.mark, { heavy: true }); b.log('contact', 'slam', { res }); } else b.log('contact', 'slam', { res: 'clear' }); f.state = 'down'; f.t = 1.2; } }
       if (f.state === 'down' && f.t <= 0) f.state = 'idle';
       f.m.position.copy(f.pos);
     });
@@ -202,7 +220,7 @@ export function createSeawall(G, C) {
   const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 60, 12, 1, true).translate(0, -30, 0).rotateX(Math.PI / 2 * -1), beamMat); beam.visible = false; beam.frustumCulled = false; G.scene.add(beam);
   const rocks = [0, 1, 2].map(() => { const m = new THREE.Mesh(tetra(1), mat); m.visible = false; m.frustumCulled = false; G.scene.add(m); return { m, on: false, p: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), t: 0, T: 1.2, rest: 0 }; });
   const b = { facing: new THREE.Vector3(0, 0, 1) }, tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(); G.fx.warmList.push(body, ...feet, ...arms, lamp);
-  shell(G, C, b, () => { root.visible = true; b.nextT = 2.4; b.st = 'walk'; b.downT = 0; b.salvo = 0; b.walk = 0; beam.visible = false; b.centre.copy(C.at || G.hero.pos); b.centre.y = G.world.heightAt(b.centre.x, -b.centre.z); root.position.copy(b.centre); }, () => { root.visible = false; beam.visible = false; rocks.forEach((r) => { r.on = false; r.m.visible = false; }); });
+  shell(G, C, b, () => { root.visible = true; b.nextT = 2.4; b.st = 'walk'; b.downT = 0; b.salvo = 0; b.walk = 0; b.turn = { yaw: Math.atan2(b.facing.x, b.facing.z), yawV: 0 }; root.rotation.y = b.turn.yaw; beam.visible = false; b.centre.copy(C.at || G.hero.pos); b.centre.y = G.world.heightAt(b.centre.x, -b.centre.z); root.position.copy(b.centre); }, () => { root.visible = false; beam.visible = false; rocks.forEach((r) => { r.on = false; r.m.visible = false; }); });
   b.headT = { pos: new THREE.Vector3(), r: 2.2, onHit: (d) => { if (b.downT > 0) { b.hurt(d); lampMat.color.setHex(0xff7040); } else { b.hurt(d * C.armour_mul); b.log('blocked', 'stone'); } } };
   function toss() { const r = rocks.find((q) => !q.on); if (!r) return; const h = G.hero; r.on = true; r.t = 0; r.T = C.toss_s; r.rest = 0; r.m.visible = true; arms[b.salvo % 2].getWorldPosition(r.from); r.to.copy(h.pos).addScaledVector(h.vel, 0.45); r.to.y = Math.max(G.world.heightAt(r.to.x, -r.to.z), 0) + 0.3; G.fx.circle(r.to, null, C.radius_m, 'water', C.toss_s + 0.1); b.log('tell', 'tetrapod', { tell_s: C.toss_s }); G.audio.tell && G.audio.tell(false); G.audio.swing(); }
   b.step = (dt) => {
@@ -212,7 +230,7 @@ export function createSeawall(G, C) {
     if (b.mode === 'rise' && b.t <= 0) { b.mode = 'fight'; G.audio.boom(); }
     if (b.mode === 'fight') {
       const k = b.downT > 0 ? ease(clamp((b.dropAt - b.downT) / 0.5, 0, 1)) * ease(clamp(b.downT / 0.5, 0, 1)) : 0; root.position.y = floor - k * 11; b.downT = Math.max(0, b.downT - dt); if (b.downT <= 0) lampMat.color.setHex(0xfff2b0);
-      root.rotation.y = damp(root.rotation.y, Math.atan2(b.facing.x, b.facing.z), 1.6, dt);
+      root.rotation.y = yawTo(b.turn || (b.turn = { yaw: root.rotation.y, yawV: 0 }), Math.atan2(b.facing.x, b.facing.z), dt, 0.45);
       if (b.st === 'walk') {
         b.walk += dt; if (dist > C.stand_m) { b.centre.addScaledVector(b.facing, C.walk_mps * dt); root.position.x = b.centre.x; root.position.z = b.centre.z; feet.forEach((f, i) => { f.position.y = 2.6 + Math.max(0, Math.sin(b.walk * 2.2 + i * Math.PI)) * 1.4; f.position.z = Math.sin(b.walk * 2.2 + i * Math.PI) * 2.2; }); }
         b.nextT -= dt; if (b.nextT <= 0 && b.downT <= 0) { if (b.salvo >= C.salvo + (b.phase - 1)) { b.salvo = 0; b.dropAt = b.downT = C.down_s; b.nextT = C.down_s + 1; b.log('open', 'lamp'); G.ui.tip('It kneels. Strike the lamp', 2.6); G.audio.boom(); } else if (Math.random() < 0.45) { b.st = 'lock'; b.t2 = C.lock_s; b.log('tell', 'beam', { tell_s: C.lock_s }); G.audio.tell && G.audio.tell(true); beam.visible = true; } else { toss(); b.salvo++; b.nextT = C.every_s / (b.phase > 2 ? 1.4 : 1); } }
