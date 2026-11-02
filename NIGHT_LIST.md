@@ -15,7 +15,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 9 | Takeoff good | Build 42, his eye |
 | 10 | Boost held on the ground runs on thrusters, Jump is a big fire jump, in the air Boost is Fly, held to fly or hover | Build 42, his eye |
 | 11 | Fire fights as fire: emitted, blasted, comboed, not water recoloured | Build 43: new flame system and kit. Moves still to come (#12) |
-| 12 | Martial-arts elemental fighting styles, for both sides | Build 50: fire's blows and powers cut from the karate forms already here. More kicks and water's tai chi wait on his yes for 25 CMU files, 41 MB |
+| 12 | Martial-arts elemental fighting styles, for both sides | Build 50: fire's blows and powers cut from the karate forms already here. More kicks and water's tai chi: his yes came on 2 Nov, 25 CMU files, 41 MB |
 | 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
 | 14 | Combat, cities, buildings, bosses built off proven frameworks | Combat: frame data and boss structure from published talks (`Pipeline/research/FIRE_SOURCES.md`). Cities: lofted roofs and streets from `WORLD_SOURCES.md`. Bosses: tells and punish windows. His eye |
 | 15 | The right bosses for the fire side and the land people | Build 47: the Tidecaller for fire, the Cinder King for water. The Last Seawall at the harbour, Build 49 |
@@ -32,6 +32,8 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 26 | Lava meeting the sea turns into steam and solid rock at the bottom | To do |
 | 27 | Ragdoll physics: characters pushed back by attacks | To do |
 | 28 | Thrusters are lost when hit | To do |
+| 29 | Body and movement requirements read off real fight frames, from the two references he named | Started |
+| 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After 24 to 29 |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
