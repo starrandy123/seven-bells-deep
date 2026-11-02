@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { planCities } from './city.js';
-import { addIsle, raiseIsle, paintIsle, skyRock, ISLE } from './fireisle.js';
+import { addIsle, raiseIsle, paintIsle, skyRock, ISLE, lavaLines } from './fireisle.js';
+import { createLava } from './lava.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
 import { dressDunes } from './dunes.js';
@@ -406,7 +407,9 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
           vec3 ground = (beach*bw.r + mix(beach, green, smoothstep(1.2, 3.6, hA + (n4 - .5)*1.6))*bw.g + pale*bw.b + black*bw.a)/bsum;
           ground = mix(ground, stone*(.6 + 1.2*bw.b + .2*bw.r) + black*bw.a*.5, steep*(1.0 - bw.r*.4));
           ground = mix(ground, vec3(.40, .43, .48)*(.90 + .16*macro), b2.g*(1.0 - steep*.7));          // snow: a little under what the sun will make white
-          ground = mix(ground, vec3(.040, .036, .040)*(.8 + .6*n3), b2.r);                             // ash
+          // ash and black rock: basalt where it's bare, a rust of oxidised lava in patches, sulphur near the vents, as a real lava field has
+          vec3 ashC = mix(vec3(.034, .031, .034)*(.8 + .7*n3), vec3(.10, .052, .036)*(.7 + .6*n4), smoothstep(.5, .72, n3*.6 + macro*.4)); ashC = mix(ashC, vec3(.24, .19, .06)*(.7 + .5*n4), smoothstep(.68, .82, n4*.5 + macro*.5)*smoothstep(38.0, 70.0, P.y));
+          ground = mix(ground, ashC, b2.r);
           if (camD < 60.0) ground *= mix(.82 + .36*ocTile(P, Nbase, 1.7, wand, slope).a, 1.0, smoothstep(34.0, 60.0, camD));
           alb = mix(alb, ground, smoothstep(-2.8, -.5, P.y));
           // a river's bed and banks (rivers.js): under its water a bed of stones, mossy where it's deep, the sun's ripples running over it; along its edge a
@@ -770,7 +773,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   if (riverPlan) { const add = dressRivers(riverPlan, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }     // stones and plants along the water (rivers.js)
   // the rock over the land's bare faces, and what falls off them (cliffs.js): none on the Frost Isle's ice and none in the Cone's ash, for now
   const cliffPlan = dressCliffs({ data, heightAt, waterAt: riverPlan ? riverPlan.waterAt : () => null, solids: (data.colliders || []).concat(cityPlan.colliders),
-    skip: (x, y) => { const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
+    skip: (x, y) => { if (Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R * 1.3) return true; const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
   { const add = dressReefCity(cityPlan.cities, cityPlan.sets || {}, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }
@@ -978,6 +981,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     for (let i = 0; i < Lp.length; i += 6) splat(Lp[i], Lp[i + 1], 15, 2, .9);
     for (const k of ['wall_windows', 'tower', 'dome_hall']) { const L = data.instances[k] || []; for (let i = 0; i < L.length; i += 6) splat(L[i], L[i + 1], 20 * L[i + 4], 3, .5); }
     for (const k of ['wall_windows_cold', 'tower_cold']) { const L = data.instances[k] || []; for (let i = 0; i < L.length; i += 6) splat(L[i], L[i + 1], 20 * L[i + 4], 0, .5); }
+    for (const l of lavaLines()) for (let i = 0; i < l.pts.length; i += 4) splat(l.pts[i][0], l.pts[i][1], 13, 3, .1);      // the land round a lava river is lit by it
     const b = new Uint8Array(gn * gn * 4); for (let i = 0; i < b.length; i++) b[i] = Math.min(255, out[i] * 255);
     letGo(out);
     return b;
@@ -1583,6 +1587,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   });
   cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
   skyRock(scene, look, U);
+  const lava = createLava(scene, look, heightAt, phone);
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
   for (const name in kinds) { const I = data.instances[name]; if (I) NS += (I.length / 6 | 0) * kinds[name].length; }
@@ -1865,7 +1870,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
 
   return {
     data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
-    glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
+    lava, glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;
       const out = []; let sum = 0;

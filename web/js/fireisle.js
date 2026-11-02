@@ -4,24 +4,48 @@ import * as THREE from 'three';
 import { BURN } from './burn_glsl.js';
 
 export const ISLE = { x: 300, y: -800, R: 190 };
-const FIRE_HILL = { x: 378, y: -874 }, CITY = { id: 'ash_city', name: 'The Ash City', x: 246, y: -760, r: 86 }, SKY = { id: 'sky_city', name: 'The High City', x: 306, y: -806, z: 86, r: 66 };
+export const FIRE_HILL = { x: 378, y: -874 };
+const CITY = { id: 'ash_city', name: 'The Ash City', x: 246, y: -760, r: 86 }, SKY = { id: 'sky_city', name: 'The High City', x: 306, y: -806, z: 86, r: 66 };
 const smooth = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 const shore = (a) => 1 + 0.10 * Math.sin(a * 3 + 1.1) + 0.07 * Math.sin(a * 5 + 2.7) + 0.045 * Math.sin(a * 9 + 0.4);
 const rough = (x, y) => 0.5 * Math.sin(x * 0.061 + y * 0.043) + 0.3 * Math.sin(x * 0.13 - y * 0.097 + 1.3) + 0.2 * Math.sin(x * 0.23 + y * 0.19 + 2.1);
 const edge = (x, y) => Math.hypot(x - ISLE.x, y - ISLE.y) / (ISLE.R * shore(Math.atan2(y - ISLE.y, x - ISLE.x)));
 
+// The volcano world (Randy, 2 Nov: "We need a volcano world too to contrast the waterfall"). Read off drone footage of a real eruption: black ground, a blazing vent at the crater, braided rivers running out across it, a red glow on the plume, white steam where it meets the sea. The lava's rivers, from the crater to the sea, in the isle's own ground: each carves its channel with levees either side, and a cliff ring round the cone makes them fall, the same way the rivers of the other islands make waterfalls
+const RIM = 96, FLOW = [
+  { w: 5.5, pts: [[378, -874], [402, -866], [430, -882], [456, -862], [482, -874], [512, -868]] },
+  { w: 5, pts: [[378, -874], [372, -902], [394, -928], [380, -956], [398, -986], [392, -1016]] },
+  { w: 5.5, pts: [[378, -874], [404, -844], [412, -812], [442, -786], [456, -750], [486, -722]] },
+  { w: 3.6, pts: [[412, -812], [386, -790], [374, -756], [352, -716], [340, -668], [336, -640]] },
+  { w: 3.2, pts: [[394, -928], [426, -936], [446, -966], [474, -986]] },
+];
+let lines = null;
+export function lavaLines() {
+  if (lines) return lines; lines = [];
+  const crm = (a, b, c, d, t) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t);
+  for (const f of FLOW) { const P = f.pts, out = []; for (let i = 0; i + 1 < P.length; i++) { const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)], n = Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 3.5); for (let k = 0; k < n; k++) { const t = k / n, wob = Math.sin(i * 3.1 + k * 0.7) * 1.2; out.push([crm(p0[0], p1[0], p2[0], p3[0], t) + wob, crm(p0[1], p1[1], p2[1], p3[1], t) - wob * 0.6]); } } out.push(P[P.length - 1]); lines.push({ w: f.w, pts: out }); }
+  return lines;
+}
+let chanGrid = null;
+const CH = 18;
+function chan(x, y) {        // the nearest lava channel: how far, in its own widths
+  if (!chanGrid) { chanGrid = new Map(); lavaLines().forEach((l) => l.pts.forEach((p, i) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = (Math.floor(p[0] / CH) + a) * 4099 + Math.floor(p[1] / CH) + b; let L = chanGrid.get(k); if (!L) chanGrid.set(k, (L = [])); L.push([p[0], p[1], l.w]); } })); }
+  const L = chanGrid.get(Math.floor(x / CH) * 4099 + Math.floor(y / CH)); if (!L) return 9; let best = 9; for (const c of L) { const d = Math.hypot(x - c[0], y - c[1]) / c[2]; if (d < best) best = d; } return best;
+}
+
 // the ground here: a low plain, a shore that falls away, and the volcano, its crater open at the top
 export function isleZ(x, y, bed) {
   const r = edge(x, y); if (r >= 1.4) return bed;
   const land = 1 - smooth((r - 0.8) / 0.2), town = 1 - smooth((Math.hypot(x - CITY.x, y - CITY.y) - CITY.r) / 40); let z = -2.4 + land * (8.4 + rough(x, y) * 0.8 * (1 - town * 0.92));      // level under the streets, or every kerb is a wall
-  const d = Math.hypot(x - FIRE_HILL.x, y - FIRE_HILL.y); z += land * (68 * Math.exp(-Math.pow(d / 54, 1.5)) - 22 * Math.exp(-Math.pow(d / 12, 2)));
+  const d = Math.hypot(x - FIRE_HILL.x, y - FIRE_HILL.y); z += land * (128 * Math.exp(-Math.pow(d / 72, 1.45)) - 54 * Math.exp(-Math.pow(d / 21, 2)) + 11 * (1 - smooth((d - RIM + rough(x, y) * 6) / 7)) * (1 - town));      // the cone, its crater, and the cliff ring its rivers fall over
+  const cd = chan(x, y); if (cd < 3 && r < 1.02 && town < 0.5) z += -2.4 * Math.exp(-cd * cd * 1.1) + 0.9 * Math.exp(-(cd - 1.6) * (cd - 1.6) * 3);      // a channel, with its levees
   // a volcanic shore: it drops away at once into dark water, no pale shelf and no surf
   return r <= 1 ? z : Math.min(z + (Math.min(bed, -14) - z) * smooth((r - 1) / 0.14), z) * (1 - smooth((r - 1.14) / 0.26)) + bed * smooth((r - 1.14) / 0.26);
 }
 export function addIsle(data) {
   if (data.poi.some((p) => p.id === CITY.id)) return;
   data.poi.push({ id: 'burnt_isle', name: 'The Burnt Isle', x: ISLE.x, y: ISLE.y, z: 8, r: ISLE.R, noBreak: true }, { ...CITY, z: 8, noBreak: true }, { ...SKY, noBreak: true });
-  const z = isleZ(FIRE_HILL.x, FIRE_HILL.y, 0); data.plumes.push({ id: 'isle_crater', x: FIRE_HILL.x, y: FIRE_HILL.y, z, r: 10, h: 80 });
+  const z = isleZ(FIRE_HILL.x, FIRE_HILL.y, 0) + 8; data.plumes.push({ id: 'isle_crater', x: FIRE_HILL.x, y: FIRE_HILL.y, z, r: 16, h: 120 });
   // what stood on this sea floor is under the island now
   for (const k in data.instances) { const L = data.instances[k]; let hit = false; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) < 1.15) { hit = true; break; } if (!hit) continue; const keep = []; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) >= 1.15) keep.push(L[i], L[i + 1], L[i + 2], L[i + 3], L[i + 4], L[i + 5]); data.instances[k] = keep; }
   for (const s of data.schools || []) { const r = edge(s.x, s.y); if (r < 1.3) { const a = Math.atan2(s.y - ISLE.y, s.x - ISLE.x); s.x = ISLE.x + Math.cos(a) * ISLE.R * 1.5; s.y = ISLE.y + Math.sin(a) * ISLE.R * 1.5; } }
