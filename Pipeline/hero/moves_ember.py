@@ -58,7 +58,9 @@ def launch_keys(sk):
 
 # The fire side's martial art comes from the CMU karate forms: real bow and horse stances, long full-extension strikes with a hard stop, as the elemental fighting he asked for is built on Northern Shaolin (Pipeline/research/FIRE_SOURCES.md).
 # The blows, as (take, what strikes, seconds of its peak). The file's peak is where the hand or foot moves fastest; the clip runs from before his weight starts to after he's back. Read off a stick sheet, 1 Nov.
-BLOWS = {'e_side': ('135_01', 'foot_R', 31.30, 0.62, 0.72), 'e_lunge': ('135_02', 'hand_L', 24.50, 0.50, 0.55), 'e_rev': ('135_02', 'hand_R', 26.87, 0.45, 0.55), 'e_double': ('135_01', 'hand_R', 6.17, 0.55, 0.70), 'e_cross': ('14_03', 'hand_R', 11.87, 0.60, 0.65), 'e_blast': ('14_03', 'hand_R', 20.63, 0.62, 0.55), 'e_hook': ('14_02', 'hand_R', 14.93, 0.55, 0.60), 'e_jab': ('14_02', 'hand_L', 16.50, 0.45, 0.50), 'e_kick': ('135_03', 'foot_R', 1.43, 0.62, 0.78)}
+BLOWS = {'e_side': ('135_01', 'foot_R', 31.30, 0.62, 0.72), 'e_lunge': ('135_02', 'hand_L', 24.50, 0.50, 0.55), 'e_rev': ('135_02', 'hand_R', 26.87, 0.45, 0.55), 'e_double': ('135_01', 'hand_R', 6.17, 0.55, 0.70), 'e_cross': ('14_03', 'hand_R', 11.87, 0.60, 0.65), 'e_blast': ('14_03', 'hand_R', 20.63, 0.62, 0.55), 'e_hook': ('14_02', 'hand_R', 14.93, 0.55, 0.60), 'e_jab': ('14_02', 'hand_L', 16.50, 0.45, 0.50), 'e_kick': ('135_03', 'foot_R', 1.43, 0.62, 0.78),
+         # the water side's forms, from a whole tai chi set (CMU 12_04): water's martial art moves from the root, in long unbroken curves. Found in the data by both hands rising, both going forward, the hands drawing apart
+         'w_rise': ('12_04', 'hand_R', 9.6, 1.7, 0.6), 'w_push': ('12_04', 'hand_R', 61.3, 1.5, 0.6), 'w_whip': ('12_04', 'hand_L', 72.7, 1.6, 0.6), 'w_push2': ('12_04', 'hand_L', 111.7, 1.3, 0.6)}
 GUARD = ('14_01', 1.4)        # the stillest stretch of a guard in that take is found, then closed on itself
 
 def end_of(sk, Q, bone):
