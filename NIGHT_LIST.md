@@ -27,6 +27,11 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 21 | Running stops feeling stiff | Build 44, his eye |
 | 22 | Clips of fire and water elementals fighting | After #19. He hasn't said game camera or directed |
 | 23 | Keep the method written down so it isn't reinvented | `STANDARD.md`, `Pipeline/research/` |
+| 24 | The duel's water fighter is the Warden with the trident, from the start of the game | To do |
+| 25 | The fighting stops looking choppy and sloppy | To do |
+| 26 | Lava meeting the sea turns into steam and solid rock at the bottom | To do |
+| 27 | Ragdoll physics: characters pushed back by attacks | To do |
+| 28 | Thrusters are lost when hit | To do |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
