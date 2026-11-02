@@ -15,7 +15,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 9 | Takeoff good | Build 42, his eye |
 | 10 | Boost held on the ground runs on thrusters, Jump is a big fire jump, in the air Boost is Fly, held to fly or hover | Build 42, his eye |
 | 11 | Fire fights as fire: emitted, blasted, comboed, not water recoloured | Build 43: new flame system and kit. Moves still to come (#12) |
-| 12 | Martial-arts elemental fighting styles, for both sides | To do |
+| 12 | Martial-arts elemental fighting styles, for both sides | Build 50: fire's blows and powers cut from the karate forms already here. More kicks and water's tai chi wait on his yes for 25 CMU files, 41 MB |
 | 13 | Fire ranged and close attacks, combos | Build 43: one button, both ranges. Longer combos with #12 |
 | 14 | Combat, cities, buildings, bosses built off proven frameworks | To do |
 | 15 | The right bosses for the fire side and the land people | Build 47: the Tidecaller for fire, the Cinder King for water. The Last Seawall at the harbour, Build 49 |
