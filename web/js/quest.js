@@ -419,7 +419,7 @@ export function createQuest(G) {
     st.playT += dt;
     { const lev = G.bosses && G.bosses.leviathan; if (lev && G.boss !== lev && G.boss.dead && !G.boss.active) G.boss = lev; }       // G.boss means the Leviathan unless another is up
     if (st.respawnAt && G.time >= st.respawnAt) {
-      st.respawnAt = 0; h.respawn(st.checkpoint, st.yaw); footing(); G.enemies.reset();
+      st.respawnAt = 0; if (G.sideNow === 'fire') G.ember.home(h.pos); else { h.respawn(st.checkpoint, st.yaw); footing(); } G.enemies.reset();
       if (G.boss && G.boss.active) { G.boss.stop(); G.audio.setMood('calm'); G.look.setMood('normal', 1); }
       G.ui.fade(false);
     }
@@ -628,7 +628,7 @@ export function createQuest(G) {
       return { rows, pct: b ? Math.floor((a / b) * 100) : 0 };
     },
     hasSave: () => { if (st.handedBack) return true; const s = readSave(); return !!(s && !FLAG.fresh && !FLAG.demo && !FLAG.film && (s.v === 1 || s.play > 1 || (s.missions && Object.keys(s.missions.rec || {}).length > 1))); },
-    newGame() { clearSave(); applyState(null); h.respawn(spawnP, data.spawn.yaw || 0); h.prev.copy(h.pos); h.drawPos.copy(h.pos); G.camYaw = data.spawn.yaw || 0; onboard.begin(); },
+    newGame() { clearSave(); applyState(null); G.ember.fresh(); if (G.sideNow === 'fire') G.ember.home(); else { h.respawn(spawnP, data.spawn.yaw || 0); G.camYaw = data.spawn.yaw || 0; } h.prev.copy(h.pos); h.drawPos.copy(h.pos); onboard.begin(); },
     apply: applyState,
     travel, act() { const a = actHint(); if (a) { a.go(); return true; } return false; },
     talkTap() { if (G.ui.talkTyping()) G.ui.talkFinish(); else talkNext(); }, talkSkip() { const t = st.talk; if (t) { t.i = t.lines.length; talkNext(); } },

@@ -376,17 +376,21 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
   let CH = null;
   // the harbour's terror: the first time he comes to the quays with a fight or two behind him, the breakwater stands up. It happens once
-  let wallDone = false; try { wallDone = localStorage.getItem('thalor.seawall') === '1'; } catch (_) { /* each visit, then */ }
+  let wallDone = false; try { wallDone = localStorage.getItem('thalor.seawall2') === '1'; } catch (_) { /* each visit, then */ }
   function watchHarbour() {
-    const b = G.bosses && G.bosses.seawall, h = G.hero; if (wallDone || !b || b.active || (G.boss && G.boss.active) || G.champ || !quiet() || R.kills < 1 || h.dead) return;
+    const b = G.bosses && G.bosses.seawall, h = G.hero;
+    // it's done when it's beaten, not when it's woken: lose to it, or close the game, and it comes again
+    if (b && b.dead && !wallDone) { wallDone = true; try { localStorage.setItem('thalor.seawall2', '1'); } catch (_) { /* each visit, then */ } }
+    if (wallDone || !b || b.active || (G.boss && G.boss.active) || G.champ || !quiet() || R.kills < 1 || h.dead) return;
     const c = G.world.cities.cities.find((q) => q.def.id === 'sunward_harbour'); if (!c) return; const px = c.p.x + (c.def.shift ? c.def.shift[0] : 0), py = c.p.y + (c.def.shift ? c.def.shift[1] : 0), dx = h.pos.x - px, dz = h.pos.z + py; if (dx * dx + dz * dz > 80 * 80 || h.pos.y < -1) return;
-    wallDone = true; try { localStorage.setItem('thalor.seawall', '1'); } catch (_) { /* each visit, then */ }
     const yaw = Math.atan2(-dx, -dz); b.wake(); b.centre.set(h.pos.x + Math.sin(G.camYaw) * 34, 0, h.pos.z + Math.cos(G.camYaw) * 34); void yaw; G.ui.toast(b.name, 'It kneels after a salvo. Strike the lamp', 5); G.combat.log.push({ t: G.time, type: 'seawall' });
   }
   function raid(dt) {
     CH.stepShow(dt); watchHarbour();
     if (!R.auto || G.champ) return;
-    if (R.kills >= Q.raid.before_champion && !R.champed && !R.on && quiet()) { R.champed = !!CH.start(G.sideNow === 'fire' ? 'water' : 'fire'); return; }
+    // the road can be waiting on him after a reload, when the count of raids has gone back to nothing
+    const owed = G.sideNow === 'fire' && G.road && /Tidecaller/.test(G.road.text()); if (owed && !G.champ) R.champed = false;
+    if ((R.kills >= Q.raid.before_champion || owed) && !R.champed && !R.on && quiet()) { R.champed = !!CH.start(G.sideNow === 'fire' ? 'water' : 'fire'); return; }
     if (R.on) { R.list = R.list.filter((e) => e.hp > 0); if (!R.list.length) { R.on = false; R.cool = Q.raid.again_s; R.kills++; } return; }
     if ((R.cool -= dt) > 0 || !quiet()) return;
     if (G.hero.pos.y < -Q.raid.deepest_m) { if (!R.told) { R.told = true; G.ui.tip && G.ui.tip('Something burns above the water. Go up', 6); } return; }
@@ -408,6 +412,15 @@ export async function createEmber(G, { foeMaterial, D }) {
   function showHero() { const s = H2.sup > 0; for (const o of H2.own) o.visible = !H2.on; if (H2.man) { H2.man.visible = H2.on && !s; H2.fire.visible = H2.on && s; } }
   G.road = createRoad(G);
   CH = createChampions(G, { D, Q, X: new Proxy({}, { get: (_, k) => X[k] }), R, aim, goto, faceHim, form, bolt, floorAt: (x, z) => Math.max(groundAt(x, z), 0), film: FLAG.film });
+  // where the man in red comes back to: the harbour's square if he fell near it, the High City otherwise. The sea's start is the Warden's
+  function home(from) {
+    const h = G.hero, a = (G.world.lifts || [])[0], c = G.world.cities.cities.find((q) => q.def.id === 'sunward_harbour'); if (!a) return;
+    const sx = c ? c.p.x + (c.def.shift ? c.def.shift[0] : 0) : 0, sy = c ? c.p.y + (c.def.shift ? c.def.shift[1] : 0) : 0, near = from && c && Math.hypot(from.x - sx, from.z + sy) < 220;
+    const p = near ? new THREE.Vector3(sx, Math.max(G.world.heightAt(sx, sy), 1) + 0.92, -sy) : new THREE.Vector3(a.x - 14, a.z + 0.92, -(a.y - 21)), yaw = near ? 0 : 1.16;
+    h.respawn(p, yaw); h.land = true; h.grounded = true; h.air = false; G.camYaw = yaw; h.place();
+  }
+  // a new game forgets the fire side's road and everything along it
+  function fresh() { wallDone = false; R.kills = 0; R.champed = false; try { localStorage.removeItem('thalor.seawall2'); } catch (_) { /* this visit */ } const b = G.bosses && G.bosses.seawall; if (b) b.dead = false; if (G.road) G.road.reset(); }
   function setSide(side, { place = false, quiet = false } = {}) {
     const fire = side === 'fire', h = G.hero; if (!H2.man) return; G.sideNow = fire ? 'fire' : 'water'; document.body.dataset.side = G.sideNow; H2.on = fire; h.fireBody = fire; if (!fire) { H2.sup = 0; if (h.fly) h.endFly(); } showHero();
     try { localStorage.setItem('thalor.side', G.sideNow); } catch (_) { /* a choice for this visit */ }
@@ -415,7 +428,7 @@ export async function createEmber(G, { foeMaterial, D }) {
     // what was coming for the other side goes back where it came from
     for (const e of R.list.slice()) { if (e.hp > 0) { e.hp = 0; X.free(e); } } R.list = []; R.on = false; R.cool = Q.raid.again_s * 0.5;
     // on the fire side the first thing he sees is the plaza, the street of halls, and the volcano past them
-    if (place) { const a = (G.world.lifts || [])[0], sp = G.world.data.spawn; if (fire && a) { h.respawn(new THREE.Vector3(a.x - 14, a.z + 0.92, -(a.y - 21)), 1.16); h.land = true; h.grounded = true; h.air = false; G.camYaw = 1.16; h.place(); } else if (sp) { h.respawn(new THREE.Vector3(sp.x, sp.z, -sp.y), sp.yaw || 0); h.land = false; h.grounded = false; h.air = false; G.camYaw = sp.yaw || 0; h.place(); } }
+    if (place) { const a = (G.world.lifts || [])[0], sp = G.world.data.spawn; if (fire && a) home(); else if (sp) { h.respawn(new THREE.Vector3(sp.x, sp.z, -sp.y), sp.yaw || 0); h.land = false; h.grounded = false; h.air = false; G.camYaw = sp.yaw || 0; h.place(); } }
     if (!quiet) { G.fx.ring(h.pos.clone(), 5, 0.6, fire ? 0xff8a30 : 0xbdf7ff); G.fx.sparks(h.pos, 16, fire ? 0xffa040 : 0xbdf7ff, 7); A().boom(); }
   }
   function heroSuper() {
@@ -451,7 +464,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   function frame(dt) { time.value = G.time; rings(); heroBurn(dt); for (const e of waters) { e.u.uFlash.value *= Math.exp(-16 * dt); draw(e, dt); } drawShots(); G.fireKit.frame(dt); CH.frame(); JET.flush(G.time); if (A().jet) A().jet(loud, H2.spool || loud); loud = 0; }
 
   return {
-    pool, brain, keepOut, draw, struck, died, step, frame, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
+    pool, brain, keepOut, draw, struck, died, step, frame, home, fresh, raidNow, callWater, ignite, waters, raids: R, shots, MAX, setSide, heroSuper, dressHero, heroMul: () => (H2.sup > 0 ? Q.super.damage : 1), get heroForm() { return H2; },
     champions: () => CH, raids: R, warm: [...pool.map((s) => s.g), ...waterPool.map((s) => s.g), JET.mesh, FL.mesh],
     blend(a) { for (const e of waters) if (e.prev) e.draw.lerpVectors(e.prev, e.pos, a); },
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },

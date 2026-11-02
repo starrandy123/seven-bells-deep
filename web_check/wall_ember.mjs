@@ -46,6 +46,21 @@ await section(['E16'], async () => {
   line('E16', r.both && r.c && r.refused === false && !real.length, `Watch the duel with the pool full (${r.full} taken) still gives two fighters: ${r.both}; refused in a real fight: ${r.refused === false}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// what a player who loses sees: death on the fire side, New Game on it, and a Seawall that beat him
+await section(['E17'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
+  const r = await page.evaluate(() => {
+    const G = window.__game, h = G.hero, E = G.ember, V = G.camera.position.constructor, run = (n) => { for (let i = 0; i < n; i++) G.frame(1 / 30); }, kill = () => { h.hp = 0; h.dead = true; h.state = 'dead'; G.quest.onDeath(); }, pos = () => h.pos.toArray().map((v) => Math.round(v));
+    E.setSide('fire', { place: true, quiet: true }); run(10); kill(); run(110); const one = { p: pos(), land: h.land, dead: h.dead };
+    const c = G.world.cities.cities.find((q) => q.def.id === 'sunward_harbour'), sx = c.p.x + c.def.shift[0], sy = c.p.y + c.def.shift[1], s = [sx, sy, Math.max(G.world.heightAt(sx, sy), 1)]; h.respawn(new V(s[0] + 30, s[2] + 1, -s[1]), 0); h.land = true; h.air = false; h.place(); run(5); kill(); run(110); const two = { p: pos(), land: h.land, under: h.pos.y < 0 };
+    G.road.at = 3; G.quest.newGame(); run(10); const three = { p: pos(), road: G.road.at };
+    const b = G.bosses.seawall; b.dead = false; E.raids.kills = 1; E.raids.on = false; for (const q of G.enemies.alive ? G.enemies.alive().slice() : []) q.hp = 0; G.enemies.clearAll(); h.respawn(new V(s[0], s[2] + 1, -s[1]), 0); h.land = true; h.air = false; h.place(); run(30); const woke = b.active; let saved = null; try { saved = localStorage.getItem('thalor.seawall2'); } catch (_) { saved = 'x'; } if (b.active) b.stop(); run(5);
+    return { one, two, three, woke, saved };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), high = (o) => Math.hypot(o.p[0] - 306, o.p[2] - 806) < 80 && o.p[1] > 80;
+  line('E17', high(r.one) && r.one.land && !r.one.dead && !r.two.under && r.two.p[0] < 0 && high(r.three) && r.three.road === 0 && r.woke && r.saved !== '1' && !real.length, `dead on the isle he's back on the High City ${r.one.p}, dead by the harbour he's back in its square ${r.two.p}, New Game goes home with the road at ${r.three.road}, the Seawall woke ${r.woke} and isn't marked beaten; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

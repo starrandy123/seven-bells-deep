@@ -19,6 +19,7 @@ export function createRoad(G) {
     step() {
       const s = STEPS[i]; if (s.end || !s.done(s) || G.sideNow !== 'fire') return; i++; try { localStorage.setItem('thalor.road', String(i)); } catch (_) { /* this visit */ } if (s.raid) G.ember.raidNow(s.raid); G.audio.bell && G.audio.bell(); const n = STEPS[i]; if (n.end) G.ui.toast('The world is yours', 'Go where you like. Pause, then Watch the duel', 6); else G.ui.tip && G.ui.tip(n.text, 3.5); G.combat.log.push({ t: G.time, type: 'road', i });
     },
+    reset() { i = 0; try { localStorage.removeItem('thalor.road'); } catch (_) { /* this visit */ } },
     text: () => STEPS[i].text, target: () => STEPS[i].to || null, get at() { return i; }, set at(k) { i = k; },
   };
 }
