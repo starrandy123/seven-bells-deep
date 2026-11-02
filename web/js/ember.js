@@ -18,6 +18,7 @@ import { createChampions } from './champion.js';
 import { createRoad } from './road.js';
 import { createTurf } from './turf.js';
 import { aimChain, faceIn } from './formulas/aim.js';
+import { PALM, PALM_FIX, palmTurn, turnOver, toGround } from './formulas/palm.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -337,6 +338,15 @@ export async function createEmber(G, { foeMaterial, D }) {
     const held = []; for (const t of c.tracks) { const [b, prop] = t.name.split('.'); if (prop !== 'quaternion' || !ARMS.includes(b) || !by[b]) continue; held.push({ bone: by[b], q: new THREE.Quaternion().fromArray(Array.from(t.createInterpolant().evaluate(c.duration * 0.25))) }); }
     return (s.armQ = held.length ? held : null);
   }
+  // the turn over for the held arms, worked out once from the rig at rest (formulas/palm.js), and each man's last turn to the ground, kept on him. The last turn is worked out from his hands
+  // as posed, before the inertial blend and the look, and goes in the next frame, moving no faster than PALM_FIX
+  let npcTurn = null; const pq = new THREE.Quaternion(), DOWN = [0, -1, 0];
+  function palmsOver(s, e, w, dt) {
+    if (!npcTurn) { const by = {}; for (const a of s.armQ || []) by[a.bone.name] = a.q.toArray(); const chest = gltf.scene.getObjectByName('spine_3'); if (!chest || !by.hand_R || !by.hand_L) return; chest.getWorldQuaternion(pq); const c = pq.toArray(), q = (n) => by[n]; npcTurn = { R: palmTurn(q, 'R', s.jets[0][1].position.toArray(), c), L: palmTurn(q, 'L', s.jets[1][1].position.toArray(), c) }; }
+    const fix = e.palmFix || (e.palmFix = { R: [0, 0, 0, 1], L: [0, 0, 0, 1] });
+    for (let i = 0; i < 2; i++) { const side = i ? 'L' : 'R', [fo, ha] = s.jets[i], f = fo.quaternion.toArray(), l = ha.quaternion.toArray(); turnOver(npcTurn[side], fix[side], w, f, l); fo.quaternion.fromArray(f); ha.quaternion.fromArray(l); }
+    if (w > 0.5) for (let i = 0; i < 2; i++) { s.jets[i][1].getWorldQuaternion(pq); toGround(fix[i ? 'L' : 'R'], pq.toArray(), i ? 'L' : 'R', DOWN, w, PALM_FIX * dt); }
+  }
   // the jets: a turbine's at each palm and one under the feet, held together (Randy: "Make sure the foot thrusters are one"). The foot jet is the big one: it holds him up. Each leaves along its limb, leaning to the line of the body. `spool` is the turbine's: it comes up and down over a moment and doesn't follow the throttle (turbine.js)
   // a blow that carries knocks the jets out: in the footage thrust is gone at once and completely, with no flicker, and he drops. Randy, 2 Nov: "losing their air thrusters when hit"
   function jetsLost(e) {
@@ -359,10 +369,10 @@ export async function createEmber(G, { foeMaterial, D }) {
       if (foot) { const [a2, c2, t2] = pairs[3]; a2.getWorldPosition(footA); c2.getWorldPosition(footB); v1.add(footA).multiplyScalar(0.5); v2.add(footB).multiplyScalar(0.5); t.getWorldPosition(footA); t2.getWorldPosition(footB); footA.add(footB).multiplyScalar(0.5); }
       v3.subVectors(v2, v1).normalize().multiplyScalar(foot ? 0.6 : 0.3).addScaledVector(up, -1).normalize();
       if (foot) v2.lerp(footA, 0.45).addScaledVector(v3, 0.07); else v2.addScaledVector(v3, 0.08);
-      // his own palms, which body.js turns to the ground in thrust: as far as a palm faces the ground, the flame leaves the middle of it along its normal, leaning back along his body, as a jet suit's arm jets aim at the ground and a little back
-      const pm = !foot && box === H2 && G.hero.palm, V = pm && (box.palmV || (box.palmV = [new THREE.Vector3(), new THREE.Vector3()]));
+      // the palms, which his jets turn to the ground whenever they hold him up (formulas/palm.js): as far as a palm faces the ground, the flame leaves the middle of it along its normal, leaning back along his body, as a jet suit's arm jets aim at the ground and a little back
+      const pm = !foot && !box.warden, V = pm && (box.palmV || (box.palmV = [new THREE.Vector3(), new THREE.Vector3()]));
       if (pm) {
-        const P = pm[i === 0 ? 'R' : 'L'], f = clamp((-V[0].fromArray(P.n).transformDirection(c.matrixWorld).y - 0.3) / 0.5, 0, 1), pk = f * f * (3 - 2 * f);
+        const P = PALM[i === 0 ? 'R' : 'L'], f = clamp((-V[0].fromArray(P.n).transformDirection(c.matrixWorld).y - 0.3) / 0.5, 0, 1), pk = f * f * (3 - 2 * f);
         if (pk > 1e-3) { V[0].addScaledVector(up, -0.3).normalize(); V[1].fromArray(P.c).applyMatrix4(c.matrixWorld).addScaledVector(V[0], 0.03); v3.lerp(V[0], pk).normalize(); v2.lerp(V[1], pk); }
       }
       // how long the flame shows at full thrust: about six nozzle widths. A real jet's shock-diamond train dies out within ten, and a jet suit's exhaust is barely seen in daylight (Pipeline/research/FLIGHT_SOURCES.md). Randy, 2 Nov: "The jet propulsion stream is too long"
@@ -394,7 +404,9 @@ export async function createEmber(G, { foeMaterial, D }) {
     for (let i = 0; i < 4; i++) { const a = s.acts[WEIGHTS[i]]; e.w[i] = damp(e.w[i], W[i], 7, dt); a.setEffectiveWeight(e.w[i] * rest); }
     if (rest !== e.rest0) { e.rest0 = rest; s.still && s.still.kick(); }
     const holding = rest > 0 && e.hp > 0 && !e.rag && !e.warden && e.frozen <= 0 && (e.champ ? !!e.B && (e.B.st === 'idle' || e.B.st === 'intro' || (e.B.st === 'open' && !e.cur)) : e.state !== 'tell' && e.state !== 'strike' && e.state !== 'recover'); e.armHold = damp(e.armHold || 0, holding ? 1 : 0, holding ? 3 : 12, dt);
-    if (e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; s.mixer.update(t); const H = e.armHold > 0.002 && armsOf(s); if (H) for (const a of H) a.bone.quaternion.slerp(a.q, e.armHold); if (s.still) s.still.apply(t); }
+    // his palms to the ground whenever his jets carry him, as the man the player flies: in with the held arms, out with them for a blow, and before the inertial blend, so nothing turns faster than a body can
+    const carry = e.hp > 0 && e.doused <= 0 && e.state !== 'landed' && !e.jetOut && !e.rag && !e.warden; e.palmJ = damp(e.palmJ || 0, carry ? 1 : 0, carry ? 3 : 12, dt); const pw = (e.armHold || 0) * e.palmJ;
+    if (e.frozen <= 0) { const t = G.hitstop > 0 ? dt * 0.08 : dt; s.mixer.update(t); const H = e.armHold > 0.002 && armsOf(s); if (H) for (const a of H) a.bone.quaternion.slerp(a.q, e.armHold); if (H && pw > 1e-3) palmsOver(s, e, pw, t); if (s.still) s.still.apply(t); }
     if (rest > 0 && e.hp > 0 && e.frozen <= 0 && !e.rag) { const tg = e.target || G.hero; v1.copy(sp > 6 ? e.vel : v2.subVectors(tg.pos, e.pos)).normalize(); aimChain(s.look, LOOK_S, s.head, s.face, v1, 1.42, e.w[0] * 0.8 + 1 - e.w[0]); }
     e.u.uHeat.value = damp(e.u.uHeat.value, e.heat, 6, dt);
     if (e.hp <= 0 && e.t < 1.4) e.u.uFade.value = Math.min(1, e.u.uFade.value + dt * 0.8);

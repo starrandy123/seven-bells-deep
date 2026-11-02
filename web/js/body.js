@@ -8,6 +8,7 @@ import { second, follower, chase, first, nearAngle } from './formulas/follow.js'
 import { quintic, at } from './formulas/inertial.js';
 import * as K from './formulas/ik.js';
 import { stride, along, seenAt, setGaits, warp, GAITS, MATCH } from './formulas/gait.js';
+import { palmTurn, turnOver, toGround, PALM_FIX } from './formulas/palm.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -400,53 +401,28 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
   function flyLean() {
     const l = h.flyLat || 0; if (Math.abs(l) < 1e-3) return; rollBone('spine_1', -0.08 * l); rollBone('spine_2', -0.12 * l); rollBone('spine_3', -0.14 * l); rollBone('neck', 0.1 * l); rollBone('head', 0.16 * l); rollBone('leg_R', 0.1 * l); rollBone('leg_L', 0.1 * l);
   }
-  // ---------------------------------------------------------------- the palms in thrust. Randy, 2 Nov: "The hands of the fire guy need to face down when in thrust"
-  // Each palm in its hand bone's own frame, measured off the skinned mesh (web/assets/ember.glb): the vertices weighted to the hand and their principal axes. n is the flattest, the palm's normal,
-  // on the side the fingers curl to (Pipeline/hero/base.py turns each finger "towards the palm"); a is the longest, from the wrist to the fingers; c is the middle of the palm.
-  // The held arms (holdArms) bend each wrist 75° the palm's way with the palm up, so turning it down is most of a half turn of the hand about the forearm. A forearm turns a palm over between the
-  // elbow and the wrist: here it takes half of that turn about its own length and the wrist the rest, as a rig's forearm twist bone takes half the hand's roll, so no one ring of the sleeve is wrung.
-  // That turn goes into the pose itself, so a blow and back go through the inertial blend like any change of pose. Then the shortest turn takes the palm the rest of the way to the ground, on the
-  // hands as drawn. The look: a skydiver's track, arms at the sides and palms down, and a jet suit's arm jets aimed at the ground and a little back
-  const PALM = { R: { n: [0.9524, 0.114, 0.2828], a: [-0.0852, 0.99, -0.1123], c: [-0.013, 0.07, -0.008] }, L: { n: [-0.8333, -0.4124, -0.3683], a: [-0.3113, 0.9004, -0.3039], c: [-0.017, 0.067, -0.018] } };
-  const PALM_FORE = 0.5, PALM_RATE = 8, palmTurn = {}, pq = new THREE.Quaternion(); let palmK = 0, dodgeRoll = 0;
-  // where each palm is on its hand, for the jets (ember.js)
-  h.palm = { R: PALM.R, L: PALM.L };
-  // a share t of a turn q, about its own axis
-  const part = (q, t) => { const s = Math.hypot(q[0], q[1], q[2]); if (s < 1e-6) return [0, 0, 0, 1]; const g = q[3] < 0 ? -1 : 1; return K.qaxis([q[0] * g, q[1] * g, q[2] * g], 2 * Math.atan2(s, Math.abs(q[3])) * t); };
-  // the turn, in the hand's own frame, from the held hand to one that lies along its forearm with the palm to his front; and how much of it is about the forearm's own length
-  function palmTurnOf(s) {
-    const q = (n) => { const i = index[n], e = armHeld.find((x) => x[0] === i); return e ? e[1] : rest[i]; };
-    const fq = K.qmul(K.qmul(q('clav_' + s), q('arm_' + s)), q('fore_' + s)), front = K.qrot(K.qconj(fq), K.qrot(K.qconj(REST.q.spine_3), [0, 0, 1]));
-    const ax = K.unit(bones['hand_' + s].position.toArray()), P = PALM[s], hq = q('hand_' + s);
-    let D = K.qmul(K.qconj(hq), K.turn(K.frame(P.a, P.n), K.frame(ax, front))); if (D[3] < 0) D = D.map((x) => -x);
-    const E = K.qmul(K.qmul(hq, D), K.qconj(hq));
-    return { D, ax, twist: 2 * Math.atan2(K.dot(E, ax), E[3]) };
-  }
-  // the turn over, by w (0 to 1), in the pose: the forearm takes its share about its own length and the hand the rest, so in the world the hand is where the turn alone would put it
+  // ---------------------------------------------------------------- the palms. Randy, 2 Nov: "The hands of the fire guy need to face down when in thrust", and then the hover too
+  // Whenever his jets hold him up, hovering, cruising, boosting or braking, his palms face the ground and his flames leave them (formulas/palm.js). The turn over and the last turn to the
+  // ground both go into the pose itself, so a blow and back, a launch and a landing, go through the inertial blend like any change of pose. The last turn is worked out at the end of each
+  // frame from the hands as drawn, a frame late and moving no faster than PALM_FIX; it waits out a switch's blend, and keeps what it had through a blow so the return blends in one go
+  const palmT = {}, palmFix = { R: [0, 0, 0, 1], L: [0, 0, 0, 1] }, PALM_WAIT = 0.6, pq = new THREE.Quaternion(); let dodgeRoll = 0;
+  // the held arm, for the turn over
+  const armQ = (n) => { const i = index[n], e = armHeld.find((x) => x[0] === i); return e ? e[1] : rest[i]; };
+  // by w (0 to 1), in the pose
   function palmsOver(w) {
     if (w <= 1e-3 || !armHeld) return;
     for (const s of ['R', 'L']) {
       const fi = index['fore_' + s], hi = index['hand_' + s]; if (fi === undefined || hi === undefined) continue;
-      const T = palmTurn[s] || (palmTurn[s] = palmTurnOf(s)), r = K.qaxis(T.ax, T.twist * PALM_FORE * w), fo = fi * 4, ho = hi * 4;
-      const f = K.qmul([pose[fo], pose[fo + 1], pose[fo + 2], pose[fo + 3]], r), l = K.qmul(K.qmul(K.qconj(r), [pose[ho], pose[ho + 1], pose[ho + 2], pose[ho + 3]]), part(T.D, w));
+      const T = palmT[s] || (palmT[s] = palmTurn(armQ, s, bones['hand_' + s].position.toArray(), REST.q.spine_3)), fo = fi * 4, ho = hi * 4;
+      const f = [pose[fo], pose[fo + 1], pose[fo + 2], pose[fo + 3]], l = [pose[ho], pose[ho + 1], pose[ho + 2], pose[ho + 3]]; turnOver(T, palmFix[s], w, f, l);
       for (let k = 0; k < 4; k++) { pose[fo + k] = f[k]; pose[ho + k] = l[k]; }
     }
   }
-  // the last of the way to the ground, by k, on the hands as drawn. Down is the world's, carried round with him through an air dodge's roll. Only a palm already within a right angle of
-  // the ground is taken the rest of the way, more of it the nearer it is: so it's never more than a small turn, and never the shortest way round from straight up, which is no way at all.
-  // The turn is kept in the hand's own frame and changes no faster than PALM_FIX rad/s, as a knee or a foot has a top speed here; and while the arms are in a switch's blend (a blow, a landing)
-  // it waits for the blend to finish, so the two never add up: back from a blow the hand blends, then settles the last of the way
-  const palmFix = { R: [0, 0, 0, 1], L: [0, 0, 0, 1] }, PALM_FIX = 6, PALM_WAIT = 0.6;
-  function palmsDown(k, dc) {
-    if (k <= 1e-3 || !armHeld) { palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1]; return; }
+  // the last turn, for the next frame, from the hands as drawn. Down is the world's, carried round with him through an air dodge's roll
+  function palmsAim(w, dc) {
+    if (w <= 1e-3 || !armHeld || inertA < PALM_WAIT) return;
     root.getWorldQuaternion(pq); const rq = arr(pq), dn = dodgeRoll ? K.qrot(K.qmul(K.qmul(rq, K.qaxis([0, 0, 1], dodgeRoll)), K.qconj(rq)), [0, -1, 0]) : [0, -1, 0];
-    for (const s of ['R', 'L']) {
-      const hand = bones['hand_' + s]; if (!hand) continue;
-      hand.getWorldQuaternion(pq); const W = arr(pq), n = K.qrot(W, PALM[s].n), g = inertA < PALM_WAIT ? 0 : k * smooth(0, 0.8, K.dot(n, dn));
-      const want = g > 1e-3 ? K.qmul(K.qmul(K.qconj(W), part(K.arc(n, dn), g)), W) : [0, 0, 0, 1], d = K.qmul(K.qconj(palmFix[s]), want), most = PALM_FIX * dc;
-      const a = 2 * Math.atan2(Math.hypot(d[0], d[1], d[2]), Math.abs(d[3])), F = palmFix[s] = a > most ? K.qmul(palmFix[s], part(d, most / a)) : want;
-      const q = hand.quaternion, l = K.qmul([q.x, q.y, q.z, q.w], F); q.set(l[0], l[1], l[2], l[3]);
-    }
+    for (const s of ['R', 'L']) { const hand = bones['hand_' + s]; if (!hand) continue; hand.getWorldQuaternion(pq); toGround(palmFix[s], arr(pq), s, dn, w, PALM_FIX * dc); }
   }
   function arc() {
     const u = h.breach.u, c = Math.sin(Math.PI * (u * 1.2 - 0.1)), top = Math.sin(Math.PI * u), w = 6.283 * 1.15 * airT, wave = (lag, amp) => Math.sin(w - lag) * amp * (0.45 + 0.55 * top);
@@ -482,7 +458,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     // ---- which pose is the base
     const m = onGround ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     if (m !== mode) { inertia(m === 'land' ? 0.16 : 0.24); mode = m; loco = null; }
-    // how far the palms are to be turned down: the share of his flight that's thrust, cruise and boost, set in the flight's own branch below
+    // how far the palms are turned to the ground: all the way whenever the jets hold him up, less only as the takeoff hands over. Set in the flight's own branch below
     let palmWant = 0;
     if (shot && shot.auto && shot.t >= shot.dur) clear(0.18);
     if (m === 'land') {
@@ -507,7 +483,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
       flyW.forEach((w, i) => { flyW[i] = w + (W[i] - w) * (1 - Math.exp(-5 * dc)); sample(FLY_CL[i], airT % CL[FLY_CL[i]].dur, flyW[i] * (1 - lc)); });
       holdArms(1 - lc);
       if (lc > 0) sample('fly_launch', lt, lc);
-      palmWant = (flyW[1] + flyW[2]) * (1 - lc);
+      palmWant = 1 - lc;
     }
     else if (m === 'air' && h.breach && CL.dodge_water) { airT += dc; sample('dodge_water', 0.2, 1); }      // a leap: long, arms ahead of him; `arc` below bends it along the path
     else if (m === 'air') { airT += dc; sample(has('fall') ? 'fall' : 'idle_tread', airT % (has('fall') ? CL.fall.dur : 3), 1); }
@@ -592,8 +568,8 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     if (flyK > 0.02) aimChain(lookC, lookS, bones.head, faceL, h.flyLook, 1.42, flyK);
     // on his feet the head goes first: it stays level through the stride and looks into a turn before the body gets there
     else if (onGround && speed > 1.5 && !shot) { const ahead = h.heading + clamp(nearAngle(0, wanted - facing) * 2.5 + turnRate * 0.34, -0.7, 0.7); landLook.set(Math.sin(ahead), 0, Math.cos(ahead)); aimChain(lookN, lookNS, bones.head, faceL, landLook, 0.9, 0.8 * smooth(1.5, 4, speed)); }
-    // the palms' last turn to the ground, on the hands as drawn. On a spring of its own: a blow or the brake hands them back over a moment, never in a frame
-    palmK += (palmWant - palmK) * (1 - Math.exp(-PALM_RATE * dc)); palmsDown(palmK, dc);
+    // the palms' last turn to the ground, for the next frame
+    palmsAim(palmWant, dc);
     prevDt = dt;
     swing(dt, speed, onGround);
     if (h.ride) { root.updateWorldMatrix(true, false); bones.hand_R.updateWorldMatrix(true, false); bones.hand_L.updateWorldMatrix(true, false); tv.setFromMatrixPosition(bones.hand_R.matrixWorld); tv2.setFromMatrixPosition(bones.hand_L.matrixWorld); h.handsR = tv.clone(); h.handsL = tv2.clone(); gripRel.copy(tv).add(tv2).multiplyScalar(0.5).sub(root.position); }
@@ -614,7 +590,7 @@ export function createBody(G, h, { root, model, bones, clips, STAND, moves }) {
     F.yaw = follower(h.heading); F.ground = follower(h.drawPos.y - STAND); F.stride = follower(0); lastYaw = h.heading; facing = h.heading; lastSpeed = 0; gaitOn = false;
     for (const l of legs) { const E = aim(l); plantAt(l, E, 0); l.A = ankleOn(l); l.cA = l.A; l.solo = 0; l.hover = 0; l.err = null; }
     for (const i of ACT) offs[i] = null; offP = null; inertT = inertA = inertP = 9; pendingT = pendingA = 0; loco = null;       // what the last pose was doing doesn't follow him
-    palmK = 0; palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1];
+    palmFix.R = [0, 0, 0, 1]; palmFix.L = [0, 0, 0, 1];
     legClip = !(h.land && !h.air); mode = h.land && !h.air ? 'land' : h.air ? 'air' : h.state === 'surf' ? 'surf' : 'water';
     ready = true;
   }
