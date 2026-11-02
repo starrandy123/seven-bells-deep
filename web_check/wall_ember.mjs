@@ -134,6 +134,22 @@ await section(['E22'], async () => {
   line('E22', a.fly && a.sp > 20 && a.turn < 0.02 && b.turned > 0.6 && b.bank > 0.9 && b.slip < 10 && Math.abs(c.bank) < 0.05 && d.sp < 1 && d.fly && e.up > 0.1 && e.inv < -0.05 && f.fell > 4 && !f.dodges && g.pitch > -0.02 && !real.length, `Fly alone flew straight at ${a.sp.toFixed(0)} m/s; full stick turned ${(b.turned * 57.3).toFixed(0)}° on a ${(b.bank * 57.3).toFixed(0)}° bank with the nose ${b.slip.toFixed(1)}° off his path; wings came level (${(c.bank * 57.3).toFixed(1)}°); let go: ${d.sp.toFixed(2)} m/s, still flying; pull back raised the nose ${(e.up * 57.3).toFixed(0)}°, inverted ${(e.inv * 57.3).toFixed(0)}°; Jump held fell ${f.fell.toFixed(1)} m with ${f.dodges} dodges; a thumb held up through the start kept the nose at ${(g.pitch * 57.3).toFixed(0)}°; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// a building marked where it's hit, and whole again in time
+await section(['E23'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.booted && window.__game.dmg, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, W = G.world, V = G.hero.pos.constructor, mat = new (G.camera.matrixWorld.constructor)(); let best = null;
+    for (const m of W.cityMeshes) { const g = m.geometry; if (!g.boundingBox) g.computeBoundingBox(); for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, mat); const b = g.boundingBox.clone().applyMatrix4(mat); if (b.max.y - b.min.y < 8 || b.min.y < 1) continue; const d = Math.hypot((b.min.x + b.max.x) / 2 + 372, b.min.z - 528); if (!best || d < best.d) best = { d, b, m, i }; } }
+    const b = best.b; G.hero.pos.set((b.min.x + b.max.x) / 2, b.min.y + 1, b.min.z - 10); G.dmg.hit(new V((b.min.x + b.max.x) / 2, b.min.y + 2, b.min.z - 0.15), 2.4, 'fire', 1); G.dmg.update(0.25, G.hero.pos.x, G.hero.pos.z);
+    const slot = best.m.geometry.attributes.aDmg.array[best.i * 4], T = G.look.uniforms.tOcDmg.value.image.data; let ink = 0; if (slot) for (let k = (slot - 1) * 4096; k < slot * 4096; k++) if (T[k]) ink++;
+    for (let t = 0; t < 130; t += 0.25) G.dmg.update(0.25, G.hero.pos.x, G.hero.pos.z);
+    return { slot, ink, after: best.m.geometry.attributes.aDmg.array[best.i * 4] };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E23', r.slot > 0 && r.ink > 100 && r.after === 0 && !real.length, `a fire blow marks the wall (slot ${r.slot}, ${r.ink} values in its tile) and two minutes later it's whole again (slot ${r.after}); ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

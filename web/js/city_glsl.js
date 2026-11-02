@@ -4,17 +4,27 @@
 // are hatched like a comic's shadows, cross-hatched where they turn furthest away; then the ink goes on top of everything, and the water's haze over all of it.
 // Kinds: city.js K. Colours are linear, from ART.md: pale marble #d9d4c4, algae #3d6e5a, gold mosaic #c9a24a.
 
-export const CITY_VERTEX_DECL = 'attribute vec4 aFac;\nvarying vec4 vFac;\nvarying float vFacSeed;\n';
+export const CITY_VERTEX_DECL = 'attribute vec4 aFac, aDmg;\nvarying vec4 vFac;\nvarying float vFacSeed;\nflat varying mediump float vDmgS; flat varying mediump vec2 vDmgA;\n';
 export const CITY_VERTEX_BEND = `vFac = aFac;
 #ifdef USE_INSTANCING
   vFacSeed = fract(instanceMatrix[3].x*.1371 + instanceMatrix[3].z*.0713 + instanceMatrix[3].y*.031);
+  vDmgS = floor(aDmg.r*255.0 + .5) - 1.0; vDmgA = aDmg.gb;
 #else
-  vFacSeed = 0.0;
+  vFacSeed = 0.0; vDmgS = -1.0; vDmgA = vec2(0.0);
 #endif
 `;
 
 export const CITY_PARS = /* glsl */`
 varying vec4 vFac; varying float vFacSeed;
+flat varying mediump float vDmgS; flat varying mediump vec2 vDmgA;
+uniform mediump sampler2DArray tOcDmg; uniform vec4 ocDmgC[32];
+// the damage tile round a building (scorch.js): around it by a diamond, no trig; up it by its height, the roof in the top rows
+vec4 ocDmgAt(float s) {
+  vec4 c = ocDmgC[int(s)]; vec2 p = vOcP.xz - c.xz, a = abs(p);
+  float q = p.x/(a.x + a.y + 1e-3), u = (p.y >= 0.0 ? 1.0 - q : 3.0 + q)*.25;
+  float v = (vOcP.y - c.y)*c.w*.85 + max(9.0 - max(a.x, a.y), 0.0)*.0167;
+  return texture(tOcDmg, vec3(u, v, s));
+}
 float ocWinM = 0.0, ocInkM = 0.0, ocEmber = 0.0; vec3 ocWinC = vec3(0.0);
 float ocH1(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
 // an ink line about a pixel and a half wide wherever d (in any unit) crosses zero: d over its own screen rate is its distance in pixels
@@ -227,6 +237,30 @@ export const CITY_ALBEDO = /* glsl */`{
       ocC = mix(ocC, ocGc*(.62 + .72*ocDot), ocG*.88);
     }
   }
+  // what fire, water, ice and blows did to it (scorch.js), the Frostbite way: a low-resolution field per building, its edges cut by noise, never a soft circle, and drawn in the comic's own ink. Pipeline/research/WORLD_RESPONSE_SOURCES.md
+  { vec4 ocD = vec4(vDmgA.x, 0.0, vDmgA.y, 0.0);
+    if (vDmgS > -.5) ocD = max(ocD, ocDmgAt(vDmgS));
+    if (ocD.r + ocD.g + ocD.b + ocD.a > .008) {
+      vec2 ocQ = vec2((vOcP.x + vOcP.z)*.5, vOcP.y);
+      float n1 = texture(tOcNoise, ocQ*.19).r, n2 = texture(tOcNoise, ocQ*.83).g, det = (n1*.62 + n2*.38 - .5)*ocLodW, rib = texture(tOcNoise, vec2(ocQ.x*.55, ocQ.y*.04)).b - .5;
+      bool wood = ocK == 14 || ocK == 16 || ocK == 17 || ocK == 11;
+      // soot that climbs from the hit, timber gone to blocks of char
+      float fC = ocD.r + det*.7 + rib*.22, soot = clamp((fC - .5)*7.0 + .5, 0.0, 1.0);
+      vec3 cC = wood ? vec3(.016, .014, .013)*(.7 + .9*step(.5, fract(ocQ.x*3.1 + step(.5, fract(ocQ.y*2.3))*.5))) : ocC*.16 + .008;
+      ocC = mix(ocC, cC, soot); ocWinM *= 1.0 - soot; inkW = max(inkW, ocLn(fC - .5)*.7);
+      // heat: stone flushes pink, then pales right by the fire; windows light from inside
+      if (!wood) ocC = mix(ocC, mix(ocC*vec3(1.25, .72, .62), vec3(.72, .68, .62), smoothstep(.75, 1.0, ocD.g)), smoothstep(.3, .7, ocD.g)*(1.0 - soot));
+      ocWinM = max(ocWinM, ocD.g*(.55 + .45*n2)); ocWinC = mix(ocWinC, vec3(1.0, .42, .10), ocD.g);
+      // ice: a shell in ribs that buries the drawing, its edge feathered
+      float fF = ocD.b + det*.9 + rib*.35, ice = clamp((fF - .5)*6.0 + .5, 0.0, 1.0);
+      vec3 iC = mix(vec3(.46, .58, .66), vec3(.74, .83, .90), n1)*(.88 + .24*smoothstep(.0, .16, rib + .08));
+      ocC = mix(ocC, iC, ice); ocWinM *= 1.0 - ice*.92; ink *= 1.0 - ice; inkW *= 1.0 - ice*.8; inkW = max(inkW, ocLn(fF - .5)*.55);
+      // the break, in three layers: the face off, coursed stone under it, then the room behind, by one ray into 3 x 3.4 m cells (van Dongen's interior mapping)
+      float fB = ocD.a + det*.8;
+      if (fB > .38) { ocC = mix(vec3(.30, .26, .22), vec3(.46, .38, .30), n2)*(.8 + .3*step(.5, fract(ocQ.y/.35))); ocWinM = 0.0; }
+      inkW = max(inkW, max(ocLn(fB - .38)*.6, ocLn(fB - .62)));
+      if (fB > .62) { vec3 V = normalize(vOcP - cameraPosition) + 1e-4, cell = vec3(3.0, 3.4, 3.0), t = ((floor(vOcP/cell) + step(0.0, V))*cell - vOcP)/V; float d = min(t.x, min(t.y, t.z)), flr = step(t.y, min(t.x, t.z)); ocC = mix(vec3(.030, .026, .024), vec3(.055, .045, .038), flr)*exp(-d*.25); ink = 0.0; }
+    } }
   ocInkM = max(ink*ocLod, inkW*ocLodW);
   diffuseColor.rgb = ocC;
 }`;

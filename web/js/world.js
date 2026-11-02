@@ -708,7 +708,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     // the cities' buildings (city.js massing, city_glsl.js drawing): every surface drawn from its aFac in comic ink, hatched where it turns from the sun,
     // its windows lit warm (cold in the deep) when the lamps are lit, at night, and always below 18 m
     city: () => look.patch(lit({ vertexColors: true }), {
-      key: 'city2', vertexDecl: CITY_VERTEX_DECL, vertexBend: CITY_VERTEX_BEND, fragmentPars: CITY_PARS, albedo: CITY_ALBEDO, fragmentPost: CITY_POST, glow: CITY_GLOW,
+      key: 'city3', vertexDecl: CITY_VERTEX_DECL, vertexBend: CITY_VERTEX_BEND, fragmentPars: CITY_PARS, albedo: CITY_ALBEDO, fragmentPost: CITY_POST, glow: CITY_GLOW, uniforms: { tOcDmg: U.tOcDmg, ocDmgC: U.ocDmgC },
     }),
     lamp: () => look.patch(lit({ vertexColors: true }), {
       key: 'lamp',
@@ -1627,6 +1627,8 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
       }`,
   });
   cityMeshes = cityPlan.build(scene, (k) => k === 'ink' ? cityInk : familyMat('city'));
+  // each building's damage slot (scorch.js): a geometry of its own over the shared buffers, so the instanced damage values are per city
+  for (const m of cityMeshes) { const g = m.geometry, g2 = new THREE.BufferGeometry(); for (const k in g.attributes) g2.setAttribute(k, g.attributes[k]); g2.setIndex(g.index); g2.boundingBox = g.boundingBox; g2.boundingSphere = g.boundingSphere; g2.setAttribute('aDmg', new THREE.InstancedBufferAttribute(new Uint8Array(m.count * 4), 4, true).setUsage(THREE.DynamicDrawUsage)); m.geometry = g2; }
   { const before = new Set(scene.children); skyRock(scene, look, U); for (const o of scene.children) if (!before.has(o)) o.traverse((q) => { if (q.isMesh) skyMeshes.push(q); }); }
   bakeSun(); bakeLand();
   const mirror = createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities: cityMeshes, isle: ISLE, phone });
@@ -1914,7 +1916,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // the placements as floats, read by index from here on: as plain arrays they held 3 MB of boxed numbers (a heap snapshot, 2 Nov)
   for (const k in data.instances) data.instances[k] = Float32Array.from(data.instances[k]);
   return {
-    mirror, data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
+    mirror, cityMeshes, data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     lava, glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;

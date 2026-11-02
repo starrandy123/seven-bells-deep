@@ -43,9 +43,57 @@ export function createScorch(G) {
   }
   function ignite(i, from) { st[i] = BURN; left[i] = BURN_S; dist[i] = from; px[i * 4 + 1] = 255; burning++; }
 
+  // ---------------------------------------------------------------- buildings: a tile of their own for each one that's hit, 32 at a time, the oldest given back first (Frostbite 2's destruction masks, flattened; Pipeline/research/WORLD_RESPONSE_SOURCES.md)
+  // Fire chars and heats it; water washes the soot off, and on hot stone it cracks it (miners broke rock that way); ice crusts it; a heavy blow breaks it, the face off, then the room behind. Nothing falls: it all comes back
+  const TT = U.tOcDmg.value, TD = TT.image.data, TS = 32, NS = 32, slotOf = new Map(), slots = Array.from({ length: NS }, () => ({ key: null, m: null, i: -1, hold: 0, at: 0, dirty: false })); let bgrid = null, tNow = 0;
+  function buildGrid() {
+    bgrid = new Map(); const M = new THREE.Matrix4(), B = new THREE.Box3();
+    for (const m of W.cityMeshes || []) { const g = m.geometry; if (!g.boundingBox) g.computeBoundingBox(); for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M); B.copy(g.boundingBox).applyMatrix4(M); if (B.max.y < 0.5 || B.max.y - B.min.y < 2.5) continue; const cx = (B.min.x + B.max.x) / 2, cz = (B.min.z + B.max.z) / 2, e = [m, i, cx, cz, Math.max(B.min.y, 0), B.max.y, Math.max(B.max.x - B.min.x, B.max.z - B.min.z) / 2], k = Math.floor(cx / 16) + ':' + Math.floor(cz / 16); if (!bgrid.has(k)) bgrid.set(k, []); bgrid.get(k).push(e); } }
+  }
+  const setSlot = (m, i, v) => { const a = m.geometry.attributes.aDmg; if (!a) return; a.array[i * 4] = v; a.needsUpdate = true; };
+  function slotFor(e) {
+    const key = e[0].id + ':' + e[1]; let s = slotOf.get(key); if (s !== undefined) return s;
+    let best = 0, bt = Infinity; for (let k = 0; k < NS; k++) { const q = slots[k]; if (!q.key) { best = k; bt = -1; break; } if (q.at < bt) { bt = q.at; best = k; } }
+    const q = slots[best]; if (q.key) { slotOf.delete(q.key); setSlot(q.m, q.i, 0); }
+    q.key = key; q.m = e[0]; q.i = e[1]; TD.fill(0, best * TS * TS * 4, (best + 1) * TS * TS * 4); slotOf.set(key, best); U.ocDmgC.value[best].set(e[2], e[4], e[3], 1 / Math.max(e[5] - e[4], 1)); setSlot(e[0], e[1], best + 1); return best;
+  }
+  function stampB(e, p, r, el, power) {
+    const s = slotFor(e), q = slots[s], cx = e[2], cz = e[3], foot = e[4], H = Math.max(e[5] - foot, 1), dx = p.x - cx, dz = p.z - cz, ax = Math.abs(dx), az = Math.abs(dz), qq = dx / (ax + az + 1e-3), u = ((dz >= 0 ? 1 - qq : 3 + qq) * 0.25) * TS, v = ((p.y - foot) / H * 0.85 + Math.max(9 - Math.max(ax, az), 0) * 0.0167) * TS;
+    const per = 4 * Math.max(ax + az, 2), ru = Math.max(1.6, (r / per) * TS * 2), rv = Math.max(1.6, (r / H) * 0.85 * TS), base = s * TS * TS * 4;
+    for (let y = Math.max(0, Math.floor(v - rv)); y <= Math.min(TS - 1, Math.ceil(v + rv * 3)); y++) for (let k = Math.floor(u - ru * 2); k <= Math.ceil(u + ru * 2); k++) {
+      // soot rises in a V: wider above, three times as tall as it is low
+      const up = y > v, ry = up ? rv * 3 : rv, rx = ru * (up ? 1 + (y - v) / (rv * 3) : 1), d = ((k - u) / rx) ** 2 + ((y - v) / ry) ** 2; if (d >= 1) continue; const w = (1 - d) * power, o = base + (y * TS + ((k % TS) + TS) % TS) * 4;
+      if (el === 'fire') { TD[o] = Math.max(TD[o], Math.min(255, w * 260)); if (!up || d < 0.4) TD[o + 1] = Math.max(TD[o + 1], Math.min(255, w * 255)); if (TD[o + 2] > 0) TD[o + 2] = Math.max(0, TD[o + 2] - w * 200); }
+      else if (el === 'water') { if (TD[o + 1] > 150 && w > 0.3) TD[o + 3] = Math.min(255, TD[o + 3] + 60); TD[o] = TD[o] * (1 - 0.5 * w); TD[o + 1] = 0; }
+      else { TD[o + 2] = Math.max(TD[o + 2], Math.min(255, w * 270)); TD[o + 1] = 0; }
+      // a blow breaks it in stages, the way the study counts hit points: plaster off, then a breach, then the room; frozen or hot stone goes faster
+      if (power >= 0.9 && !up && d < 0.5) TD[o + 3] = Math.min(255, TD[o + 3] + (TD[o + 2] > 120 ? 70 : TD[o + 1] > 150 ? 55 : 26));
+    }
+    q.hold = 30; q.dirty = true; q.at = tNow; active = 1;
+  }
+  function buildingHit(p, r, el, power) {
+    if (!W.cityMeshes) return; if (!bgrid) buildGrid(); const kx = Math.floor(p.x / 16), kz = Math.floor(p.z / 16);
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const L = bgrid.get(kx + a + ':' + (kz + b)); if (!L) continue; for (const e of L) { const d = Math.hypot(p.x - e[2], p.z - e[3]); if (d > e[6] + r + 0.8 || p.y < e[4] - 2 || p.y > e[5] + r + 1) continue; stampB(e, p, r, el, power); } }
+  }
+  // they come back: held 30 s, then receding, each channel at its own pace, frost fastest
+  function mendB(dt) {
+    let any = 0;
+    for (let s = 0; s < NS; s++) {
+      const q = slots[s]; if (!q.key) continue; any = 1; if (q.hold > 0) { q.hold -= dt; continue; }
+      const base = s * TS * TS * 4, dC = (dt / 60) * 255, dH = (dt / 15) * 255, dF = (dt / 10) * 255, dB = (dt / 60) * 255; let left = 0;
+      for (let o = base; o < base + TS * TS * 4; o += 4) { TD[o] = Math.max(0, TD[o] - dC); TD[o + 1] = Math.max(0, TD[o + 1] - dH); TD[o + 2] = Math.max(0, TD[o + 2] - dF); TD[o + 3] = Math.max(0, TD[o + 3] - dB); left |= TD[o] | TD[o + 1] | TD[o + 2] | TD[o + 3]; }
+      q.dirty = true; if (!left) { setSlot(q.m, q.i, 0); slotOf.delete(q.key); q.key = null; }
+    }
+    // the whole array, when anything changed: a layer at a time left the layers past the first unseen in this build of three, and it's 131 KB at most five times a second
+    let up = false; for (let s = 0; s < NS; s++) if (slots[s].dirty) { slots[s].dirty = false; up = true; } if (up) TT.needsUpdate = true;
+    return any;
+  }
+
   // one spot of anything: where it lands, how wide, what it is, how hard. Every power that reaches the ground comes through here
   function hit(p, r, el, power = 1) {
-    const g = W.heightAt(p.x, -p.z), h = G.hero; if (g < 0.2 || p.y - g > r + 2.5 || Math.hypot(p.x - h.pos.x, p.z - h.pos.z) > SIZE * 0.42) return;
+    const g = W.heightAt(p.x, -p.z), h = G.hero; if (Math.hypot(p.x - h.pos.x, p.z - h.pos.z) > SIZE * 0.42) return;
+    buildingHit(p, r, el, power);
+    if (g < 0.2 || p.y - g > r + 2.5) return;
     if (!live) start(h.pos.x, h.pos.z); else follow(h.pos.x, h.pos.z);
     const cc = Math.round((p.x - ox) / CELL + N / 2 - 0.5), cr = Math.round((oz - p.z) / CELL + N / 2 - 0.5), R = Math.ceil(r / CELL) + 1;
     if (el === 'fire') lit.copy(p);
@@ -96,8 +144,8 @@ export function createScorch(G) {
   return {
     hit,
     update(dt, x, z) {
-      if (!live) return; if (active) follow(x, z); acc += dt;
-      if (acc >= TICK) { acc = 0; if (active) tick(); if (dirty) { tex.needsUpdate = true; dirty = false; } }
+      if (!live && !slotOf.size) return; if (live && active) follow(x, z); acc += dt;
+      tNow += dt; if (acc >= TICK) { acc = 0; if (active) tick(); if (mendB(TICK)) active = 1; if (dirty) { tex.needsUpdate = true; dirty = false; } }
       if (active && G.fireLight) for (const f of fires) if (f.n) G.fireLight.light(f.x, f.y + 1.2, f.z, 1, 0.42, 0.1, 10 + Math.min(10, f.n * 0.4), 16 + f.n, 0.6, f.x);
     },
     restore() { tex.needsUpdate = true; }, grid, touch() { tex.needsUpdate = true; },

@@ -351,7 +351,8 @@ function bakeGrid(size, seg, cx, cy, flat) {
 // A periodic wave surface bends a fine grid of sun rays onto the seabed; where the grid folds, light piles up. 32 slices of a loop, in a
 // tile that repeats in x, y and time. Each slice stores light/5, so a slice's mean reads about .2 and a mean of 1 is the undisturbed sun.
 function bakeCaustics(renderer, tier) {
-  const N = tier === 'phone' ? 192 : 256, L = 32, NW = 16, seg = tier === 'phone' ? 300 : 400;
+  // 160 a side on a phone: under the sea it reads the same, and 0.4 MB of the budget comes back for the buildings' damage
+  const N = tier === 'phone' ? 160 : 256, L = 32, NW = 16, seg = tier === 'phone' ? 260 : 400;
   const rt = new THREE.WebGL3DRenderTarget(N, N, L, {
     format: THREE.RedFormat, type: THREE.UnsignedByteType, depthBuffer: false, generateMipmaps: true,
     minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping,
@@ -493,7 +494,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
     tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
-    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, ocEmbers: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    ocLightP: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 1)) }, ocLightC: { value: Array.from({ length: 16 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocGridM: { value: new THREE.Vector4(0, 0, .25, 64) }, ocLightN: { value: 0 }, tOcDmg: { value: (() => { const t = new THREE.DataArrayTexture(new Uint8Array(32 * 32 * 4 * 32), 32, 32, 32); t.format = THREE.RGBAFormat; t.type = THREE.UnsignedByteType; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true; return t; })() }, ocDmgC: { value: Array.from({ length: 32 }, () => new THREE.Vector4(0, 0, 0, .1)) }, ocEmbers: { value: 0 }, tOcRefl: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() }, ocReflOn: { value: 0 }, ocCapA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) }, ocCapB: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     ocAddGain: { value: phone ? 1 : .5 },
     ocRes: { value: new THREE.Vector2(0, 0) },
     ocShaft: { value: 1 },
