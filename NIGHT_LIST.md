@@ -33,7 +33,12 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | 27 | Ragdoll physics: characters pushed back by attacks | To do |
 | 28 | Thrusters are lost when hit | To do |
 | 29 | Body and movement requirements read off real fight frames, from the two references he named | Started |
-| 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After 24 to 29 |
+| 31 | Ice in the fights and the duel, the water side's second element | To do |
+| 32 | The blue foes are their own people, separate from the water elementals, and fight and fly better | To do |
+| 33 | Fire burns and breaks the world; water puts fire out, freezes and breaks it; buildings recover | To do |
+| 34 | Dodge in the air | To do |
+| 35 | Near the sea, the water tornado drags fire and other foes in: henchmen drown, bosses and the main character are disarmed and badly hurt | To do |
+| 30 | A new showcase of both sides with the new features, on web and phone, for him to talk through how Part 2 was made | After 24 to 35 |
 
 Owed from before: two real thumbs on Boost and Jump (real touch fingers in Chromium, S9 and S10, Build 56), a real iPhone, a lost graphics context repainting the isle (fixed, Build 56), Q7 at Thalor (102 now), the merge of `fire` into `part2` (done at Build 53).
 
