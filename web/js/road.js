@@ -7,6 +7,7 @@ export function createRoad(G) {
     { text: 'Take off: hold Boost, then Jump', done: () => G.hero.fireAir },
     { text: 'Hold Fly and drop down to the Ash City', to: at(246, -760, 14), done: (s) => near(s.to, 40) },
     { text: 'Stand on the rim of the volcano', to: at(378, -874, 112), done: (s) => near(s.to, 46) },
+    { text: 'Land on the Cinder Keep', to: at(446, -792, 120), done: (s) => near(s.to, 36) && !G.hero.air },
     { text: 'Break the raids: bring down three', done: () => kills() >= 3 },
     { text: 'Beat the Tidecaller', done: () => G.ember.champions().beaten },
     { text: 'Carry the fire to Sunward Harbour', to: at(-316, -563, 8), done: (s) => near(s.to, 80) },

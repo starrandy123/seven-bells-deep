@@ -5,7 +5,7 @@ His words are in `EPIC.md` §11. "Done" here means built and checked. `accepted`
 | # | Ask | State |
 |---|---|---|
 | 1 | Fire elementals: no staff, regular men in red, all-fire as super mode | Built (Build 35-37) |
-| 2 | Cities on the ground and in the sky, and enemies for the fire side | Built, buildings to be redone (#14) |
+| 2 | Cities on the ground and in the sky, and enemies for the fire side | Built. Build 60 adds the sky fortresses he named on 1 Nov: the Cinder Keep and the Ember Gate, floating keeps read off a real castle's plan |
 | 3 | Choose water or fire on the home screen, switch from pause | Built |
 | 4 | Foot thrusters are one | Built |
 | 5 | Water looks unnatural from the air | Built, his eye |

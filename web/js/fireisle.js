@@ -6,6 +6,8 @@ import { BURN } from './burn_glsl.js';
 export const ISLE = { x: 300, y: -800, R: 190 };
 export const FIRE_HILL = { x: 378, y: -874 };
 const CITY = { id: 'ash_city', name: 'The Ash City', x: 246, y: -760, r: 86 }, SKY = { id: 'sky_city', name: 'The High City', x: 306, y: -806, z: 86, r: 66 };
+// the sky fortresses: a keep on a rock of its own, flown to from the High City. Read off a real keep: a five-storey tower at the centre on a sloped stone base, smaller keeps by it, turrets at the corners, plastered walls between them with a gate (Himeji's plan, bunka.nii.ac.jp/suisensyo/himeji)
+export const KEEPS = [{ id: 'cinder_keep', name: 'The Cinder Keep', x: 446, y: -792, z: 118, r: 30, a: 0.35 }, { id: 'ember_gate', name: 'The Ember Gate', x: 322, y: -966, z: 102, r: 26, a: -0.5 }];
 const smooth = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 const shore = (a) => 1 + 0.10 * Math.sin(a * 3 + 1.1) + 0.07 * Math.sin(a * 5 + 2.7) + 0.045 * Math.sin(a * 9 + 0.4);
 const rough = (x, y) => 0.5 * Math.sin(x * 0.061 + y * 0.043) + 0.3 * Math.sin(x * 0.13 - y * 0.097 + 1.3) + 0.2 * Math.sin(x * 0.23 + y * 0.19 + 2.1);
@@ -44,7 +46,7 @@ export function isleZ(x, y, bed) {
 }
 export function addIsle(data) {
   if (data.poi.some((p) => p.id === CITY.id)) return;
-  data.poi.push({ id: 'burnt_isle', name: 'The Burnt Isle', x: ISLE.x, y: ISLE.y, z: 8, r: ISLE.R, noBreak: true }, { ...CITY, z: 8, noBreak: true }, { ...SKY, noBreak: true });
+  data.poi.push({ id: 'burnt_isle', name: 'The Burnt Isle', x: ISLE.x, y: ISLE.y, z: 8, r: ISLE.R, noBreak: true }, { ...CITY, z: 8, noBreak: true }, { ...SKY, noBreak: true }, ...KEEPS.map((k) => ({ ...k, fort: true, noBreak: true })));
   const z = isleZ(FIRE_HILL.x, FIRE_HILL.y, 0) + 8; data.plumes.push({ id: 'isle_crater', x: FIRE_HILL.x, y: FIRE_HILL.y, z, r: 16, h: 120 });
   // what stood on this sea floor is under the island now
   for (const k in data.instances) { const L = data.instances[k]; let hit = false; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) < 1.15) { hit = true; break; } if (!hit) continue; const keep = []; for (let i = 0; i < L.length; i += 6) if (edge(L[i], L[i + 1]) >= 1.15) keep.push(L[i], L[i + 1], L[i + 2], L[i + 3], L[i + 4], L[i + 5]); data.instances[k] = keep; }
@@ -64,11 +66,16 @@ export function paintIsle(b, bn, c, ox, oy) {
 }
 // the rock the High City stands on: flat on top, a broken cone below it, split by the same molten seams as an Emberkin
 export function skyRock(scene, look, U) {
-  const seg = 56, rings = [[0, 0], [0.45, 0], [0.8, 0], [0.97, -0.2], [1.02, -1.4], [1.0, -6], [0.88, -15], [0.68, -28], [0.46, -42], [0.27, -56], [0.1, -70]], P = [], M = [], I = [];
-  const rim = (a) => SKY.r * 1.07 * (1 + 0.06 * Math.sin(a * 3 + 0.7) + 0.045 * Math.sin(a * 7 + 1.9)), bump = (a, d) => (d < -1 ? 1 : 0) * (2.6 * Math.sin(a * 11 + d * 0.3) + 1.8 * Math.sin(a * 17 - d * 0.21 + 1));
-  for (let k = 0; k < rings.length; k++) for (let j = 0; j < seg; j++) { const a = (j / seg) * 6.2832, [f, d] = rings[k], r = f * rim(a) + bump(a, d) * Math.min(1, f * 1.4); P.push(SKY.x + Math.cos(a) * r, SKY.z + d + (d < -1 ? bump(a + 1, d) * 0.8 : 0), -(SKY.y + Math.sin(a) * r)); M.push(d < -1 ? 0.55 + 0.25 * Math.sin(a * 5 + d) : 0.1, 0, 0, 1); }
-  for (let k = 0; k + 1 < rings.length; k++) for (let j = 0; j < seg; j++) { const a = k * seg + j, b = k * seg + (j + 1) % seg, c = a + seg, e = b + seg; I.push(a, e, b, a, c, e); }
-  const tip = P.length / 3; P.push(SKY.x, SKY.z - 84, -SKY.y); M.push(0.9, 0, 0, 1); for (let j = 0; j < seg; j++) I.push((rings.length - 1) * seg + j, tip, (rings.length - 1) * seg + (j + 1) % seg);
+  const P = [], M = [], I = [];
+  // the High City's rock, and a smaller one under each keep: the same shape to scale, all one mesh and one draw
+  const rock = (S, seg) => {
+    const k0 = S.r / SKY.r, base = P.length / 3, rings = [[0, 0], [0.45, 0], [0.8, 0], [0.97, -0.2], [1.02, -1.4], [1.0, -6], [0.88, -15], [0.68, -28], [0.46, -42], [0.27, -56], [0.1, -70]];
+    const rim = (a) => S.r * 1.07 * (1 + 0.06 * Math.sin(a * 3 + S.x + 0.7) + 0.045 * Math.sin(a * 7 + 1.9)), bump = (a, d) => (d < -1 ? k0 : 0) * (2.6 * Math.sin(a * 11 + d * 0.3) + 1.8 * Math.sin(a * 17 - d * 0.21 + 1));
+    for (let k = 0; k < rings.length; k++) for (let j = 0; j < seg; j++) { const a = (j / seg) * 6.2832, f = rings[k][0], d = rings[k][1] * (rings[k][1] < -1 ? k0 : 1), r = f * rim(a) + bump(a, d) * Math.min(1, f * 1.4); P.push(S.x + Math.cos(a) * r, S.z + d + (d < -1 ? bump(a + 1, d) * 0.8 : 0), -(S.y + Math.sin(a) * r)); M.push(d < -1 ? 0.55 + 0.25 * Math.sin(a * 5 + d) : 0.1, 0, 0, 1); }
+    for (let k = 0; k + 1 < rings.length; k++) for (let j = 0; j < seg; j++) { const a = base + k * seg + j, b = base + k * seg + (j + 1) % seg, c = a + seg, e = b + seg; I.push(a, e, b, a, c, e); }
+    const tip = P.length / 3; P.push(S.x, S.z - 84 * k0, -S.y); M.push(0.9, 0, 0, 1); for (let j = 0; j < seg; j++) I.push(base + (rings.length - 1) * seg + j, tip, base + (rings.length - 1) * seg + (j + 1) % seg);
+  };
+  rock(SKY, 56); for (const k of KEEPS) rock(k, 30);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('_mask', new THREE.Float32BufferAttribute(M, 4)); g.setAttribute('color', new THREE.Float32BufferAttribute(new Array(P.length).fill(1), 3)); g.setIndex(I); g.computeVertexNormals();
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
   look.patch(m, { key: 'skyrock', uniforms: { uEmT: U.ocTime, uHeat: { value: 1 }, uEmS: { value: new THREE.Vector4(0, 0, 0, 0.035) }, uSide: { value: 0 } }, ...BURN });

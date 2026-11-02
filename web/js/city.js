@@ -270,6 +270,8 @@ function fireSet(phone) {
   { const m = new Mk(); for (const x of [-1.5, 1.5]) for (const z of [-1, 1]) m.cyl(x, z, 0.09, 0.09, 0, 2.5, 5, K.FIRE_POST, { solid: false }); m.pagoda(0, 0, 3.0, 2.0, 2.5, 0.8, 0.5, 0.35); m.box(0, 0, 3.0, 1.6, 0, 0.9, K.TIMBER, K.TIMBER, 3); A.stall = { geo: m.geometry(), solids: m.S, H: 3.3, W: 3.6 }; }
   { const m = new Mk(); m.cyl(0, 0, 0.1, 0.08, 0, 3.9, 6, K.DARK, { solid: false }); m.cyl(0, 0, 0.34, 0.34, 3.9, 4.6, 8, K.LAMP, { solid: false }); m.cyl(0, 0, 0.42, 0.04, 4.6, 5.0, 8, K.GOLD, { solid: false }); m.S.push({ t: 'cyl', x: 0, z: 0, r: 0.22, y0: 0, y1: 5 }); A.lamp = { geo: m.geometry(), solids: m.S, H: 5, W: 0.8 }; }
   { const m = new Mk(); m.box(0, 0, 1, 1, -3, 0, K.STONE, K.PAVING, 3); A.plinth = { geo: m.geometry(), solids: m.S, H: 0, W: 1 }; }
+  // a fortress wall: stone to the shoulder, a lacquered band, a tiled cap
+  { const m = new Mk(); m.box(0, 0, 10, 1.7, -1, 2.6, K.STONE, K.STONE, 3); m.box(0, 0, 10, 1.25, 2.6, 3.7, K.FIRE_POST, K.FIRE_POST, 3); m.pagoda(0, 0, 10, 1.25, 3.7, 0.75, 0.5, 0.2); A.fortWall = { geo: m.geometry(), solids: m.S, H: 4.5, W: 10 }; }
   return A;
 }
 function landSet(phone) {
@@ -459,6 +461,21 @@ export function planCities(data, heightAt, opts = {}) {
           put(t, x, y, z, yaw, s, s * (0.92 + rand() * 0.16), s, def.fire ? SCORCHED[Math.floor(rand() * SCORCHED.length)] : PLASTER[Math.floor(rand() * PLASTER.length)]);
         }
       }
+    }
+    // the keeps stand on rocks of their own but are this city's pieces: the same kit, in the same draws
+    if (def.id === 'sky_city') for (const f of (data.poi || []).filter((q) => q.fort)) {
+      const fc = Math.cos(f.a), fs = Math.sin(f.a), Z = f.z, S = f.r * 0.6, at = (type, u, v, z, yaw, sx, sy, sz) => put(type, f.x + u * fc - v * fs, f.y + u * fs + v * fc, z, f.a + yaw, sx, sy, sz);
+      colliders.push({ t: 'cyl', x: f.x, y: f.y, z0: Z - 10, z1: Z, r: f.r * 1.06, city: def.id, type: 'rock' });
+      at('plinth', 0, 0, Z + 0.15, 0, S * 2 + 7, 1, S * 2 + 7);
+      // the inner keep on its raised stone base
+      at('plinth', 0, 0, Z + 3.4, 0, S * 1.1, 1.1, S * 1.1); at('campanile', 0, 0, Z + 3.4, 0, 1.5, 1.5, 1.5);
+      at('towerHouse', -S * 0.42, S * 0.42, Z + 3.4, 0, 0.95, 0.95, 0.95); at('towerHouse', S * 0.42, -S * 0.42, Z + 3.4, Math.PI, 0.95, 0.95, 0.95);
+      for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) at('towerHouse', a * S, b * S, Z + 0.15, 0, 1.15, 1.15, 1.15);
+      const run = (S * 2 - 7) / 10, half = (S - 6.5) / 10, off = 3 + (S - 6.5) / 2;
+      at('fortWall', 0, S, Z + 0.15, 0, run, 1, 1); at('fortWall', S, 0, Z + 0.15, Math.PI / 2, run, 1, 1); at('fortWall', -S, 0, Z + 0.15, Math.PI / 2, run, 1, 1);
+      // the gate: the front wall in two runs, with a gap between
+      at('fortWall', off, -S, Z + 0.15, 0, half, 1, 1); at('fortWall', -off, -S, Z + 0.15, 0, half, 1, 1);
+      for (const [a, b] of [[-3.4, -S - 2], [3.4, -S - 2], [-S * 0.5, S * 0.5], [S * 0.5, -S * 0.5]]) at('lamp', a, b, Z + 0.15, 0, 1, 1, 1);
     }
     cities.push({ def, p, inst, plaza, lift: def.fire && plaza ? { x: plaza[0] + 9 * sa, y: plaza[1] - 9 * ca, z: plaza[2] + 0.2 } : null });
   }
