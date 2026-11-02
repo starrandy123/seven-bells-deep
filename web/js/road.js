@@ -7,7 +7,7 @@ export function createRoad(G) {
     { text: 'Take off: hold Boost, then Jump', done: () => G.hero.fireAir },
     { text: 'Hold Fly and drop down to the Ash City', to: at(246, -760, 14), done: (s) => near(s.to, 40) },
     { text: 'Stand on the rim of the volcano', to: at(378, -874, 112), done: (s) => near(s.to, 46) },
-    { text: 'Land on the Cinder Keep', to: at(446, -792, 120), done: (s) => near(s.to, 36) && !G.hero.air },
+    { text: 'Land on the Cinder Keep', to: at(446, -792, 120), done: (s) => near(s.to, 36) && !G.hero.air, raid: 3 },
     { text: 'Break the raids: bring down three', done: () => kills() >= 3 },
     { text: 'Beat the Tidecaller', done: () => G.ember.champions().beaten },
     { text: 'Carry the fire to Sunward Harbour', to: at(-316, -563, 8), done: (s) => near(s.to, 80) },
@@ -17,7 +17,7 @@ export function createRoad(G) {
   let i = 0; try { i = Math.min(STEPS.length - 1, parseInt(localStorage.getItem('thalor.road') || '0', 10) || 0); } catch (_) { /* from the start, then */ }
   return {
     step() {
-      const s = STEPS[i]; if (s.end || !s.done(s) || G.sideNow !== 'fire') return; i++; try { localStorage.setItem('thalor.road', String(i)); } catch (_) { /* this visit */ } G.audio.bell && G.audio.bell(); const n = STEPS[i]; if (n.end) G.ui.toast('The world is yours', 'Go where you like. Pause, then Watch the duel', 6); else G.ui.tip && G.ui.tip(n.text, 3.5); G.combat.log.push({ t: G.time, type: 'road', i });
+      const s = STEPS[i]; if (s.end || !s.done(s) || G.sideNow !== 'fire') return; i++; try { localStorage.setItem('thalor.road', String(i)); } catch (_) { /* this visit */ } if (s.raid) G.ember.raidNow(s.raid); G.audio.bell && G.audio.bell(); const n = STEPS[i]; if (n.end) G.ui.toast('The world is yours', 'Go where you like. Pause, then Watch the duel', 6); else G.ui.tip && G.ui.tip(n.text, 3.5); G.combat.log.push({ t: G.time, type: 'road', i });
     },
     text: () => STEPS[i].text, target: () => STEPS[i].to || null, get at() { return i; }, set at(k) { i = k; },
   };
