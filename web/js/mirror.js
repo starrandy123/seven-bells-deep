@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 
 export function createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities, isle, phone }) {
-  const W = 256, s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(); cam.matrixAutoUpdate = false; cam.matrixWorldAutoUpdate = false;
+  const W = 320, s = new THREE.Scene(), cam = new THREE.PerspectiveCamera(); cam.matrixAutoUpdate = false; cam.matrixWorldAutoUpdate = false;
   let rt = null, frame = 0, h0 = 0;
   const day = { value: 1 }, night = { value: 0 };
   // the land: a grid over the world, its colour and its light baked once, never below the sea
@@ -18,15 +18,16 @@ export function createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size
     const I = []; for (let j = 0; j < n - 1; j++) for (let i = 0; i < n - 1; i++) { const a = j * n + i; I.push(a, a + 1, a + n, a + 1, a + n + 1, a + n); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3, true)); g.setIndex(I);
     const m = new THREE.ShaderMaterial({ uniforms: { uDay: day, ocHaze: U.ocHaze }, side: THREE.DoubleSide, vertexColors: true, toneMapped: false,
-      vertexShader: 'varying vec3 vC; varying float vF; void main(){ vec4 w = modelMatrix*vec4(position.x, max(position.y, 0.0), position.z, 1.0); vC = color; vF = 1.0 - exp(-distance(w.xyz, cameraPosition)*.0011); gl_Position = projectionMatrix*viewMatrix*w; }',
-      fragmentShader: 'uniform float uDay; uniform vec3 ocHaze; varying vec3 vC; varying float vF; void main(){ gl_FragColor = vec4(mix(vC*vC*uDay, ocHaze, vF), 1.0); }' });
+      vertexShader: 'varying vec3 vC; varying float vF, vY; void main(){ vec4 w = modelMatrix*vec4(position, 1.0); vC = color; vY = w.y; vF = 1.0 - exp(-distance(w.xyz, cameraPosition)*.0011); gl_Position = projectionMatrix*viewMatrix*w; }',
+      // nothing under the sea's plane: it would stand between the mirror's eye and the surface
+      fragmentShader: 'uniform float uDay; uniform vec3 ocHaze; varying vec3 vC; varying float vF, vY; void main(){ if (vY < .05) discard; gl_FragColor = vec4(mix(vC*uDay*1.5, ocHaze, vF), 1.0); }' });
     const o = new THREE.Mesh(g, m); o.frustumCulled = false; s.add(o); }
   // the buildings: one box each, from the size of what stands there, in its own colour. Only what's above the sea
   { const box = new THREE.BoxGeometry(1, 1, 1); box.translate(0, 0.5, 0); const L = [], M = new THREE.Matrix4(), B = new THREE.Box3(), c = new THREE.Vector3(), z = new THREE.Vector3(), cm = new THREE.Matrix4(), col = new THREE.Color();
     for (const m of cities) { if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); B.copy(m.geometry.boundingBox); B.getSize(z); if (z.y < 3) continue; B.getCenter(c); for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M); if (M.elements[13] + B.max.y * Math.hypot(M.elements[4], M.elements[5], M.elements[6]) < 1) continue; cm.makeTranslation(c.x, B.min.y, c.z).scale(z); L.push(M.clone().multiply(cm), m.instanceColor ? (m.getColorAt(i, col), col.clone()) : new THREE.Color(0.8, 0.78, 0.72)); } }
     const n = L.length / 2, im = new THREE.InstancedMesh(box, new THREE.ShaderMaterial({ uniforms: { uDay: day, uNight: night, ocHaze: U.ocHaze, ocSunA: U.ocSunA }, side: THREE.DoubleSide, toneMapped: false,
-      vertexShader: 'uniform vec3 ocSunA; varying vec3 vC, vW; varying float vF, vL; void main(){ vec4 w = modelMatrix*instanceMatrix*vec4(position, 1.0); w.y = max(w.y, 0.0); vec3 nn = normalize(mat3(instanceMatrix)*normal); vL = .45 + .6*max(dot(nn, ocSunA), 0.0); vC = instanceColor; vW = w.xyz; vF = 1.0 - exp(-distance(w.xyz, cameraPosition)*.0011); gl_Position = projectionMatrix*viewMatrix*w; }',
-      fragmentShader: 'uniform float uDay, uNight; uniform vec3 ocHaze; varying vec3 vC, vW; varying float vF, vL; void main(){ vec3 c = vC*vC*vL*uDay*.8; c += vec3(1.0, .62, .26)*uNight*step(.55, fract(vW.y*.31))*step(2.0, vW.y)*.7; gl_FragColor = vec4(mix(c, ocHaze, vF), 1.0); }' }), Math.max(1, n));
+      vertexShader: 'uniform vec3 ocSunA; varying vec3 vC, vW; varying float vF, vL; void main(){ vec4 w = modelMatrix*instanceMatrix*vec4(position, 1.0); vec3 nn = normalize(mat3(instanceMatrix)*normal); vL = .45 + .6*max(dot(nn, ocSunA), 0.0); vC = instanceColor; vW = w.xyz; vF = 1.0 - exp(-distance(w.xyz, cameraPosition)*.0011); gl_Position = projectionMatrix*viewMatrix*w; }',
+      fragmentShader: 'uniform float uDay, uNight; uniform vec3 ocHaze; varying vec3 vC, vW; varying float vF, vL; void main(){ if (vW.y < .05) discard; vec3 c = vC*vL*uDay*1.2; c += vec3(1.0, .62, .26)*uNight*step(.55, fract(vW.y*.31))*step(2.0, vW.y)*.7; gl_FragColor = vec4(mix(c, ocHaze, vF), 1.0); }' }), Math.max(1, n));
     for (let i = 0; i < n; i++) { im.setMatrixAt(i, L[i * 2]); im.setColorAt(i, L[i * 2 + 1]); } im.count = n; im.frustumCulled = false; s.add(im); }
 
   // the sea's own surface reads where the camera's ray lands: the same place on the screen, as seen from under the plane
@@ -37,7 +38,7 @@ export function createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size
       if (!above.visible || camera.position.y < 0.5) { U.ocReflOn.value = 0; return; }
       if ((frame++ & 1) && rt) return;
       const w = W, hgt = Math.max(64, Math.round(W / Math.max(camera.aspect, 0.5)));
-      if (!rt || rt.height !== hgt) { if (rt) rt.dispose(); rt = new THREE.WebGLRenderTarget(w, hgt, { type: THREE.HalfFloatType, depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); U.tOcRefl.value = rt.texture; }
+      if (!rt || rt.height !== hgt) { if (rt) rt.dispose(); rt = new THREE.WebGLRenderTarget(w, hgt, { type: THREE.UnsignedByteType, depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); U.tOcRefl.value = rt.texture; }
       cam.projectionMatrix.copy(camera.projectionMatrix); cam.projectionMatrixInverse.copy(camera.projectionMatrixInverse); cam.matrixWorld.copy(camera.matrixWorld).premultiply(R); cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
       const sun = U.ocSunCol.value; day.value = Math.min(1.4, (sun.r + sun.g + sun.b) * 0.5 + 0.12); night.value = Math.max(0, 1 - day.value * 1.6);
       const back = []; for (const o of borrow) if (o && o.visible) { back.push([o, o.parent]); s.add(o); }

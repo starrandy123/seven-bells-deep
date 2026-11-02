@@ -387,7 +387,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         vec3 R = reflect(rd, n); R.y = abs(R.y) + .001;
         vec3 sky = ocAir(R, .6);
         // the world in the sea (mirror.js): what stands above it, stretched along the line of sight by the waves, more the lower the eye
-        if (ocReflOn > .5) { float sinE = max(-rd.y, .08); vec4 rf = texture(tOcRefl, vClip.xy/vClip.w*.5 + .5 + n.xz*vec2(.022, .022/sinE)); sky = mix(sky, rf.rgb, rf.a); }
+        if (ocReflOn > .5) { float sinE = max(-rd.y, .08); vec2 ru = vClip.xy/vClip.w*.5 + .5 + n.xz*vec2(.022, .022/sinE); vec4 rf = (texture(tOcRefl, ru) + texture(tOcRefl, ru + vec2(0.0, .012/sinE)))*.5; sky = mix(sky, rf.rgb, rf.a); }
         float mu = max(dot(R, ocSkyL), 0.0);
         float m2 = mu*mu, m4 = m2*m2, m8 = m4*m4, m16 = m8*m8, m64 = m16*m16, m256 = m64*m64;
         // the sun on the water: close to, a smooth ripple would mirror it as a white blot; it's a thousand small glints
