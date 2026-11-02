@@ -41,7 +41,10 @@ export function createTurbines(G, cap = 12) {
         // what runs in it: streaks along the jet at speed, and a shimmer in its brightness
         float streak = texture2D(tN, vec2(vUv.x*2.0 + seed, u*1.1 - uT*7.0)).r, fine = texture2D(tN, vec2(vUv.x*5.0 - seed, u*2.6 - uT*13.0)).g, shim = .78 + .44*(streak*.6 + fine*.4);
         float noz = exp(-u*30.0)*(1.0 - smoothstep(.0, .05, vCut));      // the nozzle's own heat, the brightest thing in the photographs
+        // wet below zero: the Pale Flame's, a flame hot enough to burn blue, white at the nozzle, blue, then violet at the tail
+        float pale = step(wet, -.5); wet = max(wet, 0.0);
         vec3 bodyC = mix(mix(mix(vec3(1.0, .93, .78), vec3(1.0, .58, .2), smoothstep(.04, .42, u)), vec3(.95, .28, .06), smoothstep(.42, .95, u)), vec3(.74, .92, 1.0), wet), beadC = mix(vec3(1.0, .86, .5), vec3(.92, .98, 1.0), wet), nozC = mix(vec3(1.0, .96, .84), vec3(.95, 1.0, 1.0), wet);
+        bodyC = mix(bodyC, mix(mix(vec3(.86, .94, 1.0), vec3(.30, .58, 1.0), smoothstep(.04, .42, u)), vec3(.32, .2, .95), smoothstep(.42, .95, u)), pale); beadC = mix(beadC, vec3(.7, .85, 1.0), pale); nozC = mix(nozC, vec3(.9, .97, 1.0), pale);
         float body = edge*tail*shim*(.62 + .5*P), rim = (1.0 - edge)*tail*.16*(.6 + .4*streak);
         vec3 rgb = bodyC*(body + rim) + beadC*bead*(1.4 + 1.4*P)*shim + nozC*noz*edge*2.6;
         gl_FragColor = vec4(rgb*(.78 + .22*P), clamp(body*.8 + rim + bead*.9 + noz*edge, 0.0, 1.0));

@@ -57,7 +57,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   const shots = []; for (let i = 0; i < (phone ? 6 : 9); i++) shots.push({ on: false, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, from: null, dmg: 0, back: false, cued: false, trailT: 0 });
   let X = null;      // what enemies.js lends: takeToken, dropToken, beginTell, tellStep, beginStrike, endTell, blowLands, playClip, free, spawn, count
   const v4 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3(), acc = new THREE.Vector3(), want = new THREE.Vector3(), push = new THREE.Vector3(), viewX = new THREE.Vector3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion();
-  const FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
+  const PALE = new THREE.Color(0.35, 0.6, 1.0), FIRE = new THREE.Color(1.0, 0.42, 0.07), HOT = new THREE.Color(1.0, 0.72, 0.28), SMOKE = new THREE.Color(0.2, 0.18, 0.18), STEAM = new THREE.Color(0.82, 0.86, 0.9), SEA = new THREE.Color(0.22, 0.72, 1.0), FOAM = new THREE.Color(0.86, 0.97, 1.0);
   const DUST = new THREE.Color(0.74, 0.69, 0.62);
   const waters = [];      // the water elementals in the air. They aren't foes: nothing the Warden aims lands on them, and they aren't counted in a fight
   const JET = createTurbines(G, phone ? 12 : 18), FL = createFlames(G, phone ? 130 : 190); G.fireKit = createFireKit(G, FL); G.flames = FL;
@@ -96,6 +96,9 @@ export async function createEmber(G, { foeMaterial, D }) {
   function brain(e, dt) {
     pick(e, dt);
     const h = e.foe || G.hero, F = e.def, dist = e.pos.distanceTo(h.pos), Fl = e.super ? FIERCE : Q.flight;
+    // they fly as he does: a blow of his coming at one in the air, and it may burst aside on its jets, as he can. Not every time, and not again for a moment
+    e.dodgeT = Math.max(0, (e.dodgeT || 0) - dt);
+    if (!e.friend && !e.champ && h === G.hero && h.state === 'attack' && dist < 7 && e.dodgeT <= 0 && e.state !== 'stun' && e.state !== 'dead' && e.doused <= 0 && e.state !== 'strike') { e.dodgeT = 1.4; if (Math.random() < 0.38) { v1.subVectors(e.pos, h.pos).normalize(); v2.set(-v1.z, 0, v1.x).multiplyScalar(Math.random() < 0.5 ? 1 : -1); e.vel.addScaledVector(v2, 20).addScaledVector(v1, 6); e.vel.y += 3; e.spool = 1; G.combat.log.push({ t: G.time, type: 'foe_dodge', foe: e.kind }); } }
     if (e.friend && e.free && e.state === 'circle' && (e.idleT = (e.idleT || 0) + dt) > Q.water.stays_s) { e.state = 'leave'; e.t = 2.4; } else if (!e.free) e.idleT = 0;
     e.t -= dt; if (e.state !== 'dead') e.heat = Math.min(1, e.heat + (e.doused > 0 ? 0 : H.regain_per_s) * dt);
     if (!e.champ && !e.friend && !e.super && e.state === 'circle' && e.doused <= 0) { e.superT -= dt; if (e.superT <= 0 && e.hp < e.maxHp * Q.super.at_hp) { e.state = 'ignite'; e.t = Q.super.tell_s; X.dropToken(e); X.playClip(e, 'e_hook', 0.12, true); G.combat.log.push({ t: G.time, type: 'ignite', foe: e.kind }); A().tell && A().tell(true); } }
@@ -242,7 +245,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   // ------------------------------------------------------------------ fire: a bolt flies, leaves its trail, and meets something
   function bolt(e, b) {
     const s = shots.find((x) => !x.on); if (!s) return; const h = e.foe || G.hero, side = e.warden ? 0 : (e.nextHand = (e.nextHand || 0) ^ 1), hand = e.slot.jets[side][1];
-    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage * (e.super ? Q.super.damage : 1); s.t = 3.2; s.trailT = 0; s.blow = b.id; s.ice = !!e.warden;
+    hand.getWorldPosition(s.p); s.on = true; s.back = false; s.cued = false; s.from = e; s.dmg = b.damage * (e.super ? Q.super.damage : 1); s.t = 3.2; s.trailT = 0; s.blow = b.id; s.ice = !!e.warden; s.pale = !!e.pale;
     v1.copy(h.pos); if (h === G.hero) v1.y = Math.max(h.pos.y + 0.3, 0.3); const l = s.p.distanceTo(v1) / b.speed_mps; v1.addScaledVector(h.vel, l * b.lead); s.v.subVectors(v1, s.p).normalize().multiplyScalar(b.speed_mps); s.side = e.side; s.friendly = !!e.friend;
     fx().sparks(s.p, 6, e.side === 'water' ? 0xbdf7ff : 0xffa040, 5); A().fwoosh && A().fwoosh(); G.combat.log.push({ t: G.time, type: 'bolt', foe: e.kind, blow: b.id });
   }
@@ -263,7 +266,8 @@ export async function createEmber(G, { foeMaterial, D }) {
       s.t -= dt; s.p.addScaledVector(s.v, dt); const dist = s.p.distanceTo(h.pos), sp = s.v.length() || 1, wet = s.side === 'water'; let done = s.t <= 0;
       if ((s.trailT -= dt) <= 0) {
         s.trailT = 0.03;
-        if (wet) { fx().sp('dot', s.p, 0.34, 0.24, SEA, { s0: 0.34, s1: 0.08, hot: 0.6, add: 0.5 }); fx().sp('bead', s.p, 0.1, 0.5, FOAM, { s0: 0.1, s1: 0.04, hot: 0.4, add: 0.3, vy: 1, grav: 7 }); }
+        if (s.pale) { fx().sp('dot', s.p, 0.42, 0.26, PALE, { s0: 0.42, s1: 0.1, hot: 0.8, add: 0.9 }); G.fireLight.light(s.p.x, s.p.y, s.p.z, 0.35, 0.55, 1, 12, 24, 0.3, 5.5); }
+        else if (wet) { fx().sp('dot', s.p, 0.34, 0.24, SEA, { s0: 0.34, s1: 0.08, hot: 0.6, add: 0.5 }); fx().sp('bead', s.p, 0.1, 0.5, FOAM, { s0: 0.1, s1: 0.04, hot: 0.4, add: 0.3, vy: 1, grav: 7 }); }
         else { G.fireLight.pop(s.p, 1, 0.5, 0.16, 11, 0.06, 26); fx().sp('dot', s.p, 0.42, 0.26, FIRE, { s0: 0.42, s1: 0.1, hot: 0.7, add: 0.8 }); if (Math.random() < 0.35) fx().sp('smoke', s.p, 0.3, 0.6, SMOKE, { s0: 0.22, s1: 0.6, a: 0.28, add: 0, hot: 0, rot: Math.random() * 6.28 }); }
       }
       if (s.friendly) { for (const o of emberkin()) if (!done && o.pos.distanceTo(s.p) < 1.6) { o.onHit(s.dmg, s.p, 'water', { element: 'water', status: { soak: 1 }, knock: 3, stun: 0.25, poise: 14 }); fx().sparks(s.p, 10, 0xbdf7ff, 7); steam(s.p, 4, 0.9); done = true; } }
@@ -278,7 +282,7 @@ export async function createEmber(G, { foeMaterial, D }) {
         }
       }
       if (!done && s.p.y < 0) { if (wet) fx().ring(v2.copy(s.p).setY(0.05), 1.4, 0.35, 0xdff4ff, Y); else { hissAt(v1.copy(s.p).setY(0.1), 1.1); fx().ring(v2.copy(s.p).setY(0.05), 1.8, 0.4, 0xdff4ff, Y); A().splash(); } done = true; }
-      if (!done) { const g = groundAt(s.p.x, s.p.z); if (s.p.y < g) { if (wet) fx().sparks(s.p, 8, 0xbdf7ff, 5); else burst(s.p, 12); G.dmg.hit(s.p, 2.2, s.ice ? 'ice' : wet ? 'water' : 'fire', 0.9); done = true; } }
+      if (!done) { const g = groundAt(s.p.x, s.p.z); if (s.p.y < g) { if (wet) fx().sparks(s.p, 8, 0xbdf7ff, 5); else burst(s.p, 12); G.dmg.hit(s.p, 2.2, s.ice ? 'ice' : wet && !s.pale ? 'water' : 'fire', 0.9); done = true; } }
       if (done) s.on = false;
     }
   }
@@ -299,7 +303,7 @@ export async function createEmber(G, { foeMaterial, D }) {
   }
   function douse(e) {
     if (e.doused > 0 || e.hp <= 0) return; e.doused = H.doused_s; X.dropToken(e); X.endTell(e); if (e.super) { e.super = false; form(e.slot, false); e.superT = Q.super.again_s; G.combat.log.push({ t: G.time, type: 'put_out', foe: e.kind }); } e.u.uTell.value = 0; e.state = 'stun'; e.t = H.doused_s; e.heat = 0; steam(e.pos, 10, 1.6); A().hiss && A().hiss(1); X.playClip(e, 'fall', 0.2, false);
-    if (e.side === 'water') G.combat.teach('boiled', 'Boiled dry', 'Fire burns off their jets. Strike now'); else G.combat.teach('doused', 'Doused', 'Water puts them out. Strike now'); G.combat.log.push({ t: G.time, type: 'doused', foe: e.kind }); e.ask.set(0, 0, 0);
+    if (e.pale) G.combat.teach('guttered', 'Guttered', 'Their blue fire is spent. Strike now'); else if (e.side === 'water') G.combat.teach('boiled', 'Boiled dry', 'Fire burns off their jets. Strike now'); else G.combat.teach('doused', 'Doused', 'Water puts them out. Strike now'); G.combat.log.push({ t: G.time, type: 'doused', foe: e.kind }); e.ask.set(0, 0, 0);
   }
   function relight(e) {
     e.doused = 0; e.heat = H.relight; e.state = 'takeoff'; e.t = 0.7; if (e.cur) e.cur.fadeOut(0.18); e.cur = null; burst(v1.copy(e.pos), 18, 1.5); A().boom(); G.combat.log.push({ t: G.time, type: 'relit', foe: e.kind });
@@ -375,7 +379,8 @@ export async function createEmber(G, { foeMaterial, D }) {
     const cam = G.camera.position, far = e.pos.distanceTo(cam);
     if (lit > 0) {
       const flick = 0.82 + 0.3 * Math.random(); e.spool = damp(e.spool ?? 0.4, clamp((0.2 + e.thrust / 3.2) * (e.heat < 0.35 && Math.random() < 0.3 ? 0.4 : 1), 0.3, 1), 3.6, dt);
-      jetsOf(s.jets, e.up, e.spool * lit, wetBody ? 1 : 0, e.phase, e, dt);
+      jetsOf(s.jets, e.up, e.spool * lit, e.pale ? -1 : wetBody ? 1 : 0, e.phase, e, dt);
+      if (e.pale) G.fireLight.light(e.pos.x, e.pos.y - 0.7, e.pos.z, 0.35, 0.55, 1, 6.5, 12 * e.spool * lit, 0.2, e.phase);
       if (!wetBody) G.fireLight.light(e.pos.x, e.pos.y - 0.7, e.pos.z, 1, 0.42, 0.1, 6.5, 12 * e.spool * lit, 0.2, e.phase);
       // the crown of fire: it stands straight up off his head and his speed lays it back. The man has none
       if ((e.super || e.friend) && !e.warden) { s.head.getWorldPosition(v1); v1.addScaledVector(e.up, 0.12); v3.copy(Y).multiplyScalar(5).addScaledVector(e.vel, -0.5).normalize(); const Lc = 0.42 * flick * (0.5 + 0.5 * e.heat), Wc = 0.3; viewX.subVectors(cam, v1).normalize().cross(v3).normalize();
@@ -511,7 +516,9 @@ export async function createEmber(G, { foeMaterial, D }) {
     use(x) { X = x; dressHero(G.hero); R.auto = !(FLAG.qa || FLAG.demo || FLAG.film); let back = false; try { back = !!localStorage.getItem('thalor.save.v2'); } catch (_) { /* no store: a new player */ } if (!back) R.cool = Q.raid.new_player_s; },
     born,
   };
-  function born(e) { e.slot.still.reset(); e.rest0 = undefined; if (e.slot.warden) e.slot.warden.visible = false; e.side = e.side || R.side || 'fire'; e.super = false; e.superT = 0; form(e.slot, !!e.friend); e.u.uSwap.value = e.side === 'water' ? 1 : 0; e.u.uSide.value = e.side === 'water' ? 1 : 0; e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
+  function born(e) { e.slot.still.reset(); e.rest0 = undefined; if (e.slot.warden) e.slot.warden.visible = false; e.side = e.side || R.side || 'fire';
+    // the men in blue who come for the man in red aren't the sea's people: they're the Pale Flame, a fire that burns so hot it burns blue. Randy, 2 Nov: "The blue fire guys I am fighting must be separate from the water elementals right? Who are these guys?"
+    e.pale = e.side === 'water' && !e.friend && G.sideNow === 'fire'; e.super = false; e.superT = 0; form(e.slot, !!e.friend); e.u.uSwap.value = e.side === 'water' ? 1 : 0; e.u.uSide.value = e.side === 'water' ? 1 : 0; e.heat = 1; e.doused = 0; e.up = new THREE.Vector3(0, 1, 0); e.ask = new THREE.Vector3(); e.thrust = 1; e.w = [1, 0, 0, 0]; e.vel.set(0, 0, 0); e.state = 'swimTo'; e.u.uHeat.value = 1; e.u.uFade.value = 0; e.ring = Q.flight.ring_m; e.ang = 0; e.heading = Math.atan2(G.hero.pos.x - e.pos.x, G.hero.pos.z - e.pos.z); e.splashed = false; e.wetNow = false; e.onGround = false;
     const a = e.slot.acts; for (const n of WEIGHTS) { a[n].reset(); a[n].setEffectiveWeight(n === 'fly_hover' ? 1 : 0); a[n].play(); }
   }
 }

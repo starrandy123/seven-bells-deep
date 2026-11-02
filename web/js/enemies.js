@@ -391,7 +391,7 @@ export async function createEnemies(G) {
     const F = e.def, raw = forced || F.blows[Math.floor(Math.random() * F.blows.length)], dif = G.combat.difficulty();
     // the difficulty moves a blow's tell and its weight, never past the half second a phone player is owed
     const b = dif.tell === 1 && dif.damage === 1 ? raw : { ...raw, tell_s: Math.max(0.5, raw.tell_s * dif.tell), damage: raw.damage * dif.damage };
-    if (F.short) { const blue = e.def.flyer && e.side === 'water'; G.combat.teach('meet_' + e.kind + (blue ? '_blue' : ''), blue ? 'A man in blue' : F.name, blue ? 'Fire boils him dry. Strike when he falls' : F.short); }      // the first swing of a new kind says what beats it
+    if (F.short) { const blue = e.def.flyer && e.side === 'water'; G.combat.teach('meet_' + e.kind + (blue ? '_blue' : ''), blue ? 'The Pale Flame' : F.name, blue ? 'Their fire burns so hot it burns blue, and burns out fast. Hit them as their jets gutter' : F.short); }      // the first swing of a new kind says what beats it
     e.blow = b; e.state = 'tell'; e.clock = 0; e.hitDone = false; e.cued = false; e.goal = (e.goal || new THREE.Vector3()).copy(G.hero.pos);
     G.combat.log.push({ t: G.time, type: 'tell', foe: e.kind, blow: b.id, tell_s: b.tell_s, unblockable: !!b.unblockable });
     G.fx.tell && G.fx.tell(e, b); G.audio.tell && G.audio.tell(!!b.unblockable);
