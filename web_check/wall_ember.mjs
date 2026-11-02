@@ -116,25 +116,38 @@ await section(['E21'], async () => {
 });
 // the flight law: the stick points him, Fly pushes him along the nose, let go and he hovers
 await section(['E22'], async () => {
+  // The flight as rebuilt on his word, 2 Nov: "The flight and movement controls are terrible! On mobile I told you to find the correct flight controls and movements" (Pipeline/research/CONTROL_SOURCES.md).
+  // This wall held the flight simulator's model he called terrible (the stick banked and the bank turned him, pull back to climb, the nose left where it was). It now holds the phone's:
+  // with Fly held the stick's X turns him at a rate, to the side it's pushed as seen from behind him, and when it lets go the turn stops and the wings level; its Y points his nose,
+  // pushed up to climb (pull back to climb is the pitchPull setting), and the nose levels out when it lets go. Let go of Fly and he hovers, and the stick moves him where it points.
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
   await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
   const r = await page.evaluate(() => {
-    const G = window.__game, Q = window.__qa, h = G.hero, V = h.pos.constructor, step = (s) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) G.frame(1 / 60); }, wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    const G = window.__game, Q = window.__qa, h = G.hero, step = (s, each) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { G.frame(1 / 60); if (each) each(); } }, wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
     G.ember.setSide('fire', { place: false, quiet: true }); const up = (y = 80) => { h.endFly(); h.pos.set(700, y, 300); h.prev.copy(h.pos); h.vel.set(0, 0, 0); h.air = true; h.land = false; h.fireAir = true; h.launchT = 9; };
-    up(); G.camYaw = 0.5; Q.drive({ boost: true, mx: 0, my: 0 }); step(3); const y0 = h.nYaw, a = { fly: h.fly, sp: h.vel.length(), turn: Math.abs(wrap(h.heading - 0.5)) };
-    Q.drive({ boost: true, mx: 1, my: 0 }); step(1.6); let slip = 0; for (let i = 0; i < 90; i++) { G.frame(1 / 60); slip = Math.max(slip, Math.acos(Math.min(1, h.vel.clone().normalize().dot(h.noseV)))); } const b = { turned: wrap(y0 - h.nYaw), bank: h.nBank, slip: slip * 57.3 };
-    Q.drive({ boost: true, mx: 0, my: 0 }); step(2); const c = { bank: h.nBank };
-    Q.drive({ boost: false, mx: 0, my: 0 }); step(4.5); const d = { sp: h.vel.length(), fly: h.fly };
-    const p0 = h.nPitch; Q.drive({ boost: false, mx: 0, my: -1 }); step(0.5); const e = { up: h.nPitch - p0 }; Q.drive({ boost: false, mx: 0, my: 0 }); step(1); const p1 = h.nPitch; G.settings.invertFlight = true; Q.drive({ boost: false, mx: 0, my: -1 }); step(0.4); e.inv = h.nPitch - p1; G.settings.invertFlight = false; Q.drive({ boost: false, mx: 0, my: 0 }); step(0.3);
-    G.combat.log.length = 0; const y1 = h.pos.y; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: true }); step(2); const f = { fell: y1 - h.pos.y, dodges: G.combat.log.filter((x) => x.type === 'air_dodge').length }; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: false }); step(0.3);
+    up(); G.camYaw = 0.5; Q.drive({ boost: true, mx: 0, my: 0 }); step(3); const a = { fly: h.fly, sp: h.vel.length(), turn: Math.abs(wrap(h.heading - 0.5)) };
+    // full right for 1 s: to his right (the heading falls), banked into it, his path close behind his nose
+    let slip = 0; const y0 = h.nYaw; Q.drive({ boost: true, mx: 1, my: 0 }); step(1, () => { slip = Math.max(slip, Math.acos(Math.min(1, h.vel.clone().normalize().dot(h.noseV)))); }); const b = { turned: wrap(y0 - h.nYaw), bank: h.nBank, slip: slip * 57.3 };
+    // let go: how far past, and the wings
+    const y1 = h.nYaw; Q.drive({ boost: true, mx: 0, my: 0 }); step(0.4); const y2 = h.nYaw; step(0.8); const c = { past: Math.abs(wrap(y1 - h.nYaw)) * 57.3, after: Math.abs(wrap(y2 - h.nYaw)) * 57.3, bank: h.nBank };
+    // full left: to his left
+    const y3 = h.nYaw; Q.drive({ boost: true, mx: -1, my: 0 }); step(0.5); c.left = wrap(h.nYaw - y3); Q.drive({ boost: true, mx: 0, my: 0 }); step(1.2);
+    // pushed up the nose climbs; let go and it levels; with pitchPull, pushed up dives
+    const p0 = h.nPitch; Q.drive({ boost: true, mx: 0, my: 1 }); step(0.5); const e = { up: h.nPitch - p0 }; Q.drive({ boost: true, mx: 0, my: 0 }); step(1.2); e.level = h.nPitch;
+    G.settings.pitchPull = true; Q.drive({ boost: true, mx: 0, my: 1 }); step(0.4); e.pull = h.nPitch - e.level; G.settings.pitchPull = false; Q.drive({ boost: true, mx: 0, my: 0 }); step(1.2);
+    // let go of Fly: he hovers; the stick moves him where it points, to the view's right; a lifted thumb holds him
+    Q.drive({ boost: false, mx: 0, my: 0 }); step(4.5); const d = { sp: h.vel.length(), fly: h.fly, hover: !!h.hover };
+    const x0 = h.pos.clone(), cy = G.camYaw; Q.drive({ boost: false, mx: 1, my: 0 }); step(1.5); d.moved = Math.hypot(h.pos.x - x0.x, h.pos.z - x0.z); d.right = ((h.pos.x - x0.x) * -Math.cos(cy) + (h.pos.z - x0.z) * Math.sin(cy)) / Math.max(d.moved, 1e-3);
+    Q.drive({ boost: false, mx: 0, my: 0 }); step(1.5); d.still = h.vel.length();
+    G.combat.log.length = 0; const y4 = h.pos.y; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: true }); step(2); const f = { fell: y4 - h.pos.y, dodges: G.combat.log.filter((x) => x.type === 'air_dodge').length }; Q.drive({ boost: false, mx: 0, my: 0, jumpHeld: false }); step(0.3);
+    // a thumb still pushing up when the flight starts doesn't swing the nose
     up(); G.camYaw = 0; Q.drive({ boost: true, mx: 0, my: 1 }); step(0.8); const g = { pitch: h.nPitch, latch: h.latch };
     return { a, b, c, d, e, f, g };
   });
   const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), { a, b, c, d, e, f, g } = r;
-  line('E22', a.fly && a.sp > 20 && a.turn < 0.02 && b.turned > 0.6 && b.bank > 0.9 && b.slip < 10 && Math.abs(c.bank) < 0.05 && d.sp < 1 && d.fly && e.up > 0.1 && e.inv < -0.05 && f.fell > 4 && !f.dodges && g.pitch > -0.02 && !real.length, `Fly alone flew straight at ${a.sp.toFixed(0)} m/s; full stick turned ${(b.turned * 57.3).toFixed(0)}° on a ${(b.bank * 57.3).toFixed(0)}° bank with the nose ${b.slip.toFixed(1)}° off his path; wings came level (${(c.bank * 57.3).toFixed(1)}°); let go: ${d.sp.toFixed(2)} m/s, still flying; pull back raised the nose ${(e.up * 57.3).toFixed(0)}°, inverted ${(e.inv * 57.3).toFixed(0)}°; Jump held fell ${f.fell.toFixed(1)} m with ${f.dodges} dodges; a thumb held up through the start kept the nose at ${(g.pitch * 57.3).toFixed(0)}°; ${real.length} errors ${real[0] || ''}`);
+  line('E22', a.fly && a.sp > 20 && a.turn < 0.02 && b.turned > 1.0 && b.bank > 0.9 && b.slip < 10 && c.past < 6 && c.after < 1 && Math.abs(c.bank) < 0.05 && c.left > 0.5 && e.up > 0.5 && Math.abs(e.level) < 0.05 && e.pull < -0.3 && d.sp < 1 && d.fly && d.hover && d.moved > 6 && d.right > 0.9 && d.still < 0.5 && f.fell > 4 && !f.dodges && Math.abs(g.pitch) < 0.15 && !real.length, `Fly alone flew straight where the view looked at ${a.sp.toFixed(0)} m/s; full stick right turned him ${(b.turned * 57.3).toFixed(0)}° to his right in 1 s (over 57) on a ${(b.bank * 57.3).toFixed(0)}° bank, his path within ${b.slip.toFixed(1)}° of his nose; let go: ${c.past.toFixed(1)}° past (under 6), still after (${c.after.toFixed(2)}°), wings level (${(c.bank * 57.3).toFixed(1)}°); full left turned him ${(c.left * 57.3).toFixed(0)}° to his left in 0.5 s; pushed up the nose rose ${(e.up * 57.3).toFixed(0)}° in 0.5 s and levelled to ${(e.level * 57.3).toFixed(1)}° when let go; with pull back set, pushed up took it ${(e.pull * 57.3).toFixed(0)}°; let go of Fly: ${d.sp.toFixed(2)} m/s, hovering ${d.hover}, the stick moved him ${d.moved.toFixed(1)} m to the view's right (${d.right.toFixed(2)}), a lifted thumb held him (${d.still.toFixed(2)} m/s); Jump held fell ${f.fell.toFixed(1)} m with ${f.dodges} dodges; a thumb held up through the start kept the nose at ${(g.pitch * 57.3).toFixed(0)}°; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
-// a building marked where it's hit, and whole again in time
 await section(['E23'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&qa', { ctx: TURNED, wait: false });
   await page.waitForFunction(() => window.__game && window.__game.booted && window.__game.dmg, null, { timeout: 90000 });

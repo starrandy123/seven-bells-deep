@@ -100,6 +100,26 @@ Read from their official help pages, manuals, changelogs and developer news, wit
 
 The stick's dead zone is the scaled radial one of the Godot add-on (MIT) and Sutphin's article; the floating stick with its base following the thumb is nipplejs's dynamic mode with `follow` (MIT), written again in `web/js/ui.js` (no code copied: the idea and its numbers). The springs are Daniel Holden's (Spring-It-On, see `FLIGHT_SOURCES.md`). Unity's and Unreal's are read for their numbers only.
 
-## After
+## After, measured
 
-(Measured on the build that ships this; see the table in the commit and `web_check/feel.mjs`.)
+`web_check/feel.mjs` on both builds with the same fingers: before is the tree as it stood (b7b3ee9: Build 67 and the body's smoothness commits), after is this rebuild.
+
+| | Before | After | What the sources give |
+|---|---|---|---|
+| Flight, Fly held, full stick: 90° / 180° | 2.53 s / 4.73 s | 1.08 s / 2.18 s | C5's STANDARD turns toward the stick at once |
+| Flight: until the turn shows (5°) | 0.40 s | 0.10 s | |
+| Flight: turned in the first second | 28° | 83° | |
+| Flight: let go at 90°, the nose goes on | 10.4°, still turning 0.75 s later | 3.3°, stopped 0.13 s later | C5: the wings level when the stick lets go |
+| Flight: the view behind him again after the turn | | 0.12 s | Unreal's spring arm lag: about 0.1 s |
+| Flight: stick pushed up for 1 s | nose 17° DOWN | nose 68° up (22° by 0.25 s) | M1: down dives, up climbs; C1 not inverted by default |
+| Flight: 1 s after letting go of it | held at -20.6° | 0.2° | |
+| Hover, stick right | turned on the spot, 90° in 0.95 s, the view swung 120° | faces right in 0.38 s and moves right at 8 m/s, the view still; a lifted thumb stops him in 0.65 s | M1's helicopter |
+| On foot, from a run: 90° / 180° | 0.67 s / 1.27 s | 0.40 s / 1.10 s | Unreal's template 500°/s (90° in 0.18 s); his walk and pivot captures cap it (the move walls) |
+| On foot: let go mid-turn | 13.2° on | 12.1° on | Unreal and Unity stop at once |
+| A thumb resting 4 px off the middle for 3 s | walked 2.67 m, turned 135° | still | a dead zone of 0.10-0.125 |
+| A thumb set down 12 px off the drawn stick's centre | read 22% of a push, walked 0.85 m | reads nothing | the stick wherever the thumb lands |
+| Swim, 90° / surf, 90° / skim, 90° | 1.0 s / 1.38 s / 1.85 s | the same | |
+
+The view, read by the smoothness survey on both builds (the lens's turn rate and its place's acceleration, 60 Hz; 120 Hz where it says): the lens at a jump on land 5.8 rad/s and 2,030 m/s² before, 0.2 and 309 after; floating at depth, where every wave put the lens through the surface, 5.9 rad/s and 2,160 m/s², now 0.1 and 2; a hit or a throw in the water 4.0-5.4 rad/s, now 0.2; the swim boost's first frame 7.2 rad/s, now 0.6; Fly coming on after a takeoff 8.8 rad/s and 3,754 m/s², now 0.6 and 254; the skim's start 9.9 rad/s, now 1.3; his body turning as he takes off from a skim 55 rad/s, now 11; and at 120 Hz the lens's rate jumping from frame to frame in flight 185 rad/s², now 48, an air dodge 401 now 27, a landing 400 now 26, a fire combo 849 now 75, a swim turn 219 now 1.3. Unchanged: the lens's cut through the surface at a leap (by design, 8.5 rad/s) and the body's height snapping as a land ride starts (body.js).
+
+Walls: E22 now holds this flight (it held the flight simulator's); E17, E32, S9, S10 pass; input 37 of 37 in Chromium and WebKit; lag passes; move_walls 57 of 66 in both engines, and every failure is the body's or was there before; M8b, M10c and M10g pass.
