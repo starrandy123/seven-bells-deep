@@ -227,10 +227,11 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
   const SW = seaWaves(), sea = { U: 7 }; setWind(SW, 7, 0);
   const WV = { ocGw: { value: SW.W }, ocGq: { value: SW.Q }, ocCapK: { value: 0.5 } };
   // how much of the sea is white: Monahan and O'Muircheartaigh's measured cover, 3.84e-6 U^3.41 of the surface, about 0.3% at 7 m/s and 1.4% at 11. The fold the shader whitens below is set so that share of the sea folds that far
-  const CAP = Array.from({ length: 1500 }, () => [Math.random() * 3000, Math.random() * 3000, Math.random() * 600]), capJ = new Float32Array(CAP.length);
+  // 4,000 fixed points, read again only when the wind has moved by 0.2 m/s, and the threshold taken between two of them: the share at 4.6 m/s is 0.07%, three points in four thousand
+  let cs = 7; const CAP = Array.from({ length: 4000 }, () => [((cs = (cs * 16807) % 2147483647) / 2147483647) * 3000, ((cs = (cs * 16807) % 2147483647) / 2147483647) * 3000, ((cs = (cs * 16807) % 2147483647) / 2147483647) * 600]), capJ = new Float32Array(CAP.length); let capU = -1, capV = 0.5;
   function capAt(U) {
-    const W = SW.W, Q = SW.Q; for (let n = 0; n < CAP.length; n++) { const [x, z, t] = CAP[n]; let jxx = 1, jzz = 1, jxz = 0; for (let i = 0; i < OCN; i++) { const w = W[i], k = Math.hypot(w.x, w.y) || 1, s = Math.sin(x * w.x + z * w.y + t * w.z) * Q[i] * w.w; jxx -= s * (w.x / k) * w.x; jzz -= s * (w.y / k) * w.y; jxz -= s * (w.x / k) * w.y; } capJ[n] = jxx * jzz - jxz * jxz; }
-    capJ.sort(); return capJ[Math.min(CAP.length - 1, Math.floor(CAP.length * 3.84e-6 * U ** 3.41))];
+    if (Math.abs(U - capU) < 0.2) return capV; capU = U; const W = SW.W, Q = SW.Q; for (let n = 0; n < CAP.length; n++) { const [x, z, t] = CAP[n]; let jxx = 1, jzz = 1, jxz = 0; for (let i = 0; i < OCN; i++) { const w = W[i], k = Math.hypot(w.x, w.y) || 1, s = Math.sin(x * w.x + z * w.y + t * w.z) * Q[i] * w.w; jxx -= s * (w.x / k) * w.x; jzz -= s * (w.y / k) * w.y; jxz -= s * (w.x / k) * w.y; } capJ[n] = jxx * jzz - jxz * jxz; }
+    capJ.sort(); const f = Math.min(CAP.length - 1.001, CAP.length * 3.84e-6 * U ** 3.41), i = Math.floor(f); return (capV = capJ[i] + (capJ[i + 1] - capJ[i]) * (f - i));
   }
   const BRK = { ocBrkA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, ocBrkK: { value: new THREE.Vector2(BREAK_K, BREAK_W) }, ocBrkN: { value: 0 } };
   const U = {
