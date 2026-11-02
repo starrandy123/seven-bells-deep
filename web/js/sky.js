@@ -442,7 +442,7 @@ export function createSky({ scene, look, tier = 'phone', clock = true }) {
         if (sh > 0.0) {
           vec2 fp = vP.xz*.21;
           float n1 = texture(tOcNoise, fp + ocTime*vec2(.006, .004)).b, n2 = texture(tOcNoise, fp*3.1 - ocTime*vec2(.011, .007)).a;
-          float band = sin(bed*2.6 - ocTime*.8 + n1*7.0)*.5 + .5;
+          float band = sin(bed*2.6 + ocTime*.8 + n1*7.0)*.5 + .5;      // + : with bed positive in the water, a minus ran the bands out to sea
           float foam = sh*smoothstep(.40, .78, n2*.6 + n1*.4 + band*.42 - (1.0 - sh)*.6);
           c = mix(c, mix(vec3(1.25, 1.26, 1.24)*clamp(ocHaze.g*1.25 + .06, 0.0, 1.0), vec3(.24, 1.05, 1.20), ocBio), foam);
           a = max(a, foam*.96);

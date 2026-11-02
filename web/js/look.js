@@ -235,7 +235,9 @@ float ocSunLit(vec3 P, float depth) {
   if (P.y > 0.0) {                                                     // above the sea: the highest thing on each sun ray, baked once
     vec2 ql = P.xz - ocSunA.xz*(P.y/ocSunA.y);
     float hl = texture(tOcLand, (ql - ocLandM.xy)*ocLandM.zw, .5).r; hl *= hl*180.0;
-    return smoothstep(-1.9, .1, P.y - hl)*ocCaps(P);
+    // the higher what casts it, the softer its edge: a sky island's shadow on the plain isn't cut with a knife, and the map's texels stop showing as steps
+    float dh = max(hl - P.y, 0.0);
+    return smoothstep(-1.9 - dh*.07, .1, P.y - hl)*ocCaps(P);
   }
   vec2 q = P.xz + ocSunW.xz*(depth/ocSunW.y);
   float h = texture(tOcSun, (q - ocSunM.xy)*ocSunM.zw).r; h *= h*300.0;   // stored as a square root: finest where the reef is
