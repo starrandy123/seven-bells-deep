@@ -130,11 +130,17 @@ const KIND = [
 function carGeometry() {
   const P = [], N = [], A = [], K = [], M = [];
   const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
-  const quad = (a, b, c, d, part, kind, mat) => { const n = new THREE.Vector3().subVectors(v3(b), v3(a)).cross(new THREE.Vector3().subVectors(v3(c), v3(a))).normalize(); for (const q of [a, b, c, a, c, d]) { P.push(q[0], q[1], q[2]); N.push(n.x, n.y, n.z); A.push(part); K.push(kind); M.push(mat); } };
+  // a face turned out from the solid it closes (ctr): a prism's quads were wound half one way, half the other, so with one-sided paint its roof and some sides were missing from above and the car read as a hollow cutout (Randy, 2 Nov: "The cars are showing the same hollow cutout issue")
+  let ctr = null;
+  const quad = (a, b, c, d, part, kind, mat) => { let n = new THREE.Vector3().subVectors(v3(b), v3(a)).cross(new THREE.Vector3().subVectors(v3(c), v3(a))).normalize();
+    if (ctr) { const fc = v3(a).add(v3(b)).add(v3(c)).add(v3(d)).multiplyScalar(0.25).sub(ctr); if (n.dot(fc) < 0) { const t = b; b = d; d = t; n = n.negate(); } }
+    for (const q of [a, b, c, a, c, d]) { P.push(q[0], q[1], q[2]); N.push(n.x, n.y, n.z); A.push(part); K.push(kind); M.push(mat); } };
   const prism = (w0, w1, y0, y1, z0b, z1b, z0t, z1t, part, kind, matSide, matTop) => {
     const b = [[-w0, y0, z0b], [w0, y0, z0b], [w0, y0, z1b], [-w0, y0, z1b]], t = [[-w1, y1, z0t], [w1, y1, z0t], [w1, y1, z1t], [-w1, y1, z1t]];
+    ctr = new THREE.Vector3(0, (y0 + y1) / 2, (z0b + z1b + z0t + z1t) / 4);
     quad(t[0], t[1], t[2], t[3], part, kind, matTop); quad(b[0], b[3], b[2], b[1], part, kind, matSide);
     quad(b[0], b[1], t[1], t[0], part, kind, matSide); quad(b[1], b[2], t[2], t[1], part, kind, matSide); quad(b[2], b[3], t[3], t[2], part, kind, matSide); quad(b[3], b[0], t[0], t[3], part, kind, matSide);
+    ctr = null;
   };
   KIND.forEach((k, i) => {
     const h = k.L / 2, w = k.W / 2;
