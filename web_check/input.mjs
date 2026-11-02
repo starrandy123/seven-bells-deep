@@ -17,9 +17,12 @@ function hands(page, ctx) {
   const send = async (type, pts) => { cdp = cdp || await ctx.newCDPSession(page); await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([id, p]) => ({ id, x: p.x, y: p.y })) }); };
   const typed = (type, id, x, y) => page.evaluate(([type, id, x, y]) => { window.__tt = window.__tt || {}; const el = type === 'pointerdown' ? (window.__tt[id] = document.elementFromPoint(x, y) || document.body) : window.__tt[id] || document.body; el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, cancelable: true, isPrimary: id === 1, buttons: type === 'pointerup' ? 0 : 1, button: 0 })); }, [type, id, x, y]);
   return {
-    async down(id, x, y) { if (engine === 'chromium') { P.set(id, { x, y }); await send(P.size === 1 ? 'touchStart' : 'touchStart', [...P]); } else await typed('pointerdown', id, x, y); },
-    async move(id, x, y) { if (engine === 'chromium') { P.set(id, { x, y }); await send('touchMove', [...P]); } else await typed('pointermove', id, x, y); },
-    async up(id) { if (engine === 'chromium') { const p = P.get(id); P.delete(id); await send('touchEnd', []); if (P.size) { await send('touchStart', [...P]); await send('touchMove', [...P]); } void p; } else { await typed('pointerup', id, 0, 0); } },
+    async down(id, x, y) { if (engine === 'chromium') { P.set(id, { x, y, x0: x, y0: y }); await send(P.size === 1 ? 'touchStart' : 'touchStart', [...P]); } else await typed('pointerdown', id, x, y); },
+    async move(id, x, y) { if (engine === 'chromium') { const p = P.get(id); p.x = x; p.y = y; await send('touchMove', [...P]); } else await typed('pointermove', id, x, y); },
+    // a lift: this Chromium doesn't read a touchMove that names fewer points as a lift, so every finger comes up and the others go down again where they FIRST landed and move to where
+    // they are (reference_driving_a_port_with_fingers). Put down again where they were, a stick that floats under the thumb (2 Nov, CONTROL_SOURCES.md) read the second press as a fresh
+    // touch at rest and he stopped; the old stick, centred on its drawing, had read it as the same push
+    async up(id) { if (engine === 'chromium') { P.delete(id); await send('touchEnd', []); if (P.size) { await send('touchStart', [...P].map(([i, p]) => [i, { x: p.x0, y: p.y0 }])); await send('touchMove', [...P]); } } else { await typed('pointerup', id, 0, 0); } },
     async tap(x, y, ms = 150) { await this.down(7, x, y); await page.waitForTimeout(ms); await this.up(7); },
   };
 }

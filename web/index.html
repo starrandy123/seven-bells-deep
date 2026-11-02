@@ -176,7 +176,8 @@
 
   /* the menu: one thumb, a tab bar along the bottom, upright and turned */
   #menu { padding: 0; background: var(--sheet); align-items: stretch; justify-content: flex-start; text-align: left; touch-action: pan-y; }
-  #menuHead { flex: none; display: flex; align-items: center; gap: 10px; padding: var(--top) var(--right) 6px var(--left); }
+  /* it wraps on a phone held upright: on one line Play as Fire and Watch the duel pushed Swim on off the right edge, where no thumb could find it */
+  #menuHead { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: var(--top) var(--right) 6px var(--left); }
   #menuHead h2 { flex: 1; margin: 0; font: 500 24px var(--title); letter-spacing: 0.1em; }
   #menuHead span { font-size: 17px; font-weight: 700; color: var(--gold); }
   #menuBody { flex: 1; min-height: 0; position: relative; overflow: hidden; padding: 0 var(--right) 0 var(--left); }

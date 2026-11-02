@@ -6,7 +6,8 @@ import { readSave } from './save.js';
 import { createScreens } from './screens.js';
 
 const $ = (id) => document.getElementById(id);
-export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 1, difficulty: 'normal', toggleBoost: false, invertFlight: false };
+// pitchPull: in flight, pull back to climb as a flight sim does; off, the stick pushed up climbs (Pipeline/research/CONTROL_SOURCES.md). A new key: the old invertFlight meant the opposite, and a save that holds it is left alone
+export const SETTINGS = { music: 1, sound: 1, shake: true, flash: true, camera: 1, difficulty: 'normal', toggleBoost: false, pitchPull: false };
 export const KEY_DEFAULTS = { atk: 'KeyJ', dash: 'KeyK', spin: 'KeyQ', wave: 'KeyE', p4: 'KeyG', stance: 'KeyX', parry: 'KeyL', call: 'KeyR', cast: 'KeyV', ride: 'KeyF', map: 'KeyM' };
 
 // what this build changed, for the line he sees on opening it
@@ -91,19 +92,27 @@ export function createUI(G) {
   addEventListener('pagehide', () => { if (G.started) setPause(true); });
 
   // ------------------------------------------------------------------ touch: a stick where the left thumb lands, looking on the right, the buttons
-  const stick = $('stick'), nub = $('nub');
+  // Pipeline/research/CONTROL_SOURCES.md. The stick comes up under the thumb wherever it lands on the left half, on the drawn stick too: its centre is where the thumb came down,
+  // never a fixed point the thumb has to find (Apple's HIG; WWDC 2026 gives it "the entire half of the screen"; nipplejs's dynamic mode, MIT; Unreal re-centres on a touch).
+  // A thumb set down 12 px off the drawn stick's centre read as 22% of a push, and he walked off with the thumb still
+  const stick = $('stick'), nub = $('nub'), ZONE_X = 0.5, ZONE_TOP = 0.15;
+  // the dead zone: radial and scaled, so a resting thumb is still and a push starts from nothing at its edge, full a little short of the rim (the Godot virtual
+  // joystick's, MIT, and Sutphin 2013; Unity's 0.125 to 0.925). With none, a thumb resting 4 px off the middle walked him 1.65 m and turned him 135° in 3 s
+  const DEAD = 0.12, FULL = 0.93, TRAVEL = 54;
+  const shaped = (x, y, out) => { const m = Math.hypot(x, y); if (m <= DEAD) { out[0] = 0; out[1] = 0; return out; } const k = Math.min(1, (m - DEAD) / (FULL - DEAD)) / m; out[0] = x * k; out[1] = y * k; return out; };
+  const st2 = [0, 0];
   let stickId = null, lookId = null, lookX = 0, lookY = 0, sx = 0, sy = 0, sox = 0, soy = 0, floatStick = false;
   const setStick = (x, y) => {
-    const R = 54, d = Math.hypot(x, y), k = d > R ? R / d : 1; x *= k; y *= k;
-    nub.style.transform = `translate(${x}px,${y}px)`; sx = x / R; sy = -y / R;
+    const d = Math.hypot(x, y), k = d > TRAVEL ? TRAVEL / d : 1; x *= k; y *= k;
+    nub.style.transform = `translate(${x}px,${y}px)`; shaped(x / TRAVEL, -y / TRAVEL, st2); sx = st2[0]; sy = st2[1];
   };
-  // in flight the stick's base follows a thumb past the rim, so a reversal is never more than two radii
-  const stickFrom = (e) => { let x = e.clientX - sox, y = e.clientY - soy; const d = Math.hypot(x, y); if (d > 54 && G.hero && G.hero.fly && !G.hero.skim) { const k = 1 - 54 / d; sox += x * k; soy += y * k; x -= x * k; y -= y * k; } setStick(x, y); };
-  stick.addEventListener('pointerdown', (e) => {
-    stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (_) {} const r = stick.getBoundingClientRect();
-    sox = r.left + r.width / 2; soy = r.top + r.height / 2; stickFrom(e); G.audio.start(); e.stopPropagation();
-  });
-  stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) stickFrom(e); });
+  // the base follows a thumb that slides past the rim, everywhere, so a reversal is never more than two radii and a drifting thumb never falls off the stick (nipplejs's follow; Baldauf 2015)
+  const stickFrom = (e) => { let x = e.clientX - sox, y = e.clientY - soy; const d = Math.hypot(x, y); if (d > TRAVEL) { const k = 1 - TRAVEL / d; sox += x * k; soy += y * k; x -= x * k; y -= y * k; stick.style.left = `${sox - stick.offsetWidth / 2}px`; stick.style.top = `${soy - stick.offsetHeight / 2}px`; } setStick(x, y); };
+  const floatAt = (e) => {
+    stickId = e.pointerId; floatStick = true; sox = e.clientX; soy = e.clientY;
+    stick.style.left = `${e.clientX - stick.offsetWidth / 2}px`; stick.style.top = `${e.clientY - stick.offsetHeight / 2}px`; stick.style.bottom = 'auto'; setStick(0, 0);
+  };
+  stick.addEventListener('pointerdown', (e) => { floatAt(e); try { stick.setPointerCapture(e.pointerId); } catch (_) {} G.audio.start(); e.stopPropagation(); });
   const stickUp = (e) => {
     if (e.pointerId !== stickId) return; stickId = null; setStick(0, 0);
     if (floatStick) { floatStick = false; stick.style.left = ''; stick.style.top = ''; stick.style.bottom = ''; }
@@ -113,12 +122,7 @@ export function createUI(G) {
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch') return;
     G.audio.start();
-    // the left of the screen is the stick, wherever the thumb lands (Apple's touch control rule)
-    if (G.playing && stickId === null && e.clientX < innerWidth * 0.42 && e.clientY > innerHeight * 0.3) {
-      stickId = e.pointerId; floatStick = true; sox = e.clientX; soy = e.clientY;
-      stick.style.left = `${e.clientX - 66}px`; stick.style.top = `${e.clientY - 66}px`; stick.style.bottom = 'auto'; setStick(0, 0);
-      return;
-    }
+    if (G.playing && stickId === null && e.clientX < innerWidth * ZONE_X && e.clientY > innerHeight * ZONE_TOP) { floatAt(e); return; }
     if (lookId !== null) return; lookId = e.pointerId; lookX = e.clientX; lookY = e.clientY;
   });
   addEventListener('pointermove', (e) => {
@@ -183,16 +187,34 @@ export function createUI(G) {
     window.__MOSA_CONTROLS = { schema: 'mosa.controls.v1', actions: a };
   }
 
+  // a pad, by the standard mapping: the left stick is the same stick as the thumb's (its dead zone too), the right one looks, A jumps, X strikes, B parries, Y changes
+  // stance, the right shoulder or trigger is Boost and Fly, Start pauses. It's read only once a pad has said hello, and a read that throws (a frame without the
+  // gamepad permission throws on every read) turns it off rather than every frame
+  let padOn = false; const padWas = []; const pad2 = [0, 0];
+  addEventListener('gamepadconnected', () => { padOn = true; });
+  function readPad() {
+    if (!padOn) return null;
+    try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (const p of l) if (p && p.connected && p.mapping === 'standard') return p; } catch (_) { padOn = false; }
+    return null;
+  }
   // read once per fixed step; one-shot presses are cleared by whoever consumes them
   function sample() {
     if (locked) { input.mx = input.my = input.ud = 0; input.boost = input.jumpHeld = false; input.atk = input.dash = input.spin = input.wave = input.p4 = input.stance = input.parry = input.call = input.ride = input.jump = false; input.cast = input.callHeld = false; input.yaw = input.pitch = 0; return input; }
     const f = (held.KeyW ? 1 : 0) - (held.KeyS ? 1 : 0), r = (held.KeyD ? 1 : 0) - (held.KeyA ? 1 : 0);
-    input.mx = r || sx; input.my = f || sy || (leftAt && performance.now() - leftAt > HOLD ? 1 : 0);
+    const gp = readPad(); let gx = 0, gy = 0, gBoost = false, gJump = false;
+    if (gp) {
+      const b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed), edge = (i) => { const on = b(i), was = padWas[i]; padWas[i] = on; return on && !was; };
+      shaped(gp.axes[0] || 0, -(gp.axes[1] || 0), pad2); gx = pad2[0]; gy = pad2[1];
+      shaped(gp.axes[2] || 0, -(gp.axes[3] || 0), pad2); input.yaw -= pad2[0] * 0.045 * sens(); input.pitch += pad2[1] * 0.032 * sens();
+      if (edge(0)) press('jump'); if (edge(2)) press('atk'); if (edge(1)) press('parry'); if (edge(3)) press('stance'); if (edge(4)) press('dash'); if (edge(9)) togglePause();
+      gBoost = b(5) || b(7); gJump = b(0);
+    }
+    input.mx = r || sx || gx; input.my = f || sy || gy || (leftAt && performance.now() - leftAt > HOLD ? 1 : 0);
     // the arrow keys look, so the whole game plays from the keyboard alone
     input.yaw += ((held.ArrowLeft ? 1 : 0) - (held.ArrowRight ? 1 : 0)) * 0.04 * sens(); input.pitch += ((held.ArrowUp ? 1 : 0) - (held.ArrowDown ? 1 : 0)) * 0.03 * sens();
     input.ud = (held.Space ? 1 : 0) - (held.KeyC || held.ControlLeft ? 1 : 0);
-    input.boost = G.settings.toggleBoost ? boostLatch : !!(held.ShiftLeft || held.ShiftRight || held.boostB || held.mouseBoost);
-    input.jumpHeld = !!(held.Space || held.jumpB);
+    input.boost = G.settings.toggleBoost ? boostLatch : !!(held.ShiftLeft || held.ShiftRight || held.boostB || held.mouseBoost || gBoost);
+    input.jumpHeld = !!(held.Space || held.jumpB || gJump);
     input.callHeld = !!(held.callB || held[G.settings.keys.call]);
     return input;
   }
