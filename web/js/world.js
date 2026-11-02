@@ -10,6 +10,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { retry } from './config.js';
 import { planCities } from './city.js';
 import { addIsle, raiseIsle, paintIsle, skyRock, ISLE, lavaLines } from './fireisle.js';
+import { addMetro, raiseMetro, planMetro, buildMetro, METRO } from './metro.js';
 import { createLava } from './lava.js';
 import { planRivers, dressRivers, riverGeometry, NO_WATER } from './rivers.js';
 import { dressCliffs, slabGeometry, LEAN } from './cliffs.js';
@@ -163,6 +164,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // rivers levelled into the land (rivers.js): their channels and the falls' pools are carved here, before anything reads the field, so the ground drawn,
   // the ground walked on and every prop's footing all agree; written back into the 16 bits that heightAt and a lost context's rebuild read
   const riverPlan = planRivers(data, Hz, n, cell, ox, oy);
+  addMetro(data); raiseMetro(data, Hz, n, cell, ox, oy);      // the skyscraper city on its own island (metro.js)
   addIsle(data); raiseIsle(data, Hz, n, cell, ox, oy);      // the Burnt Isle: the Emberkin's own land, raised here as the rivers are carved, so everything reads the same ground
   if (tweakHeight) tweakHeight(Hz, n, cell, ox, oy);
   if (riverPlan || tweakHeight) for (let i = 0; i < n * n; i++) raw[i] = Math.max(0, Math.min(65535, Math.round((top - Hz[i]) / HK)));
@@ -802,11 +804,11 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     return t;
   }
   // the cities (city.js): planned here, before any instance is drawn, lit or collided with, because each city clears its footprint of the clutter it replaces
-  const cityPlan = planCities(data, heightAt, { phone });
+  const cityPlan = planCities(data, heightAt, { phone }), metroPlan = planMetro(data);
   if (riverPlan) { const add = dressRivers(riverPlan, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }     // stones and plants along the water (rivers.js)
   // the rock over the land's bare faces, and what falls off them (cliffs.js): none on the Frost Isle's ice and none in the Cone's ash, for now
   const cliffPlan = dressCliffs({ data, heightAt, waterAt: riverPlan ? riverPlan.waterAt : () => null, solids: (data.colliders || []).concat(cityPlan.colliders),
-    skip: (x, y) => { if (Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R * 1.3) return true; const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
+    skip: (x, y) => { if (Math.hypot(x - ISLE.x, y - ISLE.y) < ISLE.R * 1.3 || Math.hypot(x - METRO.x, y - METRO.y) < METRO.R * 1.05) return true; const f = (data.waterfalls || []).find((q) => Math.hypot(x - q.x, y - q.y) < 40); if (!f) return false; const c = Math.cos(f.yaw || 0), sn = Math.sin(f.yaw || 0), dx = x - f.x, dy = y - f.y, across = dx * c + dy * sn, along = dx * sn - dy * c; return Math.abs(across) < f.w * .5 + 1.2 + Math.max(0, along - 8) * .3 && along > -5 && along < 24; } });
   for (const k in cliffPlan.add) if (cliffPlan.add[k].length) data.instances[k] = (data.instances[k] || []).concat(cliffPlan.add[k]);
   cliffPlan.add = null;
   { const add = dressReefCity(cityPlan.cities, cityPlan.sets || {}, heightAt); for (const k in add) if (add[k].length) data.instances[k] = (data.instances[k] || []).concat(add[k]); }
@@ -1534,9 +1536,10 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     return kept;
   }
   // what stands in the sun besides the props: every building, and the sky islands, which lay their shadow on the land under them. Randy, 2 Nov: "we HAVE 0 shadows in the game". Pipeline/research/LIGHT_SOURCES.md
-  let cityMeshes = [], skyMeshes = [];
+  let cityMeshes = [], skyMeshes = [], metro = null;
   function addCasters(s, temp, instM) {
     for (const m of cityMeshes) { const im = new THREE.InstancedMesh(m.geometry, instM, m.count); im.instanceMatrix.array.set(m.instanceMatrix.array); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im); }
+    if (metro) for (const m of metro.meshes) { const im = new THREE.InstancedMesh(m.geometry, instM, m.count); im.instanceMatrix.array.set(m.instanceMatrix.array); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im); }
     for (const m of skyMeshes) { const im = new THREE.InstancedMesh(m.geometry, instM, 1); m.updateWorldMatrix(true, false); im.setMatrixAt(0, m.matrixWorld); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; s.add(im); temp.push(im); }
   }
 
@@ -1604,7 +1607,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // Most solids are copies per instance, so world.json can hold a kind's shape once. The arena gate is the world's: its solids and mesh stand until setGateOpen(true), then it sinks into the sand.
   const G8 = data.arena && data.arena.gate;
   // the cities' solids join the world's own (planned above, before any instance was drawn)
-  data.colliders = (data.colliders || []).concat(cityPlan.colliders, cliffPlan.colliders);
+  data.colliders = (data.colliders || []).concat(cityPlan.colliders, cliffPlan.colliders, metroPlan.colliders);
   // the cities' ink: the hull pushed out a constant 1.2 px on the screen near, thinning to nothing by 120 m. It's in the water's haze like everything else (Randy, 1 Nov: "there is a
   // black outline that follows when I'm approaching them": drawn flat black, the outline hung in the water ahead of buildings the haze had already taken)
   const cityInk = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: U,
@@ -1630,8 +1633,9 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // each building's damage slot (scorch.js): a geometry of its own over the shared buffers, so the instanced damage values are per city
   for (const m of cityMeshes) { const g = m.geometry, g2 = new THREE.BufferGeometry(); for (const k in g.attributes) g2.setAttribute(k, g.attributes[k]); g2.setIndex(g.index); g2.boundingBox = g.boundingBox; g2.boundingSphere = g.boundingSphere; g2.setAttribute('aDmg', new THREE.InstancedBufferAttribute(new Uint8Array(m.count * 4), 4, true).setUsage(THREE.DynamicDrawUsage)); m.geometry = g2; }
   { const before = new Set(scene.children); skyRock(scene, look, U); for (const o of scene.children) if (!before.has(o)) o.traverse((q) => { if (q.isMesh) skyMeshes.push(q); }); }
+  metro = buildMetro({ scene, look, plan: metroPlan, phone });
   bakeSun(); bakeLand();
-  const mirror = createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities: cityMeshes, isle: ISLE, phone });
+  const mirror = createMirror({ renderer, U, heightAt, biomeWeights, ox, oy, size, cities: cityMeshes.concat(metro.meshes), isle: ISLE, phone });
   const lava = createLava(scene, look, heightAt, phone);
   const listed = data.colliders || [], kinds = data.col_kinds || {};
   let NS = listed.length, NV = 0;
@@ -1888,6 +1892,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     return w7;
   }
   function update(dt, camera, focus) {
+    if (metro) metro.update(camera);
     cityPlan.update(scene, camera.position, phone);
     camera.updateMatrixWorld();
     updateTerrain(camera);
@@ -1916,7 +1921,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
   // the placements as floats, read by index from here on: as plain arrays they held 3 MB of boxed numbers (a heap snapshot, 2 Nov)
   for (const k in data.instances) data.instances[k] = Float32Array.from(data.instances[k]);
   return {
-    mirror, cityMeshes, data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
+    metro, mirror, cityMeshes, data, heightAt, regionAt, biomeAt, cities: cityPlan, cliffs: cliffPlan, rivers: riverPlan, waterAt: riverPlan ? riverPlan.waterAt : () => null, wet: wetMap, biomeWeights, collide, sweep, solidTop, update, setLampsLit, setGateOpen, terrain, batches, creatures,
     lava, glbs: { props: propsGLB, creatures: creaturesGLB }, lifts: cityPlan.cities.filter((c) => c.lift).map((c) => c.lift),
     tris: () => {
       const t = (m) => m.visible ? m.count * (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3 : 0;

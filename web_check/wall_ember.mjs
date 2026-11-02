@@ -309,6 +309,24 @@ await section(['E30'], async () => {
   line('E30', ok(4.6, 0.4, 1.0) && ok(7, 0.8, 1.6) && ok(9, 1.7, 2.6) && !real.length, `significant height by wind: 4.6 m/s ${o[4.6].Hs.toFixed(2)} m (Beaufort 3: 0.6), 7 m/s ${o[7].Hs.toFixed(2)} m (4: 1.0-1.5), 9 m/s ${o[9].Hs.toFixed(2)} m (5: 2.0-2.5); whitecap cover ${[4.6, 7, 9].map((U) => (o[U].white * 100).toFixed(2) + '% for ' + (o[U].want * 100).toFixed(2) + '%').join(', ')} (Monahan); steepness sums ${[4.6, 7, 9].map((U) => o[U].loops.toFixed(2)).join(', ')} (under 1: no loops); a swimmer's surface moved ${r.swim.range.toFixed(2)} m in 4 s; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// the skyscraper city: a 31 m roofline with rare towers out of it, and what's drawn can be stood on: a tower's roof, the Bell Ring's floor, the Signal Mast's decks
+await section(['E31'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.frame && window.__game.booted, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, Q = window.__qa, h = G.hero, M = G.world.metro, P = M.plan, Z = 7, step = (s) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) G.frame(1 / 60); };
+    const vols = P.boxes.filter((b) => b.kind === 0), tops = new Map(); for (const b of vols) { const k = b.x.toFixed(1) + ',' + b.y.toFixed(1); tops.set(k, Math.max(tops.get(k) || 0, b.z0 + b.h - Z)); }
+    const hs = [...tops.values()], datum = hs.filter((x) => Math.abs(x - 31) < 4).length / hs.length, tall = hs.filter((x) => x > 60).length / hs.length, top = Math.max(...hs);
+    // dropped over a roof he lands on it
+    const roof = vols.filter((b) => b.sx > 12 && b.sy > 12 && b.z0 + b.h > 40).sort((a, b) => b.z0 + b.h - (a.z0 + a.h))[0]; const land = (x, y, z) => { h.endFly && h.endFly(); Q.leapAt(x, y, z + 4, 0, 0, 0); h.inv = 1e6; step(2.5); return h.pos.y; };
+    const onRoof = roof ? land(roof.x, roof.y, roof.z0 + roof.h) - (roof.z0 + roof.h) : 99, onRing = land(P.ring.x, P.ring.y, Z + 1.5) - (Z + 1.5), onDeck = land(P.mast.x + 6, P.mast.y, Z + 110) - (Z + 110);
+    h.pos.set(-680 + 900, 40, -700); G.camera.position.set(-680 + 900, 40, -700); M.update(G.camera); const seenFar = M.all[0].visible;
+    return { datum, tall, top, onRoof, onRing, onDeck, seenFar, boxes: P.boxes.length, signs: P.signs.length };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x)), q = r, near = (d) => d > 0.3 && d < 2.6;
+  line('E31', q.datum > 0.3 && q.tall < 0.25 && q.top < 200 && near(q.onRoof) && near(q.onRing) && near(q.onDeck) && q.seenFar && !real.length, `${q.boxes} boxes, ${q.signs} signs; ${(q.datum * 100).toFixed(0)}% of buildings on the 31 m roofline, ${(q.tall * 100).toFixed(0)}% over 60 m, the tallest ${q.top.toFixed(0)} m; landed ${q.onRoof.toFixed(2)} m over a tower's roof, ${q.onRing.toFixed(2)} m over the Bell Ring's floor, ${q.onDeck.toFixed(2)} m over the mast's 110 m deck; the skyline drawn from 900 m: ${q.seenFar}; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });
