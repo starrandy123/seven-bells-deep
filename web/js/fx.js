@@ -182,6 +182,7 @@ export function createFx(G) {
   // ------------------------------------------------------------------ a contact. The order and the lengths are counted from the reference
   const recent = [];
   function impact(p, dir, kind, el) {
+    if (kind === 'heavy' && G.dmg) G.dmg.hit(p, 2.4, el === 'ice' ? 'ice' : 'water', 0.8);
     const I = G.combat && G.combat.data ? G.combat.data.impacts[kind] : { core_m: 2, spike_m: 3, beam_m: 0, ring_m: 0, sparks: 14, beads: 8, shards: 3 };
     const L = kind === 'light' ? 0.33 : kind === 'medium' ? 0.42 : 0.62, last = (a, b) => Math.min(L, rnd(a, b));   // a burst lasts only as long as the blow: a light one is gone by 0.33 s
     const ice = el === 'ice', tint = ice ? C.ice : C.water, soft = reduced(); stats.impacts++; inBurst = 1;
@@ -293,6 +294,7 @@ export function createFx(G) {
   function motes(p, n, el) { for (let k = 0; k < n; k++) { v1.set(p.x + rnd(-0.6, 0.6), p.y + rnd(-0.6, 0.8), p.z + rnd(-0.6, 0.6)); sp(el === 'ice' ? 'flake' : 'bead', v1, rnd(0.04, 0.1), rnd(0.3, 0.6), el === 'ice' ? C.foam : C.water, { add: el === 'ice' ? 1 : 0.25, vy: el === 'ice' ? rnd(-0.6, 0.6) : -1.5, grav: el === 'ice' ? 0 : 3, spin: rnd(-3, 3), hot: 0.8 }); } }
   function denied() { if (G.ui && G.ui.hurt) void 0; }
   function shock(p, r, el) {
+    if (G.dmg) G.dmg.hit(p, r, el === 'ice' ? 'ice' : 'water', 0.9);
     const t = el === 'ice' ? C.ice : C.water; v1.copy(p); v1.y -= 0.6;
     const s = sp('ring', v1, 0.4, 0.5, t, { b: 0, s0: r * 0.2, s1: r * 1.2, hot: 0.9, outF: 0.15 }); planeAxes(s, Y);
     if (el === 'ice') { const f = sp('frost', v1, r * 0.9, 1.1, C.foam, { b: 0, s0: r * 0.3, add: 0.7, hot: 0.7, outF: 0.6 }); planeAxes(f, Y, Math.random() * TAU); }
@@ -305,9 +307,10 @@ export function createFx(G) {
     const n = body === 'shark' ? 10 : 14;
     for (let k = 0; k < n; k++) { v1.set(p.x + rnd(-0.8, 0.8), p.y + rnd(-1, 1.1), p.z + rnd(-0.8, 0.8)); sp('smoke', v1, rnd(1.1, 2), rnd(0.6, 1.0), tmpC, { add: 0, hot: 0, a: 0.75, delay: rnd(0, 0.32), s0: rnd(0.5, 0.9), vy: rnd(0.2, 1.1), vx: rnd(-0.5, 0.5), vz: rnd(-0.5, 0.5), inF: 0.2, outF: 0.5, spin: rnd(-1, 1), rot: Math.random() * TAU }); }
   }
-  function frostBurst(p, r) { for (let k = 0; k < 5; k++) { v1.set(p.x + rnd(-r, r), p.y + rnd(0, r * 1.2), p.z + rnd(-r, r)); sp('smoke', v1, r * 1.5, rnd(0.3, 0.6), C.foam, { add: 0.8, a: 0.3, hot: 0.1, s0: r * 0.5, vy: 1 }); sp('glint', v1, rnd(0.2, 0.5), rnd(0.15, 0.32), C.foam, { hot: 1, rot: Math.random() * TAU }); } v1.copy(p); v1.y += 0.1; const f = sp('frost', v1, r * 2.1, 1.4, C.ice, { b: 0, s0: r, add: 0.75, hot: 0.65, a: 0.85, outF: 0.55 }); planeAxes(f, Y, Math.random() * TAU); }
+  function frostBurst(p, r) { if (G.dmg) G.dmg.hit(p, r * 1.3, 'ice', 1); for (let k = 0; k < 5; k++) { v1.set(p.x + rnd(-r, r), p.y + rnd(0, r * 1.2), p.z + rnd(-r, r)); sp('smoke', v1, r * 1.5, rnd(0.3, 0.6), C.foam, { add: 0.8, a: 0.3, hot: 0.1, s0: r * 0.5, vy: 1 }); sp('glint', v1, rnd(0.2, 0.5), rnd(0.15, 0.32), C.foam, { hot: 1, rot: Math.random() * TAU }); } v1.copy(p); v1.y += 0.1; const f = sp('frost', v1, r * 2.1, 1.4, C.ice, { b: 0, s0: r, add: 0.75, hot: 0.65, a: 0.85, outF: 0.55 }); planeAxes(f, Y, Math.random() * TAU); }
   // Winter's Breath: a cone of cold, drawn every step it runs
   function frost(p, dir, range, coneDeg) {
+    if (G.dmg) { v1.copy(p).addScaledVector(dir, range * 0.6); G.dmg.hit(v1, 2.6, 'ice', 0.7); }
     const half = (coneDeg * Math.PI) / 360, sp0 = range * 2.2;
     for (let k = 0; k < (phone ? 3 : 4); k++) {
       const a = Math.random() * TAU, off = Math.random() * half * 0.92;
@@ -476,7 +479,7 @@ export function createFx(G) {
 
   // ------------------------------------------------------------------ Maelstrom: three streams pour round him, climbing and widening
   let vortT = 0, vortP = new THREE.Vector3();
-  let vortWho = null; function spin(p, who) { vortT = 1.0; vortP.copy(p); vortWho = who || null; bubbles(p, 26, 5); }
+  let vortWho = null; function spin(p, who) { vortT = 1.0; vortP.copy(p); vortWho = who || null; bubbles(p, 26, 5); if (G.dmg) G.dmg.hit(p, 4.6, 'water', 1); }
   function vortexMesh(dt) {
     if (vortT <= 0) return; vortT -= dt; if (vortWho) vortP.copy(vortWho); else if (G.hero) vortP.copy(G.hero.drawPos);
     const k = clamp(vortT * 3.2, 0, 1) * clamp((1.0 - vortT) * 8, 0, 1);
@@ -496,7 +499,7 @@ export function createFx(G) {
     shot.d += shot.speed * dt; shot.t += dt; const q = shot.d / shot.max; if (q >= 1) { shot.on = false; return; }
     const dir = shot.dir; v2.copy(Y).cross(dir); if (v2.lengthSq() < 1e-3) v2.set(1, 0, 0); v2.normalize(); v3.crossVectors(dir, v2).normalize();
     const hw = 8 + q * 7, H = 3.6 + q * 2.4, fade = clamp((1 - q) * 3.4, 0, 1) * clamp(shot.t * 9, 0, 1);
-    v1.copy(shot.from).addScaledVector(dir, shot.d);
+    v1.copy(shot.from).addScaledVector(dir, shot.d); if (G.dmg && (shot.mark = (shot.mark || 0) - dt) <= 0) { shot.mark = 0.12; G.dmg.hit(v1, hw * 0.7, 'water', 1); }
     const cx = v1.x, cy = v1.y, cz = v1.z, tt = G.time * 5;
     grid(22, 10, false, (u, v) => {
       const x = (u - 0.5) * 2, bow = -x * x * 3.4, edge = 1 - x * x * x * x, h = H * edge * (0.86 + 0.14 * Math.sin(x * 7 + tt));
@@ -511,7 +514,7 @@ export function createFx(G) {
 
   // ------------------------------------------------------------------ Geyser: bubbling first (the tell), then a column with a crown
   const gey = []; for (let i = 0; i < 3; i++) gey.push({ on: 0, p: new THREE.Vector3(), r: 3, h: 12, t: 0, tell: 0, T: 1 });
-  function geyser(p, r, h, t, tell, T) { let g = gey.find((x) => x.on > 0 && x.p.distanceToSquared(p) < 0.01); if (!g) g = gey.find((x) => x.on <= 0) || gey[0]; g.on = 2; g.p.copy(p); g.r = r; g.h = h; g.t = t; g.tell = tell; g.T = T; }
+  function geyser(p, r, h, t, tell, T) { if (t >= tell && G.dmg) G.dmg.hit(p, r * 1.2, 'water', 1); let g = gey.find((x) => x.on > 0 && x.p.distanceToSquared(p) < 0.01); if (!g) g = gey.find((x) => x.on <= 0) || gey[0]; g.on = 2; g.p.copy(p); g.r = r; g.h = h; g.t = t; g.tell = tell; g.T = T; }
   function geyserMesh() {
     for (const g of gey) {
       if (g.on <= 0) continue; g.on -= 1;
@@ -568,7 +571,7 @@ export function createFx(G) {
     c.burst = inBurst; c.flying = !!opts.fly; c.vel.copy(dir).multiplyScalar(opts.fly || 0); c.spin.set(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9));
     return { place(np, nd) { c.p.copy(np); c.q.setFromUnitVectors(Y, nd); }, kill() { c.on = false; } };
   }
-  function spike(p, dir, len, width, life) { crystal(p, dir, len, width, life + 0.34, { grow: 0.1 }); }
+  function spike(p, dir, len, width, life) { if (G.dmg) G.dmg.hit(p, width * 2.2 + 0.6, 'ice', 0.9); crystal(p, dir, len, width, life + 0.34, { grow: 0.1 }); }
   function shatter(p, n, scale = 1) {
     v2.copy(p); v2.y += 0.8;
     for (let k = 0; k < n; k++) { v1.set(rnd(-1, 1), rnd(-0.5, 1.1), rnd(-1, 1)).normalize(); crystal(v2, v1, rnd(0.3, 0.9) * scale, rnd(0.09, 0.2) * scale, rnd(0.42, 0.8), { fly: rnd(6, 16), grav: 10, grow: 0.01 }); }

@@ -31,7 +31,7 @@ export function createFireKit(G, F) {
     s.f = F.comet(from, s.v, 1.15 * k, 4.4 * k, (opts.range || 22) / speed + 0.1); G.audio.fwoosh && G.audio.fwoosh();
     return s;
   }
-  function endShot(s, hit) { s.on = false; if (s.f) { s.f.age = s.f.life; s.f = null; } burst(s.p, hit ? 1 : 0.7, null); }
+  function endShot(s, hit) { s.on = false; if (s.f) { s.f.age = s.f.life; s.f = null; } burst(s.p, hit ? 1 : 0.7, null); G.dmg.hit(s.p, 2.4, 'fire', 0.9); }
 
   function stepShots(dt) {
     for (const s of shots) {
@@ -65,25 +65,25 @@ export function createFireKit(G, F) {
     pushTrail: noop,
     // a sigil under his own feet is water's way, not fire's. But a ring on the ground that says where a blow will land is a warning, and those stay
     circle(p, normal, radius, el, dur) { if (radius >= 3.4 && water && water.circle) water.circle(p, normal, radius, el, dur); },
-    impact(p, dir, kind) { burst(p, kind === 'heavy' ? 1.25 : kind === 'medium' ? 1 : 0.8, dir); },
+    impact(p, dir, kind) { burst(p, kind === 'heavy' ? 1.25 : kind === 'medium' ? 1 : 0.8, dir); if (kind === 'heavy') G.dmg.hit(p, 2.4, 'fire', 0.8); },
     whip(a, b, s) { if (s <= 0.02) return; v1.subVectors(b, a); const l = v1.length() || 1; v1.multiplyScalar(1 / l); F.tongue(a, v1, 0.62 * s, l * 1.08, 0.09); F.tongue(a, v1, 0.32 * s, l * 1.15, 0.07); if (Math.random() < 0.7) { v2.copy(a).addScaledVector(v1, rnd(0.2, 1) * l); F.puff(v2, rnd(0.35, 0.6), 0.2, rnd(-2, 2), rnd(-1, 3), rnd(-2, 2), 4, 2, 1.5); } },
     riptide(on) { K.rip = on ? 1 : 0; if (on) burst(G.hero.pos, 0.8); },
-    spin(p, who) { K.spin = 1.05; K.spinP.copy(p); K.spinWho = who || null; },
+    spin(p, who) { K.spin = 1.05; K.spinP.copy(p); K.spinWho = who || null; G.dmg.hit(p, 4.6, 'fire', 0.9); },
     wave(from, dir) { K.wall = { from: from.clone(), dir: dir.clone().setY(0).normalize(), d: 1.5, left: 38 }; K.wallT = 0; },
     geyser(p, r, H, t, tell, T) {
       if (t < tell) { if (Math.random() < 0.5) { const a = rnd(0, TAU), R = rnd(0, r); v1.set(p.x + Math.cos(a) * R, p.y + 0.1, p.z + Math.sin(a) * R); F.tongue(v1, UP, 0.5, rnd(0.5, 1.2), 0.2); } return; }
-      const k = clamp(1 - (t - tell) / Math.max(T - tell, 0.01), 0.2, 1); F.tongue(p, UP, r * 1.5 * k, H * 0.95, 0.12); F.tongue(p, UP, r * 0.8 * k, H * 1.05, 0.1);
+      G.dmg.hit(p, r * 1.2, 'fire', 1); const k = clamp(1 - (t - tell) / Math.max(T - tell, 0.01), 0.2, 1); F.tongue(p, UP, r * 1.5 * k, H * 0.95, 0.12); F.tongue(p, UP, r * 0.8 * k, H * 1.05, 0.1);
       for (let i = 0; i < 2; i++) { const a = rnd(0, TAU), R = rnd(0, r * 0.7); v1.set(p.x + Math.cos(a) * R, p.y + rnd(0, H * 0.7), p.z + Math.sin(a) * R); F.puff(v1, rnd(0.8, 1.4), rnd(0.25, 0.4), Math.cos(a) * 3, rnd(8, 16), Math.sin(a) * 3, 2, 3, 1.5); }
       if (Math.random() < 0.3) { v1.set(p.x, p.y + H * 0.9, p.z); smoke(v1, 2.2, 1.2); }
     },
-    frost(p, dir, range, cone) { const c = (cone * Math.PI) / 360; for (let i = 0; i < 2; i++) { v1.copy(dir); v1.x += rnd(-c, c); v1.y += rnd(-c, c) * 0.6; v1.z += rnd(-c, c); v1.normalize().multiplyScalar(range * 3); F.puff(p, rnd(0.4, 0.7), rnd(0.28, 0.4), v1.x, v1.y, v1.z, 2.4, 2, 2.6); } },
-    shock(p, r) { for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; v1.set(Math.cos(a), 0.2, Math.sin(a)).normalize(); F.tongue(v2.copy(p).addScaledVector(v1, 0.6), v1, 1, r * 0.8, 0.26, v1.x * 7, 0, v1.z * 7); } burst(p, 1.2); },
+    frost(p, dir, range, cone) { v2.copy(p).addScaledVector(dir, range * 0.6); G.dmg.hit(v2, 2.6, 'fire', 0.7); const c = (cone * Math.PI) / 360; for (let i = 0; i < 2; i++) { v1.copy(dir); v1.x += rnd(-c, c); v1.y += rnd(-c, c) * 0.6; v1.z += rnd(-c, c); v1.normalize().multiplyScalar(range * 3); F.puff(p, rnd(0.4, 0.7), rnd(0.28, 0.4), v1.x, v1.y, v1.z, 2.4, 2, 2.6); } },
+    shock(p, r) { G.dmg.hit(p, r, 'fire', 0.9); for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; v1.set(Math.cos(a), 0.2, Math.sin(a)).normalize(); F.tongue(v2.copy(p).addScaledVector(v1, 0.6), v1, 1, r * 0.8, 0.26, v1.x * 7, 0, v1.z * 7); } burst(p, 1.2); },
     guard(p) { const h = G.hero; v1.set(Math.sin(h.heading), 0, Math.cos(h.heading)); side.crossVectors(v1, UP).normalize(); v2.copy(p); v2.y += 0.9; F.arc(v2, v3.copy(side).multiplyScalar(-1), v1, 1.3, 3.14, 1.1, 0.24); },
     parry(p) { burst(p, 0.9); }, block(p) { burst(p, 0.6); },
     dodge(p, dir) { v1.copy(dir).multiplyScalar(-1); for (let i = 0; i < 5; i++) F.puff(p, rnd(0.4, 0.7), 0.26, v1.x * rnd(5, 11) + rnd(-2, 2), rnd(-1, 2), v1.z * rnd(5, 11) + rnd(-2, 2), 5, 1, 1.6); },
     perfect(p) { burst(p, 1.2); }, stance(p) { v1.copy(p); v1.y += 0.9; burst(v1, 0.7); },
     // the magma stance: what's ice on the water side is rock and fire here
-    spike(p, dir, len, width) { v1.copy(dir).normalize(); F.tongue(p, v1, width * 1.5, len * 1.5, 0.36); F.tongue(p, v1, width * 0.7, len * 1.9, 0.28); G.fx.sparks(p, 3, 0xff9040, 5); },
+    spike(p, dir, len, width) { G.dmg.hit(p, width * 2.2, 'fire', 0.8); v1.copy(dir).normalize(); F.tongue(p, v1, width * 1.5, len * 1.5, 0.36); F.tongue(p, v1, width * 0.7, len * 1.9, 0.28); G.fx.sparks(p, 3, 0xff9040, 5); },
     crystal() { return { place(np, nd) { v1.copy(nd).normalize().negate(); F.tongue(np, v1, 0.9, 6.5, 0.07); F.tongue(np, v1, 0.45, 8, 0.06); F.puff(np, 0.5, 0.16, v1.x * 3, v1.y * 3, v1.z * 3, 4, 2, 1.5); }, kill() {} }; },
     shatter(p, n, scale = 1) { burst(p, 0.8 * scale, null); }, frostBurst(p, r) { burst(p, 0.5 * r, null); },
   };
@@ -98,7 +98,7 @@ export function createFireKit(G, F) {
     } else K.spearAt = null;
     if (K.rip > 0) { v1.copy(h.vel); const sp = v1.length() || 1; v1.multiplyScalar(1 / sp); F.comet(v2.copy(h.pos).addScaledVector(v1, 0.9), h.vel, 1.9, 5.2, 0.09); for (let i = 0; i < 2; i++) F.puff(h.pos, rnd(0.6, 0.95), 0.3, -v1.x * 7 + rnd(-3, 3), rnd(-1, 3), -v1.z * 7 + rnd(-3, 3), 4, 2, 1.5); }
     if (K.spin > 0) { K.spin -= dt; K.spinA += dt * 11; const q = clamp(K.spin * 3, 0.3, 1), at = K.spinWho || h.pos; v3.copy(at); v3.y -= 0.1; for (let i = 0; i < 2; i++) { const a = K.spinA + i * Math.PI, R = i ? 4.1 : 2.3; v1.set(Math.cos(a), 0.06, Math.sin(a)); v2.set(-Math.sin(a), 0, Math.cos(a)); F.arc(v3, v1, v2, R, 1.7, 1.25 * q, 0.13); } if (Math.random() < 0.7) { const a = rnd(0, TAU); v1.set(Math.cos(a), 0, Math.sin(a)); F.puff(v2.copy(at).addScaledVector(v1, 3), rnd(0.5, 0.8), 0.28, v1.x * 7 - v1.z * 8, rnd(0, 3), v1.z * 7 + v1.x * 8, 3, 2, 1.5); } }
-    if (K.wall) { const w = K.wall; w.d += dt * 34; w.left -= dt * 34; if ((K.wallT -= dt) <= 0) { K.wallT = 0.045; side.set(-w.dir.z, 0, w.dir.x); for (let i = -2; i <= 2; i++) { v1.copy(w.from).addScaledVector(w.dir, w.d).addScaledVector(side, i * 1.55 + rnd(-0.4, 0.4)); v1.y = floorAt(v1) + 0.05; F.tongue(v1, UP, rnd(1.5, 2.1), rnd(3.2, 5) * (1 - Math.abs(i) * 0.13), rnd(0.26, 0.36)); } } if (w.left <= 0) K.wall = null; }
+    if (K.wall) { const w = K.wall; w.d += dt * 34; w.left -= dt * 34; if ((K.wallT -= dt) <= 0) { K.wallT = 0.045; v1.copy(w.from).addScaledVector(w.dir, w.d); G.dmg.hit(v1, 4.4, 'fire', 0.8); side.set(-w.dir.z, 0, w.dir.x); for (let i = -2; i <= 2; i++) { v1.copy(w.from).addScaledVector(w.dir, w.d).addScaledVector(side, i * 1.55 + rnd(-0.4, 0.4)); v1.y = floorAt(v1) + 0.05; F.tongue(v1, UP, rnd(1.5, 2.1), rnd(3.2, 5) * (1 - Math.abs(i) * 0.13), rnd(0.26, 0.36)); } } if (w.left <= 0) K.wall = null; }
   }
   return { strike, burst, frame, install, bind(b) { binds = b; }, comet: throwShot, flare, look, get water() { return water; } };
 }

@@ -106,8 +106,8 @@ uniform vec4 ocSunM, ocShade, ocMap, ocLandM;
 uniform highp sampler3D tOcCaustic;
 uniform highp sampler2D tOcHeight, tOcRiver;
 uniform vec4 ocRiverM;
-uniform sampler2D tOcWet;
-uniform vec4 ocWetM;
+uniform sampler2D tOcWet, tOcBurn;
+uniform vec4 ocWetM, ocBurnM;
 uniform sampler2D tOcSun, tOcNoise, tOcLand, tOcPool;
 uniform vec4 ocFlashP[NF];
 uniform vec4 ocFlashC[NF];
@@ -463,6 +463,7 @@ export function createLook({ renderer, scene, camera, tier = 'phone' }) {
     ocRiverM: { value: new THREE.Vector4(1, 1, 0, 0) },
     tOcRiver: { value: (() => { const t = new THREE.DataTexture(new Float32Array([-1000]), 1, 1, THREE.RedFormat, THREE.FloatType); t.needsUpdate = true; return t; })() },      // rivers' surface level on the height grid (rivers.js); nothing until the world sets it
     tOcWet: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocWetM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // the water a land ride leaves (wetmap.js)
+    tOcBurn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType); t.needsUpdate = true; return t; })() }, ocBurnM: { value: new THREE.Vector4(0, 0, 1 / 96, 0) },      // what fire and ice left on the ground (scorch.js)
     ocMap: { value: new THREE.Vector4(-640, -640, 2.5, 513) },
     ocFlashP: { value: Array.from({ length: NF }, () => new THREE.Vector4(0, 0, 0, 1)) },
     ocFlashC: { value: Array.from({ length: NF }, () => new THREE.Vector4(0, 0, 0, 0)) },

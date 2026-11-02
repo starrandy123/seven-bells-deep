@@ -70,7 +70,7 @@ export function createSpout(G, h, D, C) {
   const BEAD = new THREE.Color(0.8, 0.95, 1);
   function step(dt, held) {
     if (T.sl) stepSling(dt);
-    if (!T.on) return; T.t += dt; U.uT.value += dt; const fx = G.fx;
+    if (!T.on) return; T.t += dt; U.uT.value += dt; const fx = G.fx; if ((T.mark = (T.mark || 0) - dt) <= 0) { T.mark = 0.3; if (G.dmg) G.dmg.hit(h.pos, 6, 'water', 1); }
     if (h.dead || h.state === 'cine') { clear(); return; }
     if (T.mode === 'rise' || T.mode === 'top') {
       // the stick walks it across the sea, and him with it

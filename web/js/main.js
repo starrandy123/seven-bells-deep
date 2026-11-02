@@ -12,6 +12,7 @@ import { findBreaks } from './surf.js';
 import { createHero } from './hero.js';
 import { createFx } from './fx.js';
 import { createEnemies } from './enemies.js';
+import { createScorch } from './scorch.js';
 import { createBoss } from './boss.js';
 import { createQuest } from './quest.js';
 import { createUI } from './ui.js';
@@ -56,6 +57,7 @@ async function boot() {
   await createHero(G);
   G.ui.setLoad(0.85, 'Calling the Reavers');
   G.enemies = await createEnemies(G);
+  G.dmg = createScorch(G);
   createBoss(G);
   G.quest = createQuest(G);
   if (FLAG.demo) G.bot = createBot(G);
@@ -118,7 +120,7 @@ function update(dt) {
   hero.animate(dt); G.enemies.animate(dt); G.boss.draw();
   if (G.filmCam) G.filmCam(dt); else if (!(G.quest.cineOn && G.quest.cineOn())) hero.camera(dt);
   G.quest.draw(G.time);
-  look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.life.update(dt, hero.pos); G.sky.update(dt, camera); (G.cityLights ||= createCityLights(G, G.world.cities.cities, G.world.heightAt)).frame(); if (G.world.lava) G.world.lava.frame(G, dt); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
+  look.update(dt, camera.position); G.world.update(dt, camera, hero.pos); G.dmg.update(dt, hero.pos.x, hero.pos.z); G.life.update(dt, hero.pos); G.sky.update(dt, camera); (G.cityLights ||= createCityLights(G, G.world.cities.cities, G.world.heightAt)).frame(); if (G.world.lava) G.world.lava.frame(G, dt); G.fx.update(dt, G.time); G.fx.speed(hero.surge, hero.vel, dt);
   G.audio.update(dt, Math.min(1, hero.speed / 16), hero.combatT < 3);
   if (G.audio.freshwater && G.world.rivers) freshSound(hero.pos);
   G.ui.update(dt);

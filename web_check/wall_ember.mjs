@@ -99,6 +99,21 @@ await section(['E20'], async () => {
   line('E20', word[0] === 'Ignite' && word[1] === 'Ignite' && label === 'Continue' && r.side === 'fire' && Math.hypot(r.x - 246, r.z - 760) < 14 && !real.length, `the fire side reads ${word.join(' and ')}; ${label} comes back ${JSON.stringify(r)}; ${real.length} errors ${real[0] || ''}`);
   await close();
 });
+// fire on the ground: a line that runs and stops, water that puts it out and won't let it catch, ice that holds and goes, and all of it gone in time
+await section(['E21'], async () => {
+  const { page, errors, close } = await open('?fresh&tier=phone&qa', { ctx: TURNED, wait: false });
+  await page.waitForFunction(() => window.__game && window.__game.booted && window.__game.dmg, null, { timeout: 90000 });
+  const r = await page.evaluate(() => {
+    const G = window.__game, S = { x: -362, z: 556 }, g = G.world.heightAt(S.x, -S.z), V = G.hero.pos.constructor, run = (s) => { let top = 0; for (let t = 0; t < s; t += 0.2) { G.dmg.update(0.2, S.x - 14, S.z - 14); top = Math.max(top, G.dmg.burning); } return top; };
+    G.hero.pos.set(S.x - 14, g + 1, S.z - 14); G.dmg.hit(new V(S.x, g + 0.5, S.z), 3, 'fire', 1); const top = run(30), c = G.dmg.count, black = G.dmg.cell(S.x + 1, S.z + 1);
+    G.dmg.hit(new V(S.x - 20, g + 0.5, S.z - 2), 5, 'water', 1); const wet = G.dmg.cell(S.x - 20, S.z - 2); G.dmg.hit(new V(S.x - 20, g + 0.5, S.z - 2), 2, 'fire', 1); run(3); const wet2 = G.dmg.cell(S.x - 20, S.z - 2);
+    G.dmg.hit(new V(S.x - 8, g + 0.5, S.z - 12), 4, 'ice', 1); const ice = G.dmg.cell(S.x - 8, S.z - 12); run(20); const iceAfter = G.dmg.cell(S.x - 8, S.z - 12); run(90); const after = G.dmg.count;
+    return { top, c, black, wet, wet2, ice, iceAfter, after };
+  });
+  const real = errors.filter((x) => !/qa\.js|Failed to load/.test(x));
+  line('E21', r.top >= 15 && r.top <= 60 && r.c.burning === 0 && r.c.burnt > 60 && r.c.burnt < 900 && r.black.scorch > 200 && r.wet.wet > 10 && r.wet2.st !== 2 && r.ice.frost > 200 && r.iceAfter.frost === 0 && r.after.burnt === 0 && !real.length, `${r.top} cells at the peak, ${r.c.burnt} burnt and out of ${r.c.fuel} fuel; soaked ground took no fire (${r.wet2.st}); frost ${r.ice.frost} then ${r.iceAfter.frost}; ${r.after.burnt} still burnt after two minutes; ${real.length} errors ${real[0] || ''}`);
+  await close();
+});
 await section(['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12'], async () => {
   const { page, errors, close } = await open('?fresh&tier=phone&film&qa', { ctx: TURNED });
   await page.evaluate(() => { const Q = window.__qa, G = window.__game, s = G.world.data.spawn; Q.swimAt(s.x, s.y, -0.4); G.camYaw = 0.4; window.__e = G.ember.raidNow(1)[0]; });

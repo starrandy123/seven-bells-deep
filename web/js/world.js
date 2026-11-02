@@ -104,6 +104,8 @@ const MEADOW_V = (uReach) => /* glsl */`
     ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);      // none under a river (deeper than any channel is a face beside it)
     vec2 ocWu = vec2(ocWp.x - ocWetM.x, ocWetM.y - ocWp.z)*ocWetM.z + .5;
     if (ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996) { vec2 ocWv = texture(tOcWet, ocWu).rg; ocFade *= (1.0 - .8*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y)); }      // laid flat where a ride ran, under water in a puddle (wetmap.js)
+    vec2 ocBu = vec2(ocWp.x - ocBurnM.x, ocBurnM.y - ocWp.z)*ocBurnM.z + .5;
+    if (ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99) ocFade *= smoothstep(.05, .35, 1.0 - texture(tOcBurn, ocBu).r);      // gone where it burnt (scorch.js)
     float ocW1 = sin(dot(ocWp.xz, vec2(.23, .14)) - ocTime*1.75), ocW2 = sin(dot(ocWp.xz, vec2(-.11, .31)) - ocTime*1.13 + 1.3), ocW3 = sin(dot(ocWp.xz, vec2(.91, .67)) - ocTime*3.4);
     float ocGust = ocW1*.62 + ocW2*.38;
     vOcGust = vec2(ocGust, min(ocH*1.4, 1.0));
@@ -113,6 +115,8 @@ const MEADOW_V = (uReach) => /* glsl */`
     gl_Position = projectionMatrix*mvPosition;
     vOcP = ocWp.xyz;`;
 // Sway written in world space, so a yawed instance sways with the same current as its neighbours.
+const TREE_BURN = /* glsl */`
+    { vec2 ocBu = vec2(ocB.x - ocBurnM.x, ocBurnM.y - ocB.z)*ocBurnM.z + .5; vBurnT = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu).r : 0.0; }`;
 const SWAY = (amp, freq, up) => /* glsl */`
     vec4 ocWp = modelMatrix*instanceMatrix*vec4(transformed, 1.0);
     vec3 ocB = (modelMatrix*instanceMatrix*vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -383,7 +387,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         vec4 b2 = texture(tBiome2, uv);
         flat_ = mix(mix(mix(flat_, vec3(.040, .036, .040), b2.r), vec3(.56, .72, .84)*(.8 + .3*macro), b2.g), vec3(.20, .21, .18)*(.8 + .4*macro), b2.b);
         wall = mix(mix(mix(wall, vec3(.030, .024, .026)*(.7 + .9*m2), b2.r), vec3(.40, .60, .76)*(.7 + .6*m2), b2.g), vec3(.13, .14, .12)*(.7 + .7*m2), b2.b);
-        vec3 alb = mix(flat_, wall, rock);
+        vec3 alb = mix(flat_, wall, rock); float ocEmb = 0.0;
         // above the tide: white sand, then green, then grey and black rock; wet sand along the waterline
         float wetK = 0.0, wetPud = 0.0;
         if (P.y > -3.0) {
@@ -435,6 +439,14 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
             alb *= 1.0 - .46*soak;
             wetK = max(wetK, soak);
             wetPud = smoothstep(.30, .46, wm.g + (n4 - .5)*.32 + (m2 - .5)*.20)*(1.0 - smoothstep(.10, .26, slope));
+          }
+          // what fire and ice left (scorch.js): black ground with a net of red points in it, a sheet of frost, both broken up by the ground's own grain, never a soft circle
+          vec2 bu = vec2(P.x - ocBurnM.x, ocBurnM.y - P.z)*ocBurnM.z + .5;
+          if (ocBurnM.w > 0.0 && bu.x > .01 && bu.y > .01 && bu.x < .99 && bu.y < .99) {
+            vec4 bm = texture(tOcBurn, bu); float be = (n4 - .5)*.34 + (m2 - .5)*.22, bf = smoothstep(.44, .56, bm.b + be*1.3);
+            alb = mix(alb, vec3(.018, .016, .015) + vec3(.03)*n4, smoothstep(.44, .56, bm.r + be));
+            alb = mix(alb, mix(vec3(.50, .60, .68), vec3(.78, .86, .92), m2), bf);
+            float bn = texture(tOcNoise, P.xz*.73).g*.6 + n4*.4; ocEmb = bm.a*smoothstep(.80 - .17*bm.a, .84 - .15*bm.a, bn)*(1.0 - bf);
           }
         }
         if (bw.b > .08) {
@@ -505,7 +517,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         vec4 gw = texture(tGlow, uv);
         float beat = .72 + .28*sin(ocTime*1.1 + P.x*.05 + P.z*.07);
         c += alb*(vec3(.16, 1.3, 1.15)*gw.r*beat + vec3(1.5, .3, 1.0)*gw.g*beat)*(1.0 + 8.0*bw.a)*1.6 + (alb + .05)*vec3(1.5, .82, .30)*(gw.b*ocLamps + gw.a)*2.8;
-        c += (alb + .03)*(ocPool(P, N) + ocNear(P, N));
+        c += (alb + .03)*(ocPool(P, N) + ocNear(P, N)) + vec3(1.0, .22, .04)*ocEmb*2.0;
         c = ocApply(c, P);
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
@@ -577,7 +589,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = mix(diffuseColor.rgb*(.84 + .34*ocN2), diffuseColor.rgb*vec3(.34, .62, .40) + vec3(.004, .018, .012), ocAl*.82); }`,
     }),
     meadow: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n',
+      wrap: .5, key: 'meadow', vertexExtra: MEADOW_V(phone ? '60.0' : '150.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet, tOcBurn; uniform vec4 ocMap, ocWetM, ocBurnM;\n',
       fragmentPars: 'varying vec2 vOcGust;\nuniform vec3 ocLandGL, ocLandGD;\n',
       // the ground's own colours, the same noise, so the blades melt into the land; a gust lightens the tips as it passes
       albedo: /* glsl */`{ float ocM = ocMeadow(vOcP.xz);
@@ -586,7 +598,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         diffuseColor.rgb = ocG*(1.0 + ocFar*vOcGust.y*(.14 + .30*max(vOcGust.x, 0.0)))*mix(1.62, 1.0, ocPaint); }`,
     }),
     flowers: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, ocWetM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
+      wrap: .6, key: 'flowers', vertexExtra: MEADOW_V(phone ? '64.0' : '120.0'), vertexDecl: 'varying vec2 vOcGust;\n', vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet, tOcBurn; uniform vec4 ocMap, ocWetM, ocBurnM;\n', fragmentPars: 'varying vec2 vOcGust;\n',
     }),
     boat: () => look.patch(lit({ vertexColors: true }), {
       key: 'boat',
@@ -602,20 +614,23 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     }),
     palm: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), { wrap: .5, key: 'palm', vertexExtra: SWAY('.011', '5.5', '.018') }),
     tree: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), {
-      wrap: .55, key: 'tree', vertexExtra: SWAY('.006', '4.6', '.022'),
+      wrap: .55, key: 'tree', vertexDecl: 'varying float vBurnT;\n', vertexPars: 'uniform sampler2D tOcBurn; uniform vec4 ocBurnM;\n', vertexExtra: SWAY('.006', '4.6', '.022') + TREE_BURN,
       // the canopy is drawn by the leaf cards; the mesh keeps the trunk and boughs
       albedo: /* glsl */`{ if (vColor.g > vColor.r*1.12 && vColor.g > vColor.b*1.2) discard;
         float ocB1 = texture(tOcNoise, vec2((vOcP.x + vOcP.z)*.91, vOcP.y*.11)).a, ocB2 = texture(tOcNoise, vec2((vOcP.x - vOcP.z)*2.7, vOcP.y*.37)).b;
         float ocR = smoothstep(.34, .70, ocB1*.6 + ocB2*.4);
-        diffuseColor.rgb = mix(vec3(.16, .11, .08), vec3(.36, .27, .19), ocR)*(.90 + .2*ocB2); }`,
+        diffuseColor.rgb = mix(vec3(.16, .11, .08), vec3(.36, .27, .19), ocR)*(.90 + .2*ocB2)*(1.0 - .9*smoothstep(.1, .6, vBurnT)); }`,
+      fragmentPars: 'varying float vBurnT;\n',
     }),
     // leaf cards: each a soft clump turned to the eye, lit by the canopy's round normal, cut by the painted mask
     leaves: () => look.patch(lit({ alphaToCoverage: true }), {
       wrap: .6, key: 'leaves', uniforms: { tLeaf: { value: tLeaf } },
-      vertexDecl: 'varying vec2 vLeaf;\nattribute vec4 aCard;\n',
+      vertexDecl: 'varying vec2 vLeaf, vLeafB;\nattribute vec4 aCard;\n', vertexPars: 'uniform sampler2D tOcBurn; uniform vec4 ocBurnM;\n',
       vertexExtra: /* glsl */`
         vec4 ocWp = modelMatrix*instanceMatrix*vec4(transformed, 1.0);
         vec3 ocB = (modelMatrix*instanceMatrix*vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec2 ocBu = vec2(ocB.x - ocBurnM.x, ocBurnM.y - ocB.z)*ocBurnM.z + .5;
+        vLeafB = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu).rb : vec2(0.0);      // what fire and ice did at the foot of the tree (scorch.js)
         float ocPh = dot(ocWp.xyz, vec3(.21, .17, .13));
         ocWp.xyz += vec3(.83, .1, .55)*(sin(ocTime*1.7 + ocPh) + .6*sin(ocTime*.9 + ocPh*.6))*.14;
         vec4 mvPosition = viewMatrix*ocWp;
@@ -623,11 +638,13 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         mvPosition.xy += aCard.xy*ocS*(.55 + .45*smoothstep(3.0, 18.0, -mvPosition.z));   // close by, smaller clumps rather than big flat ones
         gl_Position = projectionMatrix*mvPosition;
         vOcP = ocWp.xyz; vLeaf = aCard.zw;`,
-      fragmentPars: 'varying vec2 vLeaf;\nuniform sampler2D tLeaf;\nuniform vec3 ocLandGL, ocLandGD;\n',
-      albedo: /* glsl */`{ vec2 ocT = texture2D(tLeaf, vLeaf).rg;
-        diffuseColor.a = smoothstep(.35, .65, ocT.r);
+      fragmentPars: 'varying vec2 vLeaf, vLeafB;\nuniform sampler2D tLeaf;\nuniform vec3 ocLandGL, ocLandGD;\n',
+      // burnt leaves go from their ragged edge in, and what's left of the clump is black with a red rim; rime turns them pale
+      albedo: /* glsl */`{ vec2 ocT = texture2D(tLeaf, vLeaf).rg; float ocLb = smoothstep(.08, .7, vLeafB.x);
+        diffuseColor.a = smoothstep(.35 + ocLb*.56, .65 + ocLb*.32, ocT.r);
         if (diffuseColor.a < .05) discard;
-        diffuseColor.rgb = mix(ocLandGD*1.25, ocLandGL*.86, ocT.g)*vColor.rgb; }`,
+        diffuseColor.rgb = mix(mix(ocLandGD*1.25, ocLandGL*.86, ocT.g)*vColor.rgb, vec3(.035, .028, .024) + vec3(.34, .09, .02)*(1.0 - ocT.r)*step(vLeafB.x, .9), ocLb);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.70, .80, .86)*(.8 + .3*ocT.g), smoothstep(.2, .7, vLeafB.y)); }`,
     }),
     shrub: () => look.patch(lit({ vertexColors: true, side: THREE.DoubleSide }), { wrap: .6, key: 'shrub', vertexExtra: SWAY('.05', '7.5', '.2') }),
     // windows and domes that light themselves: the brightest, most saturated vertex colours glow, each building at its own flicker
@@ -1270,7 +1287,7 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
     const m = look.patch(lit({ side: THREE.DoubleSide }), {
       wrap: .5, key: 'nearGrass', uniforms: { uBox: { value: BOX }, uAhead: { value: nearAhead }, uFoc: terrainU.uFocus, tBiomeG: { value: tBiome } },
       vertexDecl: 'varying vec2 vOcGust;\nattribute vec4 aRoot;\nattribute vec2 aShape;\n',
-      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet; uniform vec4 ocMap, uFoc, ocWetM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
+      vertexPars: 'uniform highp sampler2D tOcHeight, tOcRiver; uniform vec4 ocRiverM; uniform sampler2D tOcWet, tOcBurn; uniform vec4 ocMap, uFoc, ocWetM, ocBurnM; uniform sampler2D tBiomeG; uniform float uBox; uniform vec2 uAhead;\n',
       vertexExtra: /* glsl */`
         vec2 ocRel = mod(aRoot.xy - uAhead + uBox, 2.0*uBox) - uBox;
         vec2 ocW2 = uAhead + ocRel;
@@ -1282,12 +1299,14 @@ export async function createWorld({ renderer, scene, camera, look, tier = 'phone
         float ocRd = ocG - texture(tOcRiver, ocUv*ocRiverM.xy - ocRiverM.zw).r; ocFade *= ocRd < -2.4 ? 1.0 : smoothstep(-.02, .18, ocRd);
         vec2 ocWu = vec2(ocW2.x - ocWetM.x, ocWetM.y - ocW2.y)*ocWetM.z + .5;
         vec2 ocWv = ocWetM.w > 0.0 && ocWu.x > .004 && ocWu.y > .004 && ocWu.x < .996 && ocWu.y < .996 ? texture(tOcWet, ocWu).rg : vec2(0.0);      // laid flat where a ride ran, under water in a puddle (wetmap.js)
-        float ocH = (.28 + .46*aRoot.z)*ocFade*(1.0 - .82*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y));
+        vec2 ocBu = vec2(ocW2.x - ocBurnM.x, ocBurnM.y - ocW2.y)*ocBurnM.z + .5;
+        vec4 ocBm = ocBurnM.w > 0.0 && ocBu.x > .01 && ocBu.y > .01 && ocBu.x < .99 && ocBu.y < .99 ? texture(tOcBurn, ocBu) : vec4(0.0);      // gone where it burnt, and back blade by blade (scorch.js)
+        float ocH = (.28 + .46*aRoot.z)*ocFade*(1.0 - .82*ocWv.x)*(1.0 - smoothstep(.22, .40, ocWv.y))*smoothstep(aRoot.w*.4 + .05, aRoot.w*.4 + .2, 1.0 - ocBm.r);
         float ocAng = aRoot.w*6.283, ocT = aShape.y;
         vec2 ocDir = vec2(cos(ocAng), sin(ocAng));
         float ocW1 = sin(dot(ocW2, vec2(.23, .14)) - ocTime*1.75), ocW4 = sin(dot(ocW2, vec2(-.11, .31)) - ocTime*1.13 + 1.3), ocW3 = sin(dot(ocW2, vec2(.91, .67)) - ocTime*3.4 + aRoot.z*3.0);
         float ocGust = ocW1*.62 + ocW4*.38;
-        vec2 ocLean = vec2(.83, .55)*(.18 + .30*ocGust + .07*ocW3) + ocDir*.34;
+        vec2 ocLean = (vec2(.83, .55)*(.18 + .30*ocGust + .07*ocW3) + ocDir*.34)*(1.0 - smoothstep(.4, .7, ocBm.b));
         vec2 ocAway = ocW2 - uFoc.xz; float ocAd = length(ocAway) + .001;
         if (abs(uFoc.y - ocG) < 2.5) ocLean += ocAway/ocAd*1.6*exp(-ocAd*ocAd*.8);      // a body parts the grass
         vec3 ocWt = vec3(ocW2.x, ocG + ocH*ocT*(1.0 - .30*ocT*length(ocLean)), ocW2.y);
