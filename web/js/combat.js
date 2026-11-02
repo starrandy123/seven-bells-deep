@@ -175,7 +175,7 @@ export function createCombat(G, h, api) {
     if (charge) {
       charge.t += dt; // the pack and the whale come through the sea: on land the song is all there is
       const top = !open('call') || G.world.heightAt(h.pos.x, -h.pos.z) > -2 ? 0 : P.shoal.knows('whale') ? 2 : 1; let tier = 0; for (let i = 1; i <= top; i++) if (charge.t >= D.shoal.tier_s[i]) tier = i;
-      if (tier !== charge.tier) { charge.tier = tier; G.fx.chargeRing(h.pos, tier); G.audio.bubble(); }
+      if (tier !== charge.tier) { charge.tier = tier; G.fx.chargeRing(h.pos, tier); if (G.sideNow === 'fire') G.audio.crackle(0.7); else G.audio.bubble(); }
       if (!u.callHeld || h.dead) { if (tier) buf.push(tier === 2 ? 'breach' : 'pack', now); charge = null; }
     }
     if (u.cast) { u.cast = false; buf.push('cast', now); }

@@ -180,6 +180,14 @@ export function createAudio() {
   }
   function fwoosh() { if (!ctx) return; const t = ctx.currentTime, n = ctx.createBufferSource(); n.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.1; f.frequency.setValueAtTime(1500, t); f.frequency.exponentialRampToValueAtTime(240, t + 0.3); const g = ctx.createGain(); env(g, t, 0.02, 0.7, 0.3); n.connect(f); f.connect(g); g.connect(sfx); n.start(t, Math.random() * 3); n.stop(t + 0.4); }
   function hiss(k) { if (!ctx) return; const t = ctx.currentTime, n = ctx.createBufferSource(); n.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1500; const g = ctx.createGain(); env(g, t, 0.01, 0.8 + k * 1.6, 0.5 + k * 0.5); n.connect(f); f.connect(g); g.connect(sfx); n.start(t, Math.random() * 3); n.stop(t + 1.1); }
+  // what burning sounds like, made the way the rest of this file is: a low roar of filtered noise, and sparse tiny clicks through a narrow band for the crackle
+  function crackle(k = 1) { if (!ctx) return; const t = ctx.currentTime; for (let i = 0; i < 5; i++) { const at = t + Math.random() * 0.22, n = ctx.createBufferSource(); n.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 5; f.frequency.value = 1500 + Math.random() * 3600; const g = ctx.createGain(); env(g, at, 0.002, k * (0.2 + Math.random() * 0.5), 0.02 + Math.random() * 0.03); n.connect(f); f.connect(g); g.connect(sfx); n.start(at, Math.random() * 3); n.stop(at + 0.1); } }
+  let lavaG = null, lavaT = 0;
+  function lava(level) {
+    if (!ctx || !noiseBuf) return; const t = ctx.currentTime;
+    if (!lavaG) { const n = ctx.createBufferSource(); n.buffer = noiseBuf; n.loop = true; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 170; lavaG = ctx.createGain(); lavaG.gain.value = 0; n.connect(f); f.connect(lavaG); lavaG.connect(sfx); n.start(); }
+    lavaG.gain.setTargetAtTime(level * 0.6, t, 0.7); if (level > 0.06 && t > lavaT) { lavaT = t + 0.2 + Math.random() * 0.7; crackle(level * 0.5); }
+  }
   function boom() {
     if (!ctx) return;
     const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.7); env(g, t, 0.01, 0.45, 0.8); o.connect(g); g.connect(sfx); o.start(t); o.stop(t + 1);
@@ -206,5 +214,5 @@ export function createAudio() {
     }
     const t = ctx.currentTime; fw.g.gain.setTargetAtTime(roar * 0.62 + babble * 0.07, t, 0.35); fw.g2.gain.setTargetAtTime(babble * 0.55 + roar * 0.35, t, 0.35);
   }
-  return { jet, fwoosh, hiss, start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, freshwater, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
+  return { jet, fwoosh, hiss, crackle, lava, start, update, hit, swing, bell, pearl, roar, splash, bubble, whale, boom, tell, whirr, whirrAt, spoutRoar, freshwater, setUnder, setVolumes, setMood, suspend, get on() { return !!ctx; } };
 }

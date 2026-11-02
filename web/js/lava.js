@@ -59,7 +59,10 @@ export function createLava(scene, look, heightAt, phone) {
   // what the footage has round the lava: a fountain of fire at the vent, steam where it meets the sea, sparks in the air. All of it only near him
   const vent = new THREE.Vector3(FIRE_HILL.x, cz + 1, -FIRE_HILL.y), v = new THREE.Vector3(), STEAM = new THREE.Color(0.86, 0.87, 0.9), HOT = new THREE.Color(1.0, 0.55, 0.16), EMB = new THREE.Color(1.0, 0.42, 0.08); let tF = 0, tS = 0, tE = 0, tB = 0;
   const rnd = (a, b) => a + Math.random() * (b - a);
+  let tRoar = 0;
   function frame(G, dt) {
+    // the rivers and the crater roar and crackle as you come near, a few times a second. Past the last channel chan() says 9: that's far, not near
+    if ((tRoar -= dt) <= 0 && G.audio.lava) { tRoar = 0.25; const p = G.camera.position, x = p.x, y = -p.z, c = chan(x, y), far = Math.min(c >= 9 ? 999 : c * 7, Math.hypot(x - FIRE_HILL.x, y - FIRE_HILL.y) * 0.8), t = Math.max(0, Math.min(1, (70 - far) / 60)); G.audio.lava(t * t * (3 - 2 * t) * (p.y < -0.5 ? 0 : 1)); }
     const cam = G.camera.position, far = cam.distanceTo(vent); basalt.visible = far < 900; if (far > 520) return; const F = G.flames;
     // lava burns anyone who isn't fire
     { const h = G.hero; if (G.sideNow !== 'fire' && !h.dead && (tB -= dt) <= 0) { tB = 0.5; const g = heightAt(h.pos.x, -h.pos.z); if (h.pos.y - g < 3 && chan(h.pos.x, -h.pos.z) < 1.05) { h.damage(9, h.pos, { unblockable: true }); G.fx.sparks(h.pos, 8, 0xff8030, 6); G.ui.tip && G.ui.tip('Lava: get off it', 1.6); } } }

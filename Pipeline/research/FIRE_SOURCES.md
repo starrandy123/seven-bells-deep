@@ -30,3 +30,7 @@ The named series and shipped games behind this are in the session memory, outsid
 - **Combat design:** frame data as a table (`web/data/combat.json`), a buffer, cancel windows after the hit, hitstop on both sides scaled by damage and lighter for projectiles, attack tokens so only a few foes commit at once.
 - **Clean motion capture:** CMU (free for commercial use), ACCAD (CC BY 3.0), 100STYLE (CC BY 4.0), Quaternius UAL2 (CC0).
 - **Not usable, non-commercial:** LaFAN1, Bandai Namco, SFU, UMONS-TAICHI, AIST++.
+
+## Sound
+
+Andy Farnell's *Designing Sound* (MIT Press) treats fire as a process with parts, built from analysis and synthesis. The search on 2 Nov reached only listings of the book, not the fire chapter, so the recipe here isn't read at source: a low roar of filtered noise and sparse clicks through a narrow band, in `web/js/audio.js`. If anyone wants more from it, the chapter itself is the place to start.

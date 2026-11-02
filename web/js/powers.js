@@ -89,7 +89,7 @@ export function createPowers(G, h, D, C) {
     G.fx.wave(from, dir, stanceWave());
     lives.push({ kind: 'wave', a, from, dir, d: 1, speed: d.speed_mps, max: d.range_m * (lv('wave') >= 2 ? U.wave.range : 1), w: d.width_m * (lv('wave') >= 1 ? U.wave.width : 1) });
     if (!(G.settings && G.settings.shake === false)) G.shake(0.3);
-    G.audio.splash();
+    if (G.sideNow === 'fire') G.audio.fwoosh(); else G.audio.splash();
   }
   const stanceWave = () => 'water';
 
@@ -104,7 +104,8 @@ export function createPowers(G, h, D, C) {
     p.y = floorNear(p, 9);
     spawnGeyser(p, d, a, false);
     if (lv('geyser') >= 3) lives.push({ kind: 'later', t: U.geyser.again_s, fn: () => spawnGeyser(p.clone(), d, a, false) });
-    G.audio.bubble(); G.fx.circle && G.fx.circle(p, null, d.radius_m * 1.1, G.sideNow === 'fire' ? 'fire' : 'water', d.tell_s + 0.25);
+    if (G.sideNow === 'fire') G.audio.crackle(0.8); else G.audio.bubble();
+    G.fx.circle && G.fx.circle(p, null, d.radius_m * 1.1, G.sideNow === 'fire' ? 'fire' : 'water', d.tell_s + 0.25);
   }
   function spawnGeyser(p, d, a, hostile) {
     const r = d.radius_m;
@@ -229,7 +230,7 @@ export function createPowers(G, h, D, C) {
         }
         const was = l.on; l.on = l.t >= l.tell && l.t < l.T;
         if (G.fx.geyser) G.fx.geyser(l.p, l.r, l.h, l.t, l.tell, l.T);
-        if (l.on && !was && !l.hostile) { G.audio.splash(); C.log('geyser', {}); }
+        if (l.on && !was && !l.hostile) { if (G.sideNow === 'fire') G.audio.fwoosh(); else G.audio.splash(); C.log('geyser', {}); }
         if (l.on && !l.hostile) { v1.copy(l.p); for (let k = 0; k < 3; k++) { v1.y = l.p.y + 2 + k * 4; sweep(v1, l.r, (e, mul) => C.land(e, l.a, mul)); } }
         return l.t >= l.T;
       }
