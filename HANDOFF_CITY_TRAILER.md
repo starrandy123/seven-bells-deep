@@ -96,6 +96,21 @@ Saltlight was built from planning sources only (a grid, Tokyo's 31 m roofline, a
    - End flight first on the ground (`h.endFly(); h.fly = false; h.fireAir = false`), or he lies flat in his flight pose.
    - At Boost speed use `k: 0`, or he leaves the frame.
    - A take's camera must be checked against bushes, rock and the High City's underside, which the sweep doesn't see.
+
+   **Assembling the video** (his word after the handoff: "be sure it can put together the video too and fix the city building depths"):
+   - Shoot the city's shots after the towers' depth is in, so the trailer shows the fixed city.
+   - Write a cuts list, one line per shot: `<clip path> <start s> <duration s>`. About 20 shots of 3 s, on Lieu's line in his order:
+     1. water against bosses: the Leviathan, Colossus and Kraken, him and the boss in one frame;
+     2. fire against enemies: the plaza fight, the Pale Flame in the air;
+     3. powers full frame and what they do: burn, douse, freeze, break a building, the tornado lift;
+     4. the drowned cities;
+     5. flights to the cities above the sea, and round and through Saltlight's towers;
+     6. the twist: the Tidecaller's drag; the climax: a boss and All Fire;
+     7. the button: a hero shot over Saltlight at sunset.
+   - Run `bash Pipeline/film/trailer/build_trailer.sh <cuts.txt> <out dir>`. It writes `TRAILER.mp4` (1080×1920, 30 fps, hard cuts, silent), the phone copy `phone/TRAILER.mp4` (under 30 MB) and `sheet.jpg` (a frame every 2 s).
+   - Read the sheet and the first frame of every cut before anyone sees it. Each shot must hold him large and in the same place, the boss or the power or the city behind him, and no dark figure, veil or square.
+   - File both copies in `~/Documents/Marketing/ContentFunnel/out/2026-11-02/two_days/`, add an entry to `ContentFunnel/PROGRESS.md`, and send him the phone copy with SendUserFile. He is on his phone.
+   - Yesterday's clips are in `~/Documents/UnrealProjects/DrownedCity/Pipeline/film/clips/final/` (1080×1920). He rejected `5b_boss_wide` as the opener: it shows the boss hit, not him.
 4. **Build 65:** bump `BUILD` in `web/js/config.js` and `NEWS` in `web/js/ui.js`, then run `PART2_OUT=<scratchpad> bash tools/push.sh b65 8871`. Upload through the NotesMosaic MCP: `begin_bundle_upload` with the game id `ae306273-777b-4c7b-838e-bf58cc382378`, then PUT the zip, then `finish_bundle_upload`.
 5. **Content:** the TWO DAYS script in `~/Documents/Marketing/ContentFunnel/plans/2026-11-02_scripts.md` awaits his review. The rejected v2 trailer is `out/2026-11-02/two_days/TRAILER_1080x1920.mp4`.
 
